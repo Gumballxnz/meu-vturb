@@ -4192,6 +4192,56 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
         </div>
       </section>
 
+      <section class="tab-view" id="viewSecurity">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <h1 style="font-size: 20px; font-weight: 700; color: var(--text-main); margin: 0;">Segurança</h1>
+          </div>
+          <button type="button" class="btn-primary-action" onclick="openAddDomainModal()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Adicionar Domínio
+          </button>
+        </div>
+
+        <div class="card-panel" style="padding: 0; overflow: hidden;">
+          <div class="table-responsive" style="margin: 0;">
+            <table class="dark-table" style="margin-bottom: 0;">
+              <thead>
+                <tr>
+                  <th style="width: 40px; text-align: center;">
+                    <input type="checkbox" id="selectAllSecurityDomains" onchange="toggleSelectAllSecurityDomains(this)" style="accent-color: var(--primary); cursor: pointer; width: 15px; height: 15px;">
+                  </th>
+                  <th style="cursor: pointer;" onclick="sortSecurityDomains('domain')">
+                    Domínio <span class="sort-icon-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></svg></span>
+                  </th>
+                  <th style="cursor: pointer; width: 140px;" onclick="sortSecurityDomains('traffic')">
+                    Tráfego <span class="sort-icon-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></svg></span>
+                  </th>
+                  <th style="cursor: pointer; width: 180px;" onclick="sortSecurityDomains('session')">
+                    Última sessão <span class="sort-icon-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></svg></span>
+                  </th>
+                  <th style="text-align: right; width: 100px;">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="securityDomainsTableBody"></tbody>
+            </table>
+          </div>
+
+          <div id="securityDomainsEmptyState" style="padding: 60px 20px; text-align: center;">
+            <div style="width: 64px; height: 64px; margin: 0 auto 14px; color: var(--text-dim); display: flex; align-items: center; justify-content: center;">
+              <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline>
+                <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path>
+              </svg>
+            </div>
+            <div style="font-size: 13.5px; color: var(--text-dim); font-weight: 500;">Não há dados</div>
+          </div>
+        </div>
+      </section>
+
       <section class="tab-view" id="viewEditor">
         <div class="vturb-editor-layout">
 
@@ -5390,6 +5440,91 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       <div class="modal-footer-clean">
         <button class="btn-primary-action" onclick="closeEmbedModal()">Fechar</button>
       </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="addDomainModal">
+    <div class="modal-box" style="max-width: 560px;">
+      <div class="modal-header-clean">
+        <div class="modal-title-clean">Adicionar Domínio</div>
+        <button type="button" class="btn-icon" onclick="closeAddDomainModal()">&times;</button>
+      </div>
+      <div class="modal-body-clean" style="padding: 20px 24px;">
+        <div class="security-callout-info">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" fill="#2563eb"/><path d="M12 16v-4M12 8h.01" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/></svg>
+          <div>
+            O vídeo só será executado nos domínios listados. Para subdomínios, use * no lugar do subdomínio (ex: *.seudominio.com).
+          </div>
+        </div>
+
+        <div id="addDomainRowsContainer" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px;">
+        </div>
+
+        <button type="button" class="btn-add-another-domain" onclick="addDomainInputRow()">
+          Adicionar outro
+        </button>
+      </div>
+      <div class="modal-footer-clean" style="justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn-clean-secondary" onclick="closeAddDomainModal()">Cancelar</button>
+        <button type="button" class="btn-primary-action" id="btnSubmitAddDomains" onclick="submitAddDomains()">Adicionar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="editDomainModal">
+    <div class="modal-box" style="max-width: 520px;">
+      <div class="modal-header-clean">
+        <div class="modal-title-clean">Editar domínio</div>
+        <button type="button" class="btn-icon" onclick="closeEditDomainModal()">&times;</button>
+      </div>
+      <div class="modal-body-clean" style="padding: 24px;">
+        <input type="hidden" id="editDomainId">
+        <div class="domain-error-msg" id="editDomainError" style="display: none; color: #ef4444; font-size: 12px; font-weight: 500; margin-bottom: 6px;">Informe um domínio!</div>
+        <div class="domain-input-group">
+          <span class="domain-input-prefix">http(s)://</span>
+          <input type="text" id="editDomainInput" class="domain-input-field" placeholder="example.com ou *.example.com" oninput="document.getElementById('editDomainError').style.display='none'">
+        </div>
+      </div>
+      <div class="modal-footer-clean" style="justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn-clean-secondary" onclick="closeEditDomainModal()">Cancelar</button>
+        <button type="button" class="btn-primary-action" id="btnSubmitEditDomain" onclick="submitEditDomain()">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="deleteDomainModal">
+    <div class="modal-box" style="max-width: 460px; padding: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ff4d4f" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+            <line x1="12" y1="9" x2="12" y2="13"></line>
+            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+          </svg>
+          <span style="font-size: 16px; font-weight: 700; color: var(--text-main);">Remover domínio</span>
+        </div>
+        <button type="button" class="btn-icon" onclick="closeDeleteDomainModal()">&times;</button>
+      </div>
+      <input type="hidden" id="deleteDomainId">
+      <div style="font-size: 13.5px; color: var(--text-muted); line-height: 1.5; margin-bottom: 24px;">
+        Este domínio não poderá mais executar seus vídeos. Esta ação não pode ser desfeita.
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn-solid-danger" style="background: #ff4d4f; border-radius: var(--radius-sm);" id="btnConfirmDeleteDomain" onclick="confirmDeleteDomain()">Remover</button>
+        <button type="button" class="btn-clean-secondary" onclick="closeDeleteDomainModal()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="securityToastAlert" class="security-toast-alert" style="display: none;">
+    <div class="security-toast-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    </div>
+    <div class="security-toast-text">
+      <div class="security-toast-title">Alterações Salvas</div>
+      <div class="security-toast-sub">As configurações de domínio foram atualizadas com sucesso</div>
     </div>
   </div>
 
