@@ -506,8 +506,21 @@ function getUsedStorageBytes() {
     let total = 0;
     const files = fs.readdirSync(VIDEOS_DIR);
     for (const f of files) {
-      const stat = fs.statSync(path.join(VIDEOS_DIR, f));
-      if (stat.isFile()) total += stat.size;
+      const fullPath = path.join(VIDEOS_DIR, f);
+      try {
+        const stat = fs.statSync(fullPath);
+        if (stat.isFile()) {
+          total += stat.size;
+        } else if (stat.isDirectory()) {
+          const subFiles = fs.readdirSync(fullPath);
+          for (const sf of subFiles) {
+            try {
+              const subStat = fs.statSync(path.join(fullPath, sf));
+              if (subStat.isFile()) total += subStat.size;
+            } catch (e) {}
+          }
+        }
+      } catch (e) {}
     }
     return total;
   } catch (e) {
@@ -525,12 +538,20 @@ function getUserStorageBytes(userId) {
 }
 
 function formatStorage(bytes) {
+  if (!bytes || bytes <= 0) return '0 MB';
+  const kb = bytes / 1024;
   const mb = bytes / (1024 * 1024);
   const gb = bytes / (1024 * 1024 * 1024);
-  if (bytes >= 1024 * 1024 * 1024) {
-    return `${gb.toFixed(1).replace('.', ',')} GB`;
+  if (gb >= 1) {
+    return `${gb.toFixed(2).replace('.', ',')} GB`;
   }
-  return `${mb.toFixed(0)} MB`;
+  if (mb >= 1) {
+    return `${mb.toFixed(1).replace('.', ',')} MB`;
+  }
+  if (kb >= 1) {
+    return `${kb.toFixed(0)} KB`;
+  }
+  return `${bytes} B`;
 }
 
 function getVideoDurationFormatted(filePath) {
@@ -1120,11 +1141,12 @@ app.post('/api/auth/verify-register', (req, res) => {
 
   const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
 
+  const nowIso = new Date().toISOString();
   if (userCount === 0) {
     const info = db.prepare(`
-      INSERT INTO users (name, email, password_hash, role, status)
-      VALUES (?, ?, ?, 'owner', 'approved')
-    `).run(payload.name, cleanEmail, payload.passwordHash);
+      INSERT INTO users (name, email, password_hash, role, status, created_at)
+      VALUES (?, ?, ?, 'owner', 'approved', ?)
+    `).run(payload.name, cleanEmail, payload.passwordHash, nowIso);
 
     const token = jwt.sign({ id: info.lastInsertRowid, email: cleanEmail, role: 'owner', token_version: 1 }, JWT_SECRET, { expiresIn: '30d' });
     return res.json({
@@ -1139,9 +1161,9 @@ app.post('/api/auth/verify-register', (req, res) => {
   const initialStatus = requireApproval ? 'pending' : 'approved';
 
   const info = db.prepare(`
-    INSERT INTO users (name, email, password_hash, role, status)
-    VALUES (?, ?, ?, 'member', ?)
-  `).run(payload.name, cleanEmail, payload.passwordHash, initialStatus);
+    INSERT INTO users (name, email, password_hash, role, status, created_at)
+    VALUES (?, ?, ?, 'member', ?, ?)
+  `).run(payload.name, cleanEmail, payload.passwordHash, initialStatus, nowIso);
 
   if (initialStatus === 'pending') {
     return res.json({
@@ -2242,10 +2264,11 @@ app.post('/api/invites/accept', async (req, res) => {
       return res.status(400).json({ error: 'A senha deve ter no mínimo 6 caracteres.' });
     }
     const hash = bcrypt.hashSync(cleanPassword, 10);
+    const nowIso = new Date().toISOString();
     const info = db.prepare(`
-      INSERT INTO users (name, email, password_hash, role, status, onboarding_completed, owner_id)
-      VALUES (?, ?, ?, ?, 'approved', 1, ?)
-    `).run(memberName.slice(0, 60), cleanEmail, hash, invite.role, invite.owner_id);
+      INSERT INTO users (name, email, password_hash, role, status, onboarding_completed, owner_id, created_at)
+      VALUES (?, ?, ?, ?, 'approved', 1, ?, ?)
+    `).run(memberName.slice(0, 60), cleanEmail, hash, invite.role, invite.owner_id, nowIso);
 
     user = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
   } else {

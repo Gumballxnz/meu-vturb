@@ -911,10 +911,194 @@
       border-color: var(--primary);
     }
 
+    .view-control-toolbar {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .segmented-control {
+      display: inline-flex;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .segmented-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 12.5px;
+      font-weight: 500;
+      padding: 5px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .segmented-btn:hover {
+      color: var(--text-main);
+    }
+
+    .segmented-btn.active {
+      background: #2563EB;
+      color: #ffffff;
+      font-weight: 600;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    .view-mode-toggle {
+      display: inline-flex;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .view-mode-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .view-mode-btn:hover {
+      color: var(--text-main);
+    }
+
+    .view-mode-btn.active {
+      background: rgba(37, 99, 235, 0.35);
+      color: #38bdf8;
+    }
+
+    body.light-theme .segmented-control,
+    body.light-theme .view-mode-toggle {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+    }
+
+    body.light-theme .segmented-btn.active {
+      background: #2563EB;
+      color: #ffffff;
+    }
+
+    body.light-theme .view-mode-btn.active {
+      background: #e2e8f0;
+      color: #2563EB;
+    }
+
     .video-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
       gap: 20px;
+    }
+
+    .video-grid.is-compact-view {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .video-grid.is-compact-view .video-card {
+      flex-direction: row;
+      align-items: center;
+      padding: 8px 16px;
+      gap: 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+    }
+
+    .video-grid.is-compact-view .video-thumb-stage {
+      width: 110px;
+      min-width: 110px;
+      height: 62px;
+      border-radius: 6px;
+      flex-shrink: 0;
+    }
+
+    .video-grid.is-compact-view .thumb-badge-source {
+      top: 3px;
+      left: 3px;
+      font-size: 9px;
+      padding: 1px 4px;
+    }
+
+    .video-grid.is-compact-view .thumb-badge-duration {
+      bottom: 3px;
+      right: 3px;
+      font-size: 9.5px;
+      padding: 1px 4px;
+    }
+
+    .video-grid.is-compact-view .video-card-body {
+      flex: 1;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 0;
+    }
+
+    .video-grid.is-compact-view .video-card-title {
+      font-size: 13.5px;
+      font-weight: 600;
+      margin-bottom: 0;
+      max-width: 280px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer;
+    }
+
+    .video-grid.is-compact-view .video-stats-row {
+      margin: 0;
+      gap: 14px;
+      display: flex;
+      align-items: center;
+    }
+
+    .video-grid.is-compact-view .video-card-actions {
+      margin-top: 0;
+      gap: 6px;
+      display: flex;
+      align-items: center;
+    }
+
+    .video-grid.is-compact-view .btn-action-card {
+      padding: 5px 10px;
+      font-size: 12px;
+    }
+
+    @media (max-width: 768px) {
+      .video-grid.is-compact-view .video-card {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .video-grid.is-compact-view .video-thumb-stage {
+        width: 100%;
+        height: 140px;
+      }
+      .video-grid.is-compact-view .video-card-body {
+        flex-direction: column;
+        align-items: flex-start;
+      }
     }
 
     .video-card {
@@ -3666,14 +3850,48 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
         </div>
 
         <div class="card-panel">
-          <div class="panel-header">
+          <div class="panel-header" style="flex-wrap: wrap; gap: 12px;">
             <div class="panel-title">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
-              VSLs Ativas
+              VSLs e Pastas
             </div>
-            <button class="btn-clean-secondary" onclick="navigateTo('videos')">Ver Todas →</button>
+
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+              <div class="view-control-toolbar">
+                <div class="segmented-control">
+                  <button type="button" class="segmented-btn active" id="contentFilterAll_overview" onclick="setContentFilter('all')">Todos</button>
+                  <button type="button" class="segmented-btn" id="contentFilterFolders_overview" onclick="setContentFilter('folders')">Pastas</button>
+                  <button type="button" class="segmented-btn" id="contentFilterVideos_overview" onclick="setContentFilter('videos')">Vídeos</button>
+                </div>
+
+                <div class="view-mode-toggle">
+                  <button type="button" class="view-mode-btn" id="viewModeLarge_overview" onclick="setViewMode('large')" title="Visualização em Grade (Grande)">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                  </button>
+                  <button type="button" class="view-mode-btn active" id="viewModeCompact_overview" onclick="setViewMode('compact')" title="Visualização em Lista (Pequeno)">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                  </button>
+                </div>
+              </div>
+
+              <button class="btn-clean-secondary" onclick="navigateTo('videos')">Ver Todas →</button>
+            </div>
           </div>
-          <div class="video-grid" id="overviewRecentVideos"></div>
+
+          <div id="overviewFoldersContainer" style="margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <span style="font-size: 13px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Pastas</span>
+              <span style="font-size: 12px; color: var(--text-dim);" id="overviewFoldersCountLabel">0 pastas</span>
+            </div>
+            <div class="folders-grid" id="overviewFoldersGrid"></div>
+          </div>
+
+          <div id="overviewVideosContainer">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+              <span style="font-size: 13px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Vídeos Recentes</span>
+            </div>
+            <div class="video-grid is-compact-view" id="overviewRecentVideos"></div>
+          </div>
         </div>
       </section>
 
@@ -3727,9 +3945,9 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
             <div class="folders-grid" id="foldersGrid"></div>
           </div>
 
-          <div class="card-panel" style="padding: 16px 20px; margin-bottom: 20px;">
-            <div class="panel-header" style="margin-bottom: 0;">
-              <div class="filter-bar">
+          <div class="card-panel" id="videosFilterCardPanel" style="padding: 14px 18px; margin-bottom: 20px;">
+            <div class="panel-header" style="margin-bottom: 0; flex-wrap: wrap; gap: 12px;">
+              <div class="filter-bar" style="flex: 1; min-width: 260px;">
                 <div class="search-input-box">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                   <input type="text" id="filterSearchInput" placeholder="Buscar VSL por título..." oninput="filterVideosList()">
@@ -3748,11 +3966,30 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
                 </select>
               </div>
 
-              <div style="font-size: 13px; color: var(--text-dim);" id="videosCountLabel">0 vídeos</div>
+              <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                <div class="view-control-toolbar">
+                  <div class="segmented-control">
+                    <button type="button" class="segmented-btn active" id="contentFilterAll_videos" onclick="setContentFilter('all')">Todos</button>
+                    <button type="button" class="segmented-btn" id="contentFilterFolders_videos" onclick="setContentFilter('folders')">Pastas</button>
+                    <button type="button" class="segmented-btn" id="contentFilterVideos_videos" onclick="setContentFilter('videos')">Vídeos</button>
+                  </div>
+
+                  <div class="view-mode-toggle">
+                    <button type="button" class="view-mode-btn" id="viewModeLarge_videos" onclick="setViewMode('large')" title="Visualização em Grade (Grande)">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    </button>
+                    <button type="button" class="view-mode-btn active" id="viewModeCompact_videos" onclick="setViewMode('compact')" title="Visualização em Lista (Pequeno)">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div style="font-size: 13px; color: var(--text-dim);" id="videosCountLabel">0 vídeos</div>
+              </div>
             </div>
           </div>
 
-          <div class="video-grid" id="mainVideoGrid"></div>
+          <div class="video-grid is-compact-view" id="mainVideoGrid"></div>
         </div>
 
         <div id="libPaneTop" style="display: none;">
@@ -5996,6 +6233,30 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       }, 3500);
     }
 
+    function parseUtcDate(raw) {
+      if (!raw) return null;
+      if (raw instanceof Date) return isNaN(raw.getTime()) ? null : raw;
+      let s = String(raw).trim();
+      if (!s) return null;
+      if (/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}/.test(s)) {
+        s = s.replace(' ', 'T') + 'Z';
+      } else if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?$/.test(s)) {
+        s = s + 'Z';
+      }
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? null : d;
+    }
+
+    function formatDate(raw) {
+      const d = parseUtcDate(raw);
+      return d ? d.toLocaleDateString('pt-BR') : '-';
+    }
+
+    function formatDateTime(raw) {
+      const d = parseUtcDate(raw);
+      return d ? d.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-';
+    }
+
     function toggleSidebar(open) {
       const sb = document.getElementById('sidebar');
       const bd = document.getElementById('sidebarBackdrop');
@@ -6036,7 +6297,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
 
     function renderNotificationItem(n) {
       const isUnread = !n.read;
-      const timeStr = n.created_at ? new Date(n.created_at).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '';
+      const timeStr = n.created_at ? formatDateTime(n.created_at) : '';
       return `
         <div class="notif-item ${isUnread ? 'unread' : ''}" data-id="${n.id}">
           <div class="notif-item-icon">
@@ -7203,7 +7464,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
 
       const isOwner = data.isOwner;
       tbody.innerHTML = videos.map(v => {
-        const date = v.createdAt ? new Date(v.createdAt).toLocaleDateString('pt-BR') : '-';
+        const date = v.createdAt ? formatDate(v.createdAt) : '-';
         const statusBadge = v.isTrash
           ? `<span class="badge-status" style="background:rgba(239,68,68,0.12);color:#f87171;border:1px solid rgba(239,68,68,0.25);">Lixeira</span>`
           : `<span class="badge-status" style="background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.25);">Ativo</span>`;
@@ -9381,7 +9642,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
             menuItems += `<button class="danger" onclick="execUserAction(${u.id}, 'delete'); closeAllUserMenus()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>Excluir</button>`;
           }
 
-          const createdDate = u.created_at ? new Date(u.created_at).toLocaleDateString('pt-BR') : '-';
+          const createdDate = u.created_at ? formatDate(u.created_at) : '-';
           const roleLabel = uRole === 'owner' ? 'OWNER' : (uRole === 'admin' ? 'ADMIN' : 'MEMBRO');
           const tr = document.createElement('tr');
           tr.innerHTML = `
@@ -10176,7 +10437,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           const statusBadge = isPending
             ? '<span class="badge-status" style="background: rgba(217, 119, 6, 0.15); color: #f59e0b; border: 1px solid rgba(217, 119, 6, 0.3);">Pendente</span>'
             : '<span class="badge-status green">Ativo</span>';
-          const memberDate = m.created_at ? new Date(m.created_at).toLocaleDateString('pt-BR') : '-';
+          const memberDate = m.created_at ? formatDate(m.created_at) : '-';
           const initial = m.name ? m.name.charAt(0).toUpperCase() : 'U';
           const avatarHtml = `
             <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--color-primary-soft); border: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--primary); position: relative; overflow: hidden; flex-shrink: 0;">
@@ -10515,7 +10776,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         tableWrapper.style.display = 'block';
 
         tbody.innerHTML = hooks.map(h => {
-          const dateStr = h.created_at ? new Date(h.created_at).toLocaleDateString('pt-BR') : '-';
+          const dateStr = h.created_at ? formatDate(h.created_at) : '-';
           const eventsBadges = (h.events || []).map(ev =>
             `<span style="background: var(--bg-surface); border: 1px solid var(--border-subtle); padding: 2px 6px; border-radius: 4px; font-size: 11px; margin-right: 4px; display: inline-block; margin-bottom: 2px;">${escapeHtml(ev)}</span>`
           ).join('');
