@@ -3419,11 +3419,6 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
             </div>
           </div>
         </div>
-
-        <button class="btn-primary-action" id="btnTopNewVsl" onclick="openNewVideoModal()">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          <span>Nova VSL</span>
-        </button>
       </div>
     </header>
 
@@ -3858,9 +3853,9 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 16px; flex-wrap: wrap;">
               <p style="font-size: 13.5px; color: var(--text-muted); max-width: 650px; line-height: 1.5; margin: 0;">
                 Gerencie membros da equipe e personalize suas permissões de acesso na sua conta.
-                <a href="javascript:void(0)" style="color: var(--primary); text-decoration: underline;">Saiba mais sobre membros e permissões</a>
+                <a href="/pt-br/article/aprenda-a-usar-membros-e-permissoes-w2mokc/" target="_blank" style="color: var(--primary); text-decoration: underline;">Saiba mais sobre membros e permissões</a>
               </p>
-              <button type="button" class="btn-primary-action" onclick="openAddMemberModal()">+ Adicionar membro</button>
+              <button type="button" class="btn-primary-action" onclick="openAddMemberModal()">+ Enviar convite</button>
             </div>
 
             <div class="card-panel">
@@ -3869,9 +3864,9 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
                   <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                 </div>
                 <div class="settings-empty-text">
-                  Os membros da sua equipe aparecerão aqui, adicione um primeiro membro e configure suas permissões
+                  Os membros da sua equipe aparecerão aqui, envie um convite por e-mail e configure suas permissões
                 </div>
-                <button type="button" class="btn-primary-action" onclick="openAddMemberModal()" style="margin: 20px auto 0; align-self: center;">Adicionar membro</button>
+                <button type="button" class="btn-primary-action" onclick="openAddMemberModal()" style="margin: 20px auto 0; align-self: center;">Enviar convite</button>
               </div>
 
               <div id="membersTableWrapper" style="display: none;" class="table-responsive">
@@ -3880,8 +3875,9 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
                     <tr>
                       <th>Membro</th>
                       <th>Email</th>
-                      <th>Cargo</th>
-                      <th>Cadastro</th>
+                      <th>Permissão</th>
+                      <th>Status</th>
+                      <th>Data</th>
                       <th style="text-align: right;">Ações</th>
                     </tr>
                   </thead>
@@ -4925,35 +4921,52 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
   </div>
 
   <div class="modal-overlay" id="addMemberModal">
-    <div class="modal-box" style="max-width: 460px;">
+    <div class="modal-box" style="max-width: 580px;">
       <div class="modal-header-clean">
-        <div class="modal-title-clean">Adicionar membro da equipe</div>
+        <div class="modal-title-clean">Adicionar Membro</div>
         <button class="btn-icon" onclick="closeAddMemberModal()">&times;</button>
       </div>
       <div class="modal-body-clean" style="padding: 20px 24px;">
-        <div class="form-row">
-          <label class="form-label">Nome completo</label>
-          <input type="text" id="inputMemberName" class="form-input-text" placeholder="Ex: Lucas Silva">
+        <p style="font-size: 13.5px; color: var(--text-muted); line-height: 1.5; margin-bottom: 20px;">
+          Envie o convite por e-mail para que o membro cadastre e vincule a conta.
+        </p>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 22px;">
+          <div>
+            <label class="form-label" style="font-size: 13px; font-weight: 600; color: var(--text-main); margin-bottom: 6px; display: block;">Nome</label>
+            <input type="text" id="inputMemberName" class="form-input-text" placeholder="Digite o nome do membro" oninput="validateMemberNameLive()">
+            <div id="inputMemberNameError" style="color: #ef4444; font-size: 12px; margin-top: 4px; display: none;">O nome deve conter pelo menos 3 caracteres</div>
+          </div>
+          <div>
+            <label class="form-label" style="font-size: 13px; font-weight: 600; color: var(--text-main); margin-bottom: 6px; display: block;">E-mail</label>
+            <input type="email" id="inputMemberEmail" class="form-input-text" placeholder="Digite o e-mail do membro">
+          </div>
         </div>
-        <div class="form-row">
-          <label class="form-label">Email de acesso</label>
-          <input type="email" id="inputMemberEmail" class="form-input-text" placeholder="membro@empresa.com">
-        </div>
-        <div class="form-row">
-          <label class="form-label">Senha de acesso</label>
-          <input type="password" id="inputMemberPassword" class="form-input-text" placeholder="Mínimo 6 caracteres">
-        </div>
-        <div class="form-row" style="margin-bottom: 0;">
-          <label class="form-label">Cargo / Permissão</label>
-          <select id="inputMemberRole" class="form-input-text" style="background: var(--bg-surface);">
-            <option value="member">Membro (apenas visualização e upload)</option>
-            <option value="owner">Administrador (acesso completo à conta)</option>
-          </select>
+
+        <div style="margin-bottom: 8px;">
+          <label class="form-label" style="font-size: 13px; font-weight: 600; color: var(--text-main); margin-bottom: 12px; display: block;">Permissão</label>
+          <div style="display: flex; gap: 28px; flex-wrap: wrap;">
+            <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer;">
+              <input type="radio" name="memberPermissionRadio" value="admin" style="margin-top: 3px; accent-color: var(--color-primary);">
+              <div>
+                <div style="font-size: 13.5px; font-weight: 600; color: var(--text-main);">Administrador</div>
+                <div style="font-size: 12px; color: var(--text-dim); margin-top: 2px;">Tem todas as permissões.</div>
+              </div>
+            </label>
+
+            <label style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer;">
+              <input type="radio" name="memberPermissionRadio" value="member" checked style="margin-top: 3px; accent-color: var(--color-primary);">
+              <div>
+                <div style="font-size: 13.5px; font-weight: 600; color: var(--text-main);">Usuário Comum</div>
+                <div style="font-size: 12px; color: var(--text-dim); margin-top: 2px;">Permissões limitadas atribuídas.</div>
+              </div>
+            </label>
+          </div>
         </div>
       </div>
       <div class="modal-footer-clean">
-        <button class="btn-clean-secondary" onclick="closeAddMemberModal()">Cancelar</button>
-        <button class="btn-primary-action" id="btnSubmitAddMember" onclick="submitAddMember()">Adicionar membro</button>
+        <button type="button" class="btn-clean-secondary" onclick="closeAddMemberModal()">Cancelar</button>
+        <button type="button" class="btn-primary-action" id="btnSubmitAddMember" onclick="submitInviteMember()">Enviar convite</button>
       </div>
     </div>
   </div>
@@ -8929,11 +8942,15 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         tbody.innerHTML = members.map(m => {
           const isMe = currentUser && currentUser.id === m.id;
           const isOwner = m.id === accountOwnerId;
+          const isPending = m.invite_status === 'pending';
           const roleBadge = isOwner
             ? '<span class="user-role-tag" style="background: rgba(124, 58, 237, 0.15); color: #a78bfa; border: 1px solid rgba(124, 58, 237, 0.3);">Proprietário</span>'
             : (m.role === 'admin'
               ? '<span class="user-role-tag" style="background: rgba(37, 99, 235, 0.15); color: #60a5fa; border: 1px solid rgba(37, 99, 235, 0.3);">Administrador</span>'
-              : '<span class="user-role-tag" style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.2);">Membro</span>');
+              : '<span class="user-role-tag" style="background: rgba(148, 163, 184, 0.15); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.2);">Usuário Comum</span>');
+          const statusBadge = isPending
+            ? '<span class="badge-status" style="background: rgba(217, 119, 6, 0.15); color: #f59e0b; border: 1px solid rgba(217, 119, 6, 0.3);">Pendente</span>'
+            : '<span class="badge-status green">Ativo</span>';
           const memberDate = m.created_at ? new Date(m.created_at).toLocaleDateString('pt-BR') : '-';
           const initial = m.name ? m.name.charAt(0).toUpperCase() : 'U';
           const avatarHtml = `
@@ -8943,6 +8960,24 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
             </div>
           `;
           const canDelete = !isMe && !isOwner && (!currentUser || !currentUser.owner_id || currentUser.role === 'admin' || currentUser.role === 'owner');
+
+          let actionsHtml = '';
+          if (isPending) {
+            actionsHtml = `
+              <button type="button" class="btn-icon" title="Reenviar convite" onclick="resendInvite(${m.id}, this)" style="margin-right: 6px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+              </button>
+              <button type="button" class="btn-icon" title="Cancelar convite" onclick="cancelInvite(${m.id}, '${escapeHtml(m.name)}')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              </button>
+            `;
+          } else if (canDelete) {
+            actionsHtml = `
+              <button type="button" class="btn-icon" title="Remover membro" onclick="deleteMember(${m.id}, '${escapeHtml(m.name)}')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              </button>
+            `;
+          }
 
           return `
             <tr>
@@ -8957,14 +8992,9 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
               </td>
               <td style="color: var(--text-dim); font-size: 13px;">${escapeHtml(m.email)}</td>
               <td>${roleBadge}</td>
+              <td>${statusBadge}</td>
               <td style="color: var(--text-dim); font-size: 12.5px;">${memberDate}</td>
-              <td style="text-align: right;">
-                ${canDelete ? `
-                  <button type="button" class="btn-icon" title="Remover membro" onclick="deleteMember(${m.id}, '${escapeHtml(m.name)}')">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                  </button>
-                ` : ''}
-              </td>
+              <td style="text-align: right;">${actionsHtml}</td>
             </tr>
           `;
         }).join('');
@@ -8973,11 +9003,29 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       }
     }
 
+    function validateMemberNameLive() {
+      const input = document.getElementById('inputMemberName');
+      const errorEl = document.getElementById('inputMemberNameError');
+      if (!input || !errorEl) return;
+      const val = input.value.trim();
+      if (val.length > 0 && val.length < 3) {
+        errorEl.style.display = 'block';
+        input.style.borderColor = '#ef4444';
+      } else {
+        errorEl.style.display = 'none';
+        input.style.borderColor = '';
+      }
+    }
+
     function openAddMemberModal() {
-      document.getElementById('inputMemberName').value = '';
-      document.getElementById('inputMemberEmail').value = '';
-      document.getElementById('inputMemberPassword').value = '';
-      document.getElementById('inputMemberRole').value = 'member';
+      const nameInput = document.getElementById('inputMemberName');
+      const emailInput = document.getElementById('inputMemberEmail');
+      const errorEl = document.getElementById('inputMemberNameError');
+      if (nameInput) { nameInput.value = ''; nameInput.style.borderColor = ''; }
+      if (emailInput) { emailInput.value = ''; emailInput.style.borderColor = ''; }
+      if (errorEl) errorEl.style.display = 'none';
+      const radios = document.getElementsByName('memberPermissionRadio');
+      radios.forEach(r => { if (r.value === 'member') r.checked = true; });
       document.getElementById('addMemberModal').classList.add('active');
     }
 
@@ -8985,31 +9033,75 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       document.getElementById('addMemberModal').classList.remove('active');
     }
 
-    async function submitAddMember() {
+    async function submitInviteMember() {
       const btn = document.getElementById('btnSubmitAddMember');
-      const name = document.getElementById('inputMemberName').value.trim();
-      const email = document.getElementById('inputMemberEmail').value.trim();
-      const password = document.getElementById('inputMemberPassword').value;
-      const role = document.getElementById('inputMemberRole').value;
+      const nameInput = document.getElementById('inputMemberName');
+      const emailInput = document.getElementById('inputMemberEmail');
+      const errorEl = document.getElementById('inputMemberNameError');
+      const name = nameInput ? nameInput.value.trim() : '';
+      const email = emailInput ? emailInput.value.trim() : '';
+      const radio = document.querySelector('input[name="memberPermissionRadio"]:checked');
+      const permission = radio ? radio.value : 'member';
 
-      if (!name || !email || !password) {
-        return showToast('Preencha nome, email e senha.', true);
+      if (!name || name.length < 3) {
+        if (errorEl) errorEl.style.display = 'block';
+        if (nameInput) { nameInput.style.borderColor = '#ef4444'; nameInput.focus(); }
+        return showToast('O nome deve conter pelo menos 3 caracteres.', true);
+      }
+      if (!email || !email.includes('@')) {
+        if (emailInput) { emailInput.style.borderColor = '#ef4444'; emailInput.focus(); }
+        return showToast('Informe um e-mail válido para o convite.', true);
       }
 
-      setButtonLoading(btn, true, 'Adicionando...');
+      setButtonLoading(btn, true, 'Enviando convite...');
       try {
-        await api('/api/members', {
+        const res = await api('/api/members', {
           method: 'POST',
-          body: JSON.stringify({ name, email, password, role })
+          body: JSON.stringify({ name, email, permission })
         });
         closeAddMemberModal();
-        showToast('Membro adicionado com sucesso!');
+        showToast(res.message || 'Convite enviado por e-mail com sucesso!');
         await loadMembers();
       } catch (err) {
         showToast(err.message, true);
       } finally {
         setButtonLoading(btn, false);
       }
+    }
+
+    async function resendInvite(inviteId, btnEl) {
+      if (btnEl) setButtonLoading(btnEl, true, 'Reenviando...');
+      try {
+        const res = await api(`/api/invites/${inviteId}/resend`, { method: 'POST' });
+        showToast(res.message || 'Convite reenviado com sucesso!');
+        await loadMembers();
+      } catch (err) {
+        showToast(err.message, true);
+      } finally {
+        if (btnEl) setButtonLoading(btnEl, false);
+      }
+    }
+
+    function cancelInvite(inviteId, name) {
+      showConfirmDialog({
+        title: 'Cancelar Convite',
+        message: `Deseja cancelar o convite enviado para "${name}"?`,
+        confirmText: 'Cancelar Convite',
+        isDanger: true,
+        onConfirm: async (btn) => {
+          setButtonLoading(btn, true, 'Cancelando...');
+          try {
+            await api(`/api/invites/${inviteId}`, { method: 'DELETE' });
+            closeConfirmModal();
+            showToast('Convite cancelado.');
+            await loadMembers();
+          } catch (err) {
+            showToast(err.message, true);
+          } finally {
+            setButtonLoading(btn, false);
+          }
+        }
+      });
     }
 
     function deleteMember(id, name) {
