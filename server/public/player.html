@@ -71,6 +71,20 @@
       visibility: hidden;
       pointer-events: none;
     }
+    .smart-autoplay-overlay.pos-center {
+      align-items: center;
+      justify-content: center;
+    }
+    .smart-autoplay-overlay.pos-top {
+      align-items: flex-start;
+      justify-content: center;
+      padding-top: clamp(20px, 6vh, 48px);
+    }
+    .smart-autoplay-overlay.pos-bottom {
+      align-items: flex-end;
+      justify-content: center;
+      padding-bottom: clamp(24px, 8vh, 56px);
+    }
     .pulse-badge-wrapper {
       position: relative;
       display: inline-flex;
@@ -89,57 +103,141 @@
     .pulse-badge-halo {
       position: absolute;
       inset: -8px;
-      border-radius: 9999px;
-      background: rgba(124, 58, 237, 0.25);
-      border: 2px solid rgba(139, 92, 246, 0.5);
+      border-radius: inherit;
       pointer-events: none;
-      animation: vturb-halo-pulse 2.2s infinite ease-in-out;
-      box-shadow: 0 0 24px rgba(124, 58, 237, 0.4);
+      transition: all 0.3s ease;
     }
     .pulse-badge {
       position: relative;
       display: flex;
       align-items: center;
-      gap: 14px;
-      background: rgba(9, 9, 11, 0.94);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      padding: 10px 22px 10px 12px;
-      border-radius: 9999px;
-      box-shadow: 0 16px 36px -6px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.08);
+      transition: all 0.3s ease;
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       z-index: 2;
     }
     .pulse-icon-box {
-      width: 44px;
-      height: 44px;
-      min-width: 44px;
       border-radius: 50%;
-      background: #7c3aed;
       display: flex;
       align-items: center;
       justify-content: center;
-      color: #fff;
       flex-shrink: 0;
-      box-shadow: 0 4px 14px rgba(124, 58, 237, 0.55);
-      animation: vturb-icon-pulse 2s infinite ease-in-out;
+      transition: all 0.3s ease;
     }
     .pulse-icon-box svg {
-      width: 22px;
-      height: 22px;
-      color: #ffffff;
+      transition: all 0.2s ease;
     }
     .pulse-text-block {
       display: flex;
       flex-direction: column;
-      font-size: 13.5px;
       font-weight: 700;
-      color: #ffffff;
       line-height: 1.35;
-      text-align: left;
       letter-spacing: -0.01em;
       white-space: pre-line;
       text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+      transition: color 0.3s ease;
+    }
+    .pulse-badge-wrapper.style-capsule .pulse-badge {
+      flex-direction: row;
+    }
+    .pulse-badge-wrapper.style-card .pulse-badge {
+      flex-direction: column;
+      text-align: center;
+    }
+    .pulse-badge-wrapper.style-card .pulse-text-block {
+      text-align: center;
+    }
+    .pulse-badge-wrapper.style-square .pulse-badge {
+      flex-direction: row;
+    }
+    .pulse-badge-wrapper.style-circle .pulse-badge {
+      flex-direction: column;
+      text-align: center;
+    }
+    .pulse-badge-wrapper.style-circle .pulse-text-block {
+      text-align: center;
+      font-size: 11px;
+    }
+    .pulse-badge-wrapper.size-compact .pulse-badge {
+      padding: 7px 14px 7px 8px;
+      gap: 10px;
+    }
+    .pulse-badge-wrapper.size-compact.style-card .pulse-badge {
+      padding: 12px 16px;
+      gap: 8px;
+    }
+    .pulse-badge-wrapper.size-compact .pulse-icon-box {
+      width: 34px;
+      height: 34px;
+      min-width: 34px;
+    }
+    .pulse-badge-wrapper.size-compact .pulse-icon-box svg {
+      width: 17px;
+      height: 17px;
+    }
+    .pulse-badge-wrapper.size-compact .pulse-text-block {
+      font-size: 12px;
+    }
+    .pulse-badge-wrapper.size-medium .pulse-badge {
+      padding: 10px 22px 10px 12px;
+      gap: 14px;
+    }
+    .pulse-badge-wrapper.size-medium.style-card .pulse-badge {
+      padding: 18px 24px;
+      gap: 12px;
+    }
+    .pulse-badge-wrapper.size-medium .pulse-icon-box {
+      width: 44px;
+      height: 44px;
+      min-width: 44px;
+    }
+    .pulse-badge-wrapper.size-medium .pulse-icon-box svg {
+      width: 22px;
+      height: 22px;
+    }
+    .pulse-badge-wrapper.size-medium .pulse-text-block {
+      font-size: 13.5px;
+    }
+    .pulse-badge-wrapper.size-large .pulse-badge {
+      padding: 14px 28px 14px 16px;
+      gap: 16px;
+    }
+    .pulse-badge-wrapper.size-large.style-card .pulse-badge {
+      padding: 24px 32px;
+      gap: 14px;
+    }
+    .pulse-badge-wrapper.size-large .pulse-icon-box {
+      width: 54px;
+      height: 54px;
+      min-width: 54px;
+    }
+    .pulse-badge-wrapper.size-large .pulse-icon-box svg {
+      width: 28px;
+      height: 28px;
+    }
+    .pulse-badge-wrapper.size-large .pulse-text-block {
+      font-size: 16px;
+    }
+    .pulse-badge-wrapper.anim-pulse .pulse-badge-halo {
+      animation: vturb-halo-pulse 2.2s infinite ease-in-out;
+    }
+    .pulse-badge-wrapper.anim-pulse .pulse-icon-box {
+      animation: vturb-icon-pulse 2s infinite ease-in-out;
+    }
+    .pulse-badge-wrapper.anim-glow .pulse-badge-halo {
+      display: none;
+    }
+    .pulse-badge-wrapper.anim-glow .pulse-badge {
+      animation: vturb-glow-pulse 2.4s infinite ease-in-out;
+    }
+    .pulse-badge-wrapper.anim-none .pulse-badge-halo {
+      display: none;
+    }
+    .pulse-badge-wrapper.anim-none .pulse-badge {
+      animation: none;
+    }
+    .pulse-badge-wrapper.anim-none .pulse-icon-box {
+      animation: none;
     }
     @keyframes vturb-halo-pulse {
       0%, 100% {
@@ -157,6 +255,14 @@
       }
       50% {
         transform: scale(1.07);
+      }
+    }
+    @keyframes vturb-glow-pulse {
+      0%, 100% {
+        filter: drop-shadow(0 0 8px var(--an-glow-color, rgba(124, 58, 237, 0.4)));
+      }
+      50% {
+        filter: drop-shadow(0 0 22px var(--an-glow-color, rgba(124, 58, 237, 0.85)));
       }
     }
     .progress-bar-container {

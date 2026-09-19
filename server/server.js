@@ -13,7 +13,12 @@ const app = express();
 const PORT = process.env.PORT || 4000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
-if (NODE_ENV === 'production' && (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'cloudvturb_ultra_secret_key_2026_jwt_token_99')) {
+const isInsecureSecret = !process.env.JWT_SECRET ||
+  process.env.JWT_SECRET.trim() === '' ||
+  process.env.JWT_SECRET === 'cloudvturb_ultra_secret_key_2026_jwt_token_99' ||
+  process.env.JWT_SECRET === 'cloudvturb_dev_secret_key_2026';
+
+if (NODE_ENV === 'production' && isInsecureSecret) {
   console.error('ERRO FATAL: JWT_SECRET seguro deve ser configurado via variável de ambiente em produção.');
   process.exit(1);
 }
@@ -50,12 +55,30 @@ db.exec(`
     password_hash TEXT NOT NULL,
     role TEXT DEFAULT 'member',
     status TEXT DEFAULT 'pending',
+    full_name TEXT,
+    country TEXT,
+    phone TEXT,
+    address_street TEXT,
+    postal_code TEXT,
+    state_province TEXT,
+    onboarding_completed INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+
+  CREATE TABLE IF NOT EXISTS folders (
+    id TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_folders_user ON folders(user_id);
 
   CREATE TABLE IF NOT EXISTS videos (
     id TEXT PRIMARY KEY,
     user_id INTEGER,
+    folder_id TEXT,
     title TEXT NOT NULL,
     source_type TEXT DEFAULT 'remote',
     file_path TEXT,
@@ -64,8 +87,10 @@ db.exec(`
     file_size INTEGER DEFAULT 0,
     plays INTEGER DEFAULT 0,
     settings_json TEXT,
+    deleted_at DATETIME DEFAULT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(folder_id) REFERENCES folders(id) ON DELETE SET NULL
   );
 
   CREATE TABLE IF NOT EXISTS analytics_events (
@@ -94,8 +119,19 @@ try {
   `).run(PLAYER_DOMAIN);
 } catch (e) {}
 
+const userCols = ['full_name', 'country', 'phone', 'address_street', 'postal_code', 'state_province'];
+for (const col of userCols) {
+  try { db.exec(`ALTER TABLE users ADD COLUMN ${col} TEXT`); } catch (e) {}
+}
+try { db.exec("ALTER TABLE users ADD COLUMN onboarding_completed INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE videos ADD COLUMN file_size INTEGER DEFAULT 0"); } catch (e) {}
+try { db.exec("ALTER TABLE videos ADD COLUMN folder_id TEXT"); } catch (e) {}
+try { db.exec("ALTER TABLE videos ADD COLUMN deleted_at DATETIME DEFAULT NULL"); } catch (e) {}
+try { db.exec("CREATE INDEX IF NOT EXISTS idx_videos_folder ON videos(folder_id)"); } catch (e) {}
+try { db.exec("CREATE INDEX IF NOT EXISTS idx_videos_deleted ON videos(deleted_at)"); } catch (e) {}
+
 try {
-  db.exec("ALTER TABLE videos ADD COLUMN file_size INTEGER DEFAULT 0");
+  db.prepare("UPDATE users SET onboarding_completed = 1 WHERE role = 'owner' OR onboarding_completed IS NULL").run();
 } catch (e) {}
 
 try {
@@ -131,17 +167,27 @@ const rawAllowedOrigins = process.env.ALLOWED_ORIGINS
 
 const corsOptions = {
   origin: (origin, callback) => {
-    if (!origin || NODE_ENV !== 'production' || rawAllowedOrigins.length === 0) {
+    if (!origin || NODE_ENV !== 'production' || rawAllowedOrigins.length === 0 || rawAllowedOrigins.includes('*')) {
       return callback(null, true);
     }
     const cleanOrigin = origin.toLowerCase().replace(/\/$/, '');
+    const internalOrigins = [
+      `https://${PLAYER_DOMAIN}`,
+      `https://${DASH_DOMAIN}`,
+      `https://${BASE_DOMAIN}`,
+      `http://${PLAYER_DOMAIN}`,
+      `http://${DASH_DOMAIN}`,
+      `http://${BASE_DOMAIN}`
+    ];
+    if (internalOrigins.includes(cleanOrigin)) {
+      return callback(null, true);
+    }
     const isAllowed = rawAllowedOrigins.some(allowed => {
       if (allowed === '*' || cleanOrigin === allowed) return true;
       if (allowed.startsWith('*.') && cleanOrigin.endsWith(allowed.slice(1))) return true;
       return false;
     });
-    if (isAllowed) return callback(null, true);
-    return callback(new Error('Origem não autorizada por política de CORS.'));
+    return callback(null, isAllowed);
   },
   credentials: true
 };
@@ -239,7 +285,7 @@ function authMiddleware(req, res, next) {
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const user = db.prepare('SELECT id, name, email, role, status FROM users WHERE id = ?').get(decoded.id);
+    const user = db.prepare('SELECT id, name, email, role, status, full_name, country, phone, address_street, postal_code, state_province, onboarding_completed FROM users WHERE id = ?').get(decoded.id);
     if (!user) return res.status(401).json({ error: 'Usuário não encontrado.' });
     if (user.status !== 'approved') return res.status(403).json({ error: 'Acesso bloqueado ou pendente de aprovação.' });
     req.user = user;
@@ -383,12 +429,68 @@ app.post('/api/auth/login', (req, res) => {
   res.json({
     success: true,
     token,
-    user: { id: user.id, name: user.name, email: user.email, role: user.role, status: user.status }
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      full_name: user.full_name,
+      country: user.country,
+      phone: user.phone,
+      address_street: user.address_street,
+      postal_code: user.postal_code,
+      state_province: user.state_province,
+      onboarding_completed: Boolean(user.onboarding_completed)
+    }
   });
 });
 
 app.get('/api/auth/me', authMiddleware, (req, res) => {
   res.json({ user: req.user });
+});
+
+app.get('/api/onboarding/status', authMiddleware, (req, res) => {
+  res.json({
+    onboardingCompleted: Boolean(req.user.onboarding_completed),
+    user: req.user
+  });
+});
+
+app.post('/api/onboarding/profile', authMiddleware, (req, res) => {
+  const { fullName, country, phone, addressStreet, postalCode, stateProvince } = req.body || {};
+
+  if (!fullName || !country || !phone || !addressStreet || !postalCode || !stateProvince) {
+    return res.status(400).json({ error: 'Todos os campos de endereço e contato são obrigatórios.' });
+  }
+
+  db.prepare(`
+    UPDATE users SET
+      full_name = ?,
+      country = ?,
+      phone = ?,
+      address_street = ?,
+      postal_code = ?,
+      state_province = ?,
+      onboarding_completed = 1
+    WHERE id = ?
+  `).run(
+    String(fullName).trim().slice(0, 150),
+    String(country).trim().slice(0, 80),
+    String(phone).trim().slice(0, 40),
+    String(addressStreet).trim().slice(0, 200),
+    String(postalCode).trim().slice(0, 30),
+    String(stateProvince).trim().slice(0, 80),
+    req.user.id
+  );
+
+  const updated = db.prepare('SELECT id, name, email, role, status, full_name, country, phone, address_street, postal_code, state_province, onboarding_completed FROM users WHERE id = ?').get(req.user.id);
+  res.json({ success: true, user: updated });
+});
+
+app.post('/api/onboarding/complete', authMiddleware, (req, res) => {
+  db.prepare('UPDATE users SET onboarding_completed = 1 WHERE id = ?').run(req.user.id);
+  res.json({ success: true });
 });
 
 app.get('/api/admin/users', authMiddleware, ownerMiddleware, (req, res) => {
@@ -487,14 +589,107 @@ app.post('/api/admin/settings', authMiddleware, ownerMiddleware, (req, res) => {
   res.json({ success: true });
 });
 
-app.get('/api/videos', authMiddleware, (req, res) => {
+app.get('/api/folders', authMiddleware, (req, res) => {
+  const isOwner = req.user.role === 'owner';
   let rows;
-  if (req.user.role === 'owner') {
-    rows = db.prepare('SELECT * FROM videos ORDER BY created_at DESC').all();
+  if (isOwner) {
+    rows = db.prepare(`
+      SELECT f.*, COUNT(v.id) as video_count
+      FROM folders f
+      LEFT JOIN videos v ON v.folder_id = f.id AND v.deleted_at IS NULL
+      GROUP BY f.id
+      ORDER BY f.created_at DESC
+    `).all();
   } else {
-    rows = db.prepare('SELECT * FROM videos WHERE user_id = ? ORDER BY created_at DESC').all(req.user.id);
+    rows = db.prepare(`
+      SELECT f.*, COUNT(v.id) as video_count
+      FROM folders f
+      LEFT JOIN videos v ON v.folder_id = f.id AND v.deleted_at IS NULL
+      WHERE f.user_id = ?
+      GROUP BY f.id
+      ORDER BY f.created_at DESC
+    `).all(req.user.id);
+  }
+  res.json({ folders: rows });
+});
+
+app.post('/api/folders', authMiddleware, (req, res) => {
+  const { name } = req.body || {};
+  if (!name || typeof name !== 'string' || !name.trim()) {
+    return res.status(400).json({ error: 'O nome da pasta é obrigatório.' });
   }
 
+  const cleanName = name.trim().slice(0, 80);
+  const folderId = 'fld_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex');
+
+  db.prepare(`
+    INSERT INTO folders (id, user_id, name)
+    VALUES (?, ?, ?)
+  `).run(folderId, req.user.id, cleanName);
+
+  res.json({ success: true, folder: { id: folderId, name: cleanName, user_id: req.user.id, video_count: 0 } });
+});
+
+app.put('/api/folders/:id', authMiddleware, (req, res) => {
+  const { name } = req.body || {};
+  if (!name || typeof name !== 'string' || !name.trim()) {
+    return res.status(400).json({ error: 'Nome inválido.' });
+  }
+
+  const folder = db.prepare('SELECT * FROM folders WHERE id = ?').get(req.params.id);
+  if (!folder) return res.status(404).json({ error: 'Pasta não encontrada.' });
+  if (req.user.role !== 'owner' && folder.user_id !== req.user.id) {
+    return res.status(403).json({ error: 'Permissão negada.' });
+  }
+
+  const cleanName = name.trim().slice(0, 80);
+  db.prepare('UPDATE folders SET name = ? WHERE id = ?').run(cleanName, req.params.id);
+  res.json({ success: true, name: cleanName });
+});
+
+app.delete('/api/folders/:id', authMiddleware, (req, res) => {
+  const folder = db.prepare('SELECT * FROM folders WHERE id = ?').get(req.params.id);
+  if (!folder) return res.status(404).json({ error: 'Pasta não encontrada.' });
+  if (req.user.role !== 'owner' && folder.user_id !== req.user.id) {
+    return res.status(403).json({ error: 'Permissão negada.' });
+  }
+
+  db.prepare('UPDATE videos SET folder_id = NULL WHERE folder_id = ?').run(req.params.id);
+  db.prepare('DELETE FROM folders WHERE id = ?').run(req.params.id);
+  res.json({ success: true });
+});
+
+app.get('/api/videos', authMiddleware, (req, res) => {
+  const isOwner = req.user.role === 'owner';
+  const isTrash = req.query.trash === '1';
+  const folderId = req.query.folder_id;
+
+  let query = 'SELECT * FROM videos WHERE ';
+  const params = [];
+
+  if (isTrash) {
+    query += 'deleted_at IS NOT NULL ';
+  } else {
+    query += 'deleted_at IS NULL ';
+  }
+
+  if (!isOwner) {
+    query += 'AND user_id = ? ';
+    params.push(req.user.id);
+  }
+
+  if (folderId) {
+    if (folderId === 'root') {
+      query += 'AND (folder_id IS NULL OR folder_id = "") ';
+    } else {
+      query += 'AND folder_id = ? ';
+      params.push(folderId);
+    }
+  }
+
+  query += 'ORDER BY created_at DESC';
+
+  const rows = db.prepare(query).all(...params);
   const videos = rows.map(r => ({
     ...r,
     settings: r.settings_json ? JSON.parse(r.settings_json) : {}
@@ -503,8 +698,41 @@ app.get('/api/videos', authMiddleware, (req, res) => {
   res.json({ videos });
 });
 
+app.get('/api/videos/top', authMiddleware, (req, res) => {
+  const isOwner = req.user.role === 'owner';
+  let videosQuery = 'SELECT id, title, video_url, duration, plays, created_at FROM videos WHERE deleted_at IS NULL ';
+  const params = [];
+  if (!isOwner) {
+    videosQuery += 'AND user_id = ? ';
+    params.push(req.user.id);
+  }
+  videosQuery += 'ORDER BY plays DESC LIMIT 20';
+
+  const rows = db.prepare(videosQuery).all(...params);
+  const topVideos = rows.map(v => {
+    const ctaClicks = db.prepare("SELECT COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'cta_clicked'").get(v.id).count;
+    const completes = db.prepare("SELECT COUNT(DISTINCT session_id) as count FROM analytics_events WHERE video_id = ? AND (event_type = 'complete' OR (event_type = 'progress' AND milestone = 100))").get(v.id).count;
+    const completionRate = v.plays > 0 ? ((completes / v.plays) * 100).toFixed(1) : '0.0';
+    const ctaRate = v.plays > 0 ? ((ctaClicks / v.plays) * 100).toFixed(1) : '0.0';
+
+    return {
+      id: v.id,
+      title: v.title,
+      duration: v.duration,
+      plays: v.plays || 0,
+      ctaClicks,
+      completes,
+      completionRate,
+      ctaRate,
+      createdAt: v.created_at
+    };
+  });
+
+  res.json({ topVideos });
+});
+
 app.post('/api/videos', authMiddleware, (req, res) => {
-  const { id, title, videoUrl, sourceType, filePath, duration, settings } = req.body;
+  const { id, title, videoUrl, sourceType, filePath, duration, settings, fileSize, folderId } = req.body;
 
   if (!videoUrl || typeof videoUrl !== 'string') {
     return res.status(400).json({ error: 'URL do vídeo é obrigatória.' });
@@ -527,12 +755,21 @@ app.post('/api/videos', authMiddleware, (req, res) => {
     }
   }
 
+  let cleanFolderId = null;
+  if (folderId && folderId !== 'root') {
+    const folder = db.prepare('SELECT id, user_id FROM folders WHERE id = ?').get(folderId);
+    if (folder && (req.user.role === 'owner' || folder.user_id === req.user.id)) {
+      cleanFolderId = folder.id;
+    }
+  }
+
   db.prepare(`
-    INSERT INTO videos (id, user_id, title, source_type, file_path, file_size, video_url, duration, settings_json)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO videos (id, user_id, folder_id, title, source_type, file_path, file_size, video_url, duration, settings_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     vidId,
     req.user.id,
+    cleanFolderId,
     cleanTitle,
     sourceType === 'local' ? 'local' : 'remote',
     filePath || null,
@@ -545,8 +782,56 @@ app.post('/api/videos', authMiddleware, (req, res) => {
   res.json({ success: true, id: vidId });
 });
 
+app.patch('/api/videos/:id/move', authMiddleware, (req, res) => {
+  const vidId = req.params.id;
+  const { folderId } = req.body || {};
+
+  const existing = db.prepare('SELECT * FROM videos WHERE id = ?').get(vidId);
+  if (!existing) return res.status(404).json({ error: 'Vídeo não encontrado.' });
+  if (req.user.role !== 'owner' && existing.user_id !== req.user.id) {
+    return res.status(403).json({ error: 'Permissão negada.' });
+  }
+
+  let cleanFolderId = null;
+  if (folderId && folderId !== 'root') {
+    const folder = db.prepare('SELECT id, user_id FROM folders WHERE id = ?').get(folderId);
+    if (!folder) return res.status(404).json({ error: 'Pasta de destino não encontrada.' });
+    if (req.user.role !== 'owner' && folder.user_id !== req.user.id) {
+      return res.status(403).json({ error: 'Pasta não pertence a você.' });
+    }
+    cleanFolderId = folder.id;
+  }
+
+  db.prepare('UPDATE videos SET folder_id = ? WHERE id = ?').run(cleanFolderId, vidId);
+  res.json({ success: true, folderId: cleanFolderId });
+});
+
+app.patch('/api/videos/:id/trash', authMiddleware, (req, res) => {
+  const vidId = req.params.id;
+  const existing = db.prepare('SELECT * FROM videos WHERE id = ?').get(vidId);
+  if (!existing) return res.status(404).json({ error: 'Vídeo não encontrado.' });
+  if (req.user.role !== 'owner' && existing.user_id !== req.user.id) {
+    return res.status(403).json({ error: 'Permissão negada.' });
+  }
+
+  db.prepare('UPDATE videos SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?').run(vidId);
+  res.json({ success: true });
+});
+
+app.patch('/api/videos/:id/restore', authMiddleware, (req, res) => {
+  const vidId = req.params.id;
+  const existing = db.prepare('SELECT * FROM videos WHERE id = ?').get(vidId);
+  if (!existing) return res.status(404).json({ error: 'Vídeo não encontrado.' });
+  if (req.user.role !== 'owner' && existing.user_id !== req.user.id) {
+    return res.status(403).json({ error: 'Permissão negada.' });
+  }
+
+  db.prepare('UPDATE videos SET deleted_at = NULL WHERE id = ?').run(vidId);
+  res.json({ success: true });
+});
+
 app.put('/api/videos/:id', authMiddleware, (req, res) => {
-  const { title, settings, duration } = req.body;
+  const { title, settings, duration, folderId } = req.body;
   const vidId = req.params.id;
 
   const existing = db.prepare('SELECT user_id FROM videos WHERE id = ?').get(vidId);
@@ -555,16 +840,30 @@ app.put('/api/videos/:id', authMiddleware, (req, res) => {
     return res.status(403).json({ error: 'Permissão negada.' });
   }
 
+  let cleanFolderId = existing.folder_id;
+  if (folderId !== undefined) {
+    if (!folderId || folderId === 'root') {
+      cleanFolderId = null;
+    } else {
+      const folder = db.prepare('SELECT id, user_id FROM folders WHERE id = ?').get(folderId);
+      if (folder && (req.user.role === 'owner' || folder.user_id === req.user.id)) {
+        cleanFolderId = folder.id;
+      }
+    }
+  }
+
   db.prepare(`
     UPDATE videos SET
       title = COALESCE(?, title),
       duration = COALESCE(?, duration),
-      settings_json = COALESCE(?, settings_json)
+      settings_json = COALESCE(?, settings_json),
+      folder_id = ?
     WHERE id = ?
   `).run(
     title ? title.trim().slice(0, 150) : null,
     duration || null,
     settings ? JSON.stringify(settings) : null,
+    cleanFolderId,
     vidId
   );
 
@@ -579,13 +878,25 @@ app.delete('/api/videos/:id', authMiddleware, (req, res) => {
     return res.status(403).json({ error: 'Permissão negada.' });
   }
 
+  db.prepare('UPDATE videos SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?').run(vidId);
+  res.json({ success: true, movedToTrash: true });
+});
+
+app.delete('/api/videos/:id/permanent', authMiddleware, (req, res) => {
+  const vidId = req.params.id;
+  const existing = db.prepare('SELECT * FROM videos WHERE id = ?').get(vidId);
+  if (!existing) return res.status(404).json({ error: 'Vídeo não encontrado.' });
+  if (req.user.role !== 'owner' && existing.user_id !== req.user.id) {
+    return res.status(403).json({ error: 'Permissão negada.' });
+  }
+
   if (existing.source_type === 'local' && existing.file_path && fs.existsSync(existing.file_path)) {
     try { fs.unlinkSync(existing.file_path); } catch (e) {}
   }
 
   db.prepare('DELETE FROM analytics_events WHERE video_id = ?').run(vidId);
   db.prepare('DELETE FROM videos WHERE id = ?').run(vidId);
-  res.json({ success: true });
+  res.json({ success: true, permanentlyDeleted: true });
 });
 
 app.post('/api/videos/:id/play', (req, res) => {
@@ -602,8 +913,8 @@ app.post('/api/videos/:id/play', (req, res) => {
 app.get('/api/videos/:id/public', (req, res) => {
   const vidId = req.params.id;
   try {
-    const v = db.prepare('SELECT id, title, video_url, duration, settings_json FROM videos WHERE id = ?').get(vidId);
-    if (!v) return res.status(404).json({ error: 'Vídeo não encontrado.' });
+    const v = db.prepare('SELECT id, title, video_url, duration, settings_json FROM videos WHERE id = ? AND deleted_at IS NULL').get(vidId);
+    if (!v) return res.status(404).json({ error: 'Vídeo não encontrado ou indisponível.' });
     let settings = {};
     try { settings = JSON.parse(v.settings_json || '{}'); } catch (e) {}
 

@@ -6,6 +6,7 @@ id_*
 .env.*
 !.env.example
 clone vturb/
+clone vturb/**
 
 # Node e Dependências
 node_modules/

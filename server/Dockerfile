@@ -1,7 +1,6 @@
 FROM node:20-alpine
 
-# Dependências para compilar better-sqlite3 e ffmpeg para FastStart instantâneo
-RUN apk add --no-cache python3 make g++ gcc ffmpeg
+RUN apk add --no-cache python3 build-base ffmpeg
 
 WORKDIR /app
 
