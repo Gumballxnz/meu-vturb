@@ -1524,9 +1524,9 @@
     }
 
     .vturb-api-card {
-      background: #1e1e24;
-      border: 1px solid #2c2d36;
-      border-radius: 10px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
       margin-bottom: 24px;
     }
 
@@ -1544,55 +1544,55 @@
     }
 
     .vturb-key-badge {
-      width: 44px;
-      height: 44px;
-      border-radius: 8px;
-      background: #2b2d35;
-      border: 1px solid #383944;
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: var(--primary-light);
+      border: 1px solid var(--color-primary-border, rgba(37, 99, 235, 0.2));
       display: flex;
       align-items: center;
       justify-content: center;
       margin: 0 auto 18px auto;
-      color: #ffffff;
+      color: var(--primary);
     }
 
     .vturb-api-empty-title {
-      font-size: 15px;
-      font-weight: 600;
-      color: #ffffff;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-main);
       margin-bottom: 8px;
       letter-spacing: -0.01em;
     }
 
     .vturb-api-empty-sub {
-      font-size: 13.5px;
-      color: #9ca3af;
-      max-width: 360px;
-      line-height: 1.45;
-      margin: 0 auto 20px auto;
+      font-size: 14px;
+      color: var(--text-muted);
+      max-width: 380px;
+      line-height: 1.5;
+      margin: 0 auto 24px auto;
       text-align: center;
     }
 
     .btn-vturb-generate {
-      background: #007aff;
+      background: var(--primary);
       color: #ffffff;
       border: none;
-      border-radius: 6px;
-      padding: 8px 18px;
-      font-size: 13px;
-      font-weight: 500;
+      border-radius: var(--radius-sm);
+      padding: 9px 20px;
+      font-size: 13.5px;
+      font-weight: 600;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       white-space: nowrap;
       cursor: pointer;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
       transition: background 0.15s ease;
       margin: 0 auto;
     }
 
     .btn-vturb-generate:hover {
-      background: #0066d6;
+      background: var(--primary-hover);
     }
 
     .vturb-api-header {
@@ -1604,14 +1604,14 @@
 
     .vturb-api-title {
       font-size: 15px;
-      font-weight: 600;
-      color: #ffffff;
+      font-weight: 700;
+      color: var(--text-main);
       margin-bottom: 4px;
     }
 
     .vturb-api-desc {
       font-size: 13.5px;
-      color: #9ca3af;
+      color: var(--text-muted);
       line-height: 1.4;
     }
 
@@ -1622,7 +1622,7 @@
     .btn-dots-menu {
       background: transparent;
       border: none;
-      color: #9ca3af;
+      color: var(--text-muted);
       width: 32px;
       height: 32px;
       border-radius: 6px;
@@ -1634,20 +1634,20 @@
     }
 
     .btn-dots-menu:hover {
-      background: #2b2d35;
-      color: #ffffff;
+      background: var(--color-surface-muted);
+      color: var(--text-main);
     }
 
     .vturb-dropdown-menu {
       position: absolute;
       top: 36px;
       right: 0;
-      background: #25262c;
-      border: 1px solid #32343d;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
       border-radius: 8px;
       padding: 6px;
       min-width: 175px;
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
       z-index: 100;
       display: flex;
       flex-direction: column;
@@ -1657,8 +1657,8 @@
     .vturb-menu-item {
       background: transparent;
       border: none;
-      color: #f1f5f9;
-      font-size: 13.5px;
+      color: var(--text-main);
+      font-size: 13px;
       font-weight: 500;
       display: flex;
       align-items: center;
@@ -1672,8 +1672,7 @@
     }
 
     .vturb-menu-item:hover {
-      background: #32333b;
-      color: #ffffff;
+      background: var(--color-surface-muted);
     }
 
     .vturb-key-input-wrapper {
@@ -1683,15 +1682,20 @@
 
     .vturb-key-input {
       width: 100%;
-      background: #18191d;
-      border: 1px solid #2d2e38;
-      border-radius: 6px;
+      background: var(--color-surface-muted);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
       padding: 10px 42px 10px 14px;
-      color: #f1f5f9;
+      color: var(--text-main);
       font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
       font-size: 13.5px;
       letter-spacing: 0.02em;
       outline: none;
+      transition: border-color 0.15s ease;
+    }
+
+    .vturb-key-input:focus {
+      border-color: var(--primary);
     }
 
     .btn-toggle-key-visibility {
@@ -1701,7 +1705,7 @@
       transform: translateY(-50%);
       background: transparent;
       border: none;
-      color: #9ca3af;
+      color: var(--text-muted);
       cursor: pointer;
       padding: 4px;
       display: flex;
@@ -1711,14 +1715,14 @@
     }
 
     .btn-toggle-key-visibility:hover {
-      color: #ffffff;
+      color: var(--text-main);
     }
 
     .btn-copy-key {
-      background: #23242a;
-      border: 1px solid #363845;
-      border-radius: 6px;
-      color: #f1f5f9;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      color: var(--text-main);
       font-size: 13px;
       font-weight: 500;
       padding: 8px 14px;
@@ -1730,19 +1734,18 @@
     }
 
     .btn-copy-key:hover {
-      background: #2d2f38;
-      border-color: #454857;
-      color: #ffffff;
+      background: var(--color-surface-muted);
+      border-color: var(--border-hover);
     }
 
     .vturb-confirm-modal-box {
-      background: #202126;
-      border: 1px solid #2d2f38;
-      border-radius: 12px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
       width: 100%;
       max-width: 480px;
       padding: 24px;
-      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6);
+      box-shadow: 0 16px 36px rgba(0, 0, 0, 0.15);
       position: relative;
     }
 
@@ -1767,14 +1770,14 @@
 
     .vturb-confirm-title {
       font-size: 16px;
-      font-weight: 600;
-      color: #ffffff;
+      font-weight: 700;
+      color: var(--text-main);
     }
 
     .vturb-modal-close {
       background: transparent;
       border: none;
-      color: #9ca3af;
+      color: var(--text-muted);
       font-size: 20px;
       line-height: 1;
       cursor: pointer;
@@ -1786,7 +1789,7 @@
     }
 
     .vturb-modal-close:hover {
-      color: #ffffff;
+      color: var(--text-main);
     }
 
     .vturb-confirm-body {
@@ -1794,14 +1797,14 @@
     }
 
     .vturb-confirm-p {
-      color: #cbd5e1;
+      color: var(--text-muted);
       font-size: 13.5px;
       line-height: 1.5;
       margin-bottom: 12px;
     }
 
     .vturb-confirm-p.strong {
-      color: #ffffff;
+      color: var(--text-main);
       font-weight: 600;
       margin-bottom: 0;
     }
@@ -1813,10 +1816,10 @@
     }
 
     .btn-confirm-danger {
-      background: #ff4d4f;
+      background: var(--danger);
       color: #ffffff;
       border: none;
-      border-radius: 8px;
+      border-radius: var(--radius-sm);
       padding: 10px 24px;
       font-size: 13.5px;
       font-weight: 600;
@@ -1825,14 +1828,14 @@
     }
 
     .btn-confirm-danger:hover {
-      background: #e03b3d;
+      background: #b91c1c;
     }
 
     .btn-confirm-cancel {
-      background: #2b2d35;
-      color: #f1f5f9;
-      border: 1px solid #383a45;
-      border-radius: 8px;
+      background: var(--bg-surface);
+      color: var(--text-main);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
       padding: 10px 20px;
       font-size: 13.5px;
       font-weight: 500;
@@ -1841,9 +1844,8 @@
     }
 
     .btn-confirm-cancel:hover {
-      background: #333640;
-      border-color: #4a4d5b;
-      color: #ffffff;
+      background: var(--color-surface-muted);
+      border-color: var(--border-hover);
     }
 
     .settings-empty-icon {
@@ -2045,7 +2047,7 @@
       left: 0;
       width: 100vw;
       height: 100vh;
-      background: #09090b;
+      background: var(--bg-base);
       z-index: 999999;
       display: none;
       align-items: center;
@@ -2080,7 +2082,7 @@
       width: 100%;
       max-width: 420px;
       padding: 32px;
-      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
     }
 
     .toast-msg {
@@ -4697,8 +4699,8 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
             <circle cx="34" cy="14" r="3" fill="#10b981"/>
           </svg>
         </div>
-        <h3 style="font-size: 20px; font-weight: 800;" id="authCardTitle">Entrar na Plataforma</h3>
-        <p style="font-size: 12.5px; color: var(--text-dim); margin-top: 4px;" id="authCardSubtitle">Acesse suas VSLs de alta retenção</p>
+        <h3 style="font-size: 20px; font-weight: 800; color: var(--text-main);" id="authCardTitle">Entrar na Plataforma</h3>
+        <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px;" id="authCardSubtitle">Acesse suas VSLs de alta retenção</p>
       </div>
 
       <div id="authAlert" style="display: none; padding: 10px 14px; border-radius: var(--radius-sm); font-size: 12.5px; margin-bottom: 16px;"></div>
@@ -4713,7 +4715,7 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
           <input type="password" id="loginPassword" class="form-input-text" required placeholder="••••••••">
         </div>
         <button type="submit" class="btn-primary-action" style="width: 100%; justify-content: center; padding: 11px; margin-top: 8px;">Entrar no Dashboard</button>
-        <p style="text-align: center; font-size: 12.5px; color: var(--text-dim); margin-top: 16px;">
+        <p style="text-align: center; font-size: 12.5px; color: var(--text-muted); margin-top: 16px;">
           Não tem uma conta? <a href="#" onclick="toggleAuthMode('register'); return false;" style="color: var(--primary); text-decoration: none; font-weight: 600;">Criar Cadastro</a>
         </p>
       </form>
@@ -4732,7 +4734,7 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
           <input type="password" id="regPassword" class="form-input-text" required placeholder="••••••••" minlength="6">
         </div>
         <button type="submit" class="btn-primary-action" style="width: 100%; justify-content: center; padding: 11px; margin-top: 8px;">Criar Minha Conta</button>
-        <p style="text-align: center; font-size: 12.5px; color: var(--text-dim); margin-top: 16px;">
+        <p style="text-align: center; font-size: 12.5px; color: var(--text-muted); margin-top: 16px;">
           Já possui conta? <a href="#" onclick="toggleAuthMode('login'); return false;" style="color: var(--primary); text-decoration: none; font-weight: 600;">Fazer Login</a>
         </p>
       </form>
@@ -4763,11 +4765,18 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
     let appConfig = { appName: 'CloudVTurb', baseDomain: '', playerDomain: window.location.origin };
 
     async function api(path, options = {}) {
-      const headers = options.headers || {};
+      const headers = Object.assign({}, options.headers);
       if (token) headers['Authorization'] = `Bearer ${token}`;
-      if (!(options.body instanceof FormData)) headers['Content-Type'] = 'application/json';
+      const fetchOpts = { ...options };
+      if (fetchOpts.body && typeof fetchOpts.body === 'object' && !(fetchOpts.body instanceof FormData)) {
+        headers['Content-Type'] = 'application/json';
+        fetchOpts.body = JSON.stringify(fetchOpts.body);
+      } else if (!fetchOpts.body) {
+        delete headers['Content-Type'];
+      }
+      fetchOpts.headers = headers;
 
-      const res = await fetch(path, { ...options, headers });
+      const res = await fetch(path, fetchOpts);
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || 'Erro na requisição.');
       return data;
