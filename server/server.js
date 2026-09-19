@@ -11,6 +11,27 @@ const Database = require('better-sqlite3');
 const { Readable } = require('stream');
 const { finished } = require('stream/promises');
 
+[path.join(__dirname, '.env'), path.join(__dirname, '..', '.env')].forEach(envPath => {
+  if (fs.existsSync(envPath)) {
+    const lines = fs.readFileSync(envPath, 'utf8').split(/\r?\n/);
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+      const eqIdx = trimmed.indexOf('=');
+      if (eqIdx !== -1) {
+        const key = trimmed.slice(0, eqIdx).trim();
+        let val = trimmed.slice(eqIdx + 1).trim();
+        if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+          val = val.slice(1, -1);
+        }
+        if (!(key in process.env)) {
+          process.env[key] = val;
+        }
+      }
+    }
+  }
+});
+
 const app = express();
 const PORT = process.env.PORT || 4000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -185,19 +206,44 @@ db.exec(`
     read_bytes INTEGER DEFAULT 1024
   );
 
+  CREATE TABLE IF NOT EXISTS verification_codes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL,
+    code TEXT NOT NULL,
+    type TEXT NOT NULL,
+    payload TEXT,
+    attempts INTEGER DEFAULT 0,
+    expires_at DATETIME NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_verification_email_type ON verification_codes(email, type);
   CREATE INDEX IF NOT EXISTS idx_analytics_vid_event ON analytics_events(video_id, event_type);
   CREATE INDEX IF NOT EXISTS idx_analytics_vid_created ON analytics_events(video_id, created_at);
   CREATE INDEX IF NOT EXISTS idx_analytics_vid_visitor ON analytics_events(video_id, visitor_id);
   CREATE INDEX IF NOT EXISTS idx_analytics_session_milestone ON analytics_events(session_id, event_type, milestone);
 `);
 
-const AVATARS_DIR = path.join(PUBLIC_DIR, 'avatars');
+const AVATARS_DIR = path.join(DATA_DIR, 'avatars');
 if (!fs.existsSync(AVATARS_DIR)) fs.mkdirSync(AVATARS_DIR, { recursive: true });
+
+try {
+  const legacyAvatars = path.join(PUBLIC_DIR, 'avatars');
+  if (fs.existsSync(legacyAvatars)) {
+    const files = fs.readdirSync(legacyAvatars);
+    for (const f of files) {
+      const src = path.join(legacyAvatars, f);
+      const dst = path.join(AVATARS_DIR, f);
+      if (!fs.existsSync(dst)) fs.copyFileSync(src, dst);
+    }
+  }
+} catch (e) {}
 
 const userCols = ['full_name', 'country', 'phone', 'address_street', 'postal_code', 'state_province', 'avatar_url', 'first_name', 'last_name'];
 for (const col of userCols) {
   try { db.exec(`ALTER TABLE users ADD COLUMN ${col} TEXT`); } catch (e) {}
 }
+try { db.exec('ALTER TABLE users ADD COLUMN owner_id INTEGER DEFAULT NULL'); } catch (e) {}
 
 const analyticsCols = [
   'device TEXT DEFAULT "desktop"',
@@ -365,7 +411,7 @@ app.use((req, res, next) => {
     }
   }
 
-  const dashRoutes = ['/', '/login', '/cadastro', '/videos', '/metricas', '/usuarios', '/servidor', '/analytics', '/configuracoes', '/settings'];
+  const dashRoutes = ['/', '/login', '/cadastro', '/recuperar-senha', '/videos', '/metricas', '/usuarios', '/servidor', '/analytics', '/configuracoes', '/settings'];
   const isPlayerEditRoute = /^\/players\/[^/]+\/edit\/?$/.test(req.path);
   if (dashRoutes.includes(req.path) || isPlayerEditRoute || req.path.startsWith('/settings/') || req.path.startsWith('/configuracoes/') || req.path.startsWith('/folders/')) {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -385,6 +431,7 @@ const vturbAnalyticsRouter = require('./vturb-analytics-api')(db);
 app.use('/', vturbAnalyticsRouter);
 app.use('/api/v1', vturbAnalyticsRouter);
 
+app.use('/avatars', express.static(AVATARS_DIR));
 app.use(express.static(PUBLIC_DIR));
 
 function getUsedStorageBytes() {
@@ -536,7 +583,7 @@ function authMiddleware(req, res, next) {
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const user = db.prepare('SELECT id, name, email, role, status, full_name, country, phone, address_street, postal_code, state_province, onboarding_completed FROM users WHERE id = ?').get(decoded.id);
+    const user = db.prepare('SELECT id, name, email, role, status, full_name, country, phone, address_street, postal_code, state_province, onboarding_completed, avatar_url, owner_id FROM users WHERE id = ?').get(decoded.id);
     if (!user) return res.status(401).json({ error: 'Usuário não encontrado.' });
     if (user.status !== 'approved') return res.status(403).json({ error: 'Acesso bloqueado ou pendente de aprovação.' });
     req.user = user;
@@ -609,29 +656,188 @@ app.get('/api/config', (req, res) => {
   });
 });
 
-app.post('/api/auth/register', (req, res) => {
-  const { name, email, password } = req.body;
+function generate8DigitCode() {
+  return crypto.randomInt(10000000, 100000000).toString();
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
+}
+
+async function sendVerificationEmail({ to, code, type, name }) {
+  const apiKey = (process.env.RESEND_API_KEY || '').trim();
+  if (!apiKey) {
+    throw new Error('Chave RESEND_API_KEY não configurada no servidor (.env). Configure a chave da Resend para o envio de e-mails.');
+  }
+
+  const fromEmail = (process.env.RESEND_FROM_EMAIL || 'CloudVTurb <onboarding@resend.dev>').trim();
+  const isRegister = type === 'register';
+  const subject = isRegister
+    ? `${code} é seu código de verificação - CloudVTurb`
+    : `${code} é seu código de recuperação de senha - CloudVTurb`;
+
+  const title = isRegister ? 'Confirme seu Cadastro' : 'Recuperação de Senha';
+  const description = isRegister
+    ? 'Use o código de 8 dígitos abaixo para confirmar seu e-mail e concluir o cadastro no CloudVTurb:'
+    : 'Recebemos uma solicitação de redefinição de senha para sua conta. Use o código de 8 dígitos abaixo:';
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${title}</title>
+</head>
+<body style="margin:0;padding:24px;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#18181b;">
+  <div style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:12px;padding:32px;border:1px solid #e4e4e7;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+    <div style="font-size:22px;font-weight:800;color:#2563eb;margin-bottom:20px;letter-spacing:-0.5px;">CloudVTurb</div>
+    <h2 style="font-size:18px;font-weight:700;color:#09090b;margin:0 0 12px 0;">${title}</h2>
+    <p style="font-size:14px;line-height:1.6;color:#52525b;margin:0 0 16px 0;">Olá${name ? ` <strong>${escapeHtml(name)}</strong>` : ''},</p>
+    <p style="font-size:14px;line-height:1.6;color:#52525b;margin:0 0 24px 0;">${description}</p>
+    <div style="background:#f8fafc;border:2px dashed #2563eb;border-radius:8px;padding:18px;text-align:center;font-family:'Courier New',Courier,monospace;font-size:32px;font-weight:800;letter-spacing:6px;color:#1d4ed8;margin-bottom:24px;">${code}</div>
+    <p style="font-size:13px;line-height:1.5;color:#71717a;margin:0 0 24px 0;">Este código é válido por <strong>15 minutos</strong>. Se você não solicitou este código, por favor ignore este e-mail com segurança.</p>
+    <div style="font-size:12px;color:#a1a1aa;border-top:1px solid #f4f4f5;padding-top:16px;">CloudVTurb - Plataforma de VSLs e Hospedagem de Alta Retenção</div>
+  </div>
+</body>
+</html>`;
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from: fromEmail,
+      to: [to],
+      subject: subject,
+      html: html
+    })
+  });
+
+  const resJson = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const detail = resJson.message || resJson.error || response.statusText || 'Erro desconhecido';
+    throw new Error(`Falha no envio via Resend: ${detail}`);
+  }
+
+  return resJson;
+}
+
+app.post('/api/auth/register', async (req, res) => {
+  const { name, email, password } = req.body || {};
   if (!name || !email || !password) return res.status(400).json({ error: 'Preencha todos os campos.' });
 
-  const cleanEmail = email.trim().toLowerCase();
+  const cleanName = String(name).trim();
+  const cleanEmail = String(email).trim().toLowerCase();
+  const cleanPassword = String(password);
+
+  if (cleanPassword.length < 6) {
+    return res.status(400).json({ error: 'A senha deve conter no mínimo 6 caracteres.' });
+  }
+
   const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(cleanEmail);
   if (existing) return res.status(400).json({ error: 'Este e-mail já está cadastrado.' });
 
+  const recent = db.prepare(`
+    SELECT created_at FROM verification_codes
+    WHERE email = ? AND type = 'register'
+    ORDER BY id DESC LIMIT 1
+  `).get(cleanEmail);
+
+  if (recent) {
+    const elapsed = Date.now() - new Date(recent.created_at).getTime();
+    if (elapsed < 45000) {
+      const waitSec = Math.ceil((45000 - elapsed) / 1000);
+      return res.status(429).json({ error: `Aguarde ${waitSec} segundos antes de solicitar um novo código.` });
+    }
+  }
+
+  const passwordHash = bcrypt.hashSync(cleanPassword, 10);
+  const code = generate8DigitCode();
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+  const payload = JSON.stringify({ name: cleanName, passwordHash });
+
+  try {
+    await sendVerificationEmail({ to: cleanEmail, code, type: 'register', name: cleanName });
+  } catch (err) {
+    return res.status(502).json({ error: err.message || 'Erro ao enviar código de verificação por e-mail.' });
+  }
+
+  db.prepare(`DELETE FROM verification_codes WHERE email = ? AND type = 'register'`).run(cleanEmail);
+  db.prepare(`
+    INSERT INTO verification_codes (email, code, type, payload, attempts, expires_at)
+    VALUES (?, ?, 'register', ?, 0, ?)
+  `).run(cleanEmail, code, payload, expiresAt);
+
+  res.json({
+    success: true,
+    requireVerification: true,
+    email: cleanEmail,
+    message: 'Código de 8 dígitos enviado para o seu e-mail.'
+  });
+});
+
+app.post('/api/auth/verify-register', (req, res) => {
+  const { email, code } = req.body || {};
+  if (!email || !code) return res.status(400).json({ error: 'Informe o e-mail e o código de 8 dígitos.' });
+
+  const cleanEmail = String(email).trim().toLowerCase();
+  const cleanCode = String(code).trim().replace(/\D/g, '');
+
+  if (cleanCode.length !== 8) {
+    return res.status(400).json({ error: 'O código deve conter exatamente 8 dígitos numéricos.' });
+  }
+
+  const record = db.prepare(`
+    SELECT * FROM verification_codes
+    WHERE email = ? AND type = 'register'
+    ORDER BY id DESC LIMIT 1
+  `).get(cleanEmail);
+
+  if (!record || new Date(record.expires_at).getTime() < Date.now()) {
+    return res.status(400).json({ error: 'Código de verificação expirado ou inválido. Solicite um novo código.' });
+  }
+
+  if (record.attempts >= 5) {
+    db.prepare('DELETE FROM verification_codes WHERE id = ?').run(record.id);
+    return res.status(400).json({ error: 'Limite de tentativas excedido. Solicite um novo código.' });
+  }
+
+  if (record.code !== cleanCode) {
+    db.prepare('UPDATE verification_codes SET attempts = attempts + 1 WHERE id = ?').run(record.id);
+    return res.status(400).json({ error: 'Código incorreto. Verifique os 8 dígitos informados no seu e-mail.' });
+  }
+
+  let payload;
+  try {
+    payload = JSON.parse(record.payload);
+  } catch (e) {
+    return res.status(400).json({ error: 'Erro ao processar dados de cadastro. Tente cadastrar novamente.' });
+  }
+
+  db.prepare('DELETE FROM verification_codes WHERE id = ?').run(record.id);
+
+  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(cleanEmail);
+  if (existing) {
+    return res.status(400).json({ error: 'Este e-mail já foi registrado.' });
+  }
+
   const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
-  const passwordHash = bcrypt.hashSync(password, 10);
 
   if (userCount === 0) {
     const info = db.prepare(`
       INSERT INTO users (name, email, password_hash, role, status)
       VALUES (?, ?, ?, 'owner', 'approved')
-    `).run(name.trim(), cleanEmail, passwordHash);
+    `).run(payload.name, cleanEmail, payload.passwordHash);
 
     const token = jwt.sign({ id: info.lastInsertRowid, email: cleanEmail, role: 'owner' }, JWT_SECRET, { expiresIn: '30d' });
     return res.json({
       success: true,
-      message: 'Conta de Administrador criada com sucesso!',
+      message: 'Conta de Administrador criada e verificada com sucesso!',
       token,
-      user: { id: info.lastInsertRowid, name: name.trim(), email: cleanEmail, role: 'owner', status: 'approved' }
+      user: { id: info.lastInsertRowid, name: payload.name, email: cleanEmail, role: 'owner', status: 'approved' }
     });
   }
 
@@ -641,13 +847,13 @@ app.post('/api/auth/register', (req, res) => {
   const info = db.prepare(`
     INSERT INTO users (name, email, password_hash, role, status)
     VALUES (?, ?, ?, 'member', ?)
-  `).run(name.trim(), cleanEmail, passwordHash, initialStatus);
+  `).run(payload.name, cleanEmail, payload.passwordHash, initialStatus);
 
   if (initialStatus === 'pending') {
     return res.json({
       success: true,
       pendingApproval: true,
-      message: 'Cadastro realizado! Aguarde a aprovação do Administrador para acessar a plataforma.'
+      message: 'Cadastro confirmado! Aguarde a aprovação do Administrador para acessar a plataforma.'
     });
   } else {
     const token = jwt.sign({ id: info.lastInsertRowid, email: cleanEmail, role: 'member' }, JWT_SECRET, { expiresIn: '30d' });
@@ -655,9 +861,166 @@ app.post('/api/auth/register', (req, res) => {
       success: true,
       pendingApproval: false,
       token,
-      user: { id: info.lastInsertRowid, name: name.trim(), email: cleanEmail, role: 'member', status: 'approved' }
+      user: { id: info.lastInsertRowid, name: payload.name, email: cleanEmail, role: 'member', status: 'approved' }
     });
   }
+});
+
+app.post('/api/auth/forgot-password', async (req, res) => {
+  const { email } = req.body || {};
+  if (!email) return res.status(400).json({ error: 'Informe o e-mail cadastrado.' });
+
+  const cleanEmail = String(email).trim().toLowerCase();
+  const user = db.prepare('SELECT id, name, email FROM users WHERE email = ?').get(cleanEmail);
+  if (!user) {
+    return res.status(404).json({ error: 'Nenhuma conta encontrada com este e-mail.' });
+  }
+
+  const recent = db.prepare(`
+    SELECT created_at FROM verification_codes
+    WHERE email = ? AND type = 'reset_password'
+    ORDER BY id DESC LIMIT 1
+  `).get(cleanEmail);
+
+  if (recent) {
+    const elapsed = Date.now() - new Date(recent.created_at).getTime();
+    if (elapsed < 45000) {
+      const waitSec = Math.ceil((45000 - elapsed) / 1000);
+      return res.status(429).json({ error: `Aguarde ${waitSec} segundos antes de solicitar um novo código.` });
+    }
+  }
+
+  const code = generate8DigitCode();
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+
+  try {
+    await sendVerificationEmail({ to: cleanEmail, code, type: 'reset_password', name: user.name });
+  } catch (err) {
+    return res.status(502).json({ error: err.message || 'Erro ao enviar código de recuperação por e-mail.' });
+  }
+
+  db.prepare(`DELETE FROM verification_codes WHERE email = ? AND type = 'reset_password'`).run(cleanEmail);
+  db.prepare(`
+    INSERT INTO verification_codes (email, code, type, attempts, expires_at)
+    VALUES (?, ?, 'reset_password', 0, ?)
+  `).run(cleanEmail, code, expiresAt);
+
+  res.json({
+    success: true,
+    message: 'Código de 8 dígitos enviado com sucesso para o seu e-mail.'
+  });
+});
+
+app.post('/api/auth/reset-password', (req, res) => {
+  const { email, code, newPassword } = req.body || {};
+  if (!email || !code || !newPassword) {
+    return res.status(400).json({ error: 'Informe e-mail, o código de 8 dígitos e a nova senha.' });
+  }
+
+  const cleanEmail = String(email).trim().toLowerCase();
+  const cleanCode = String(code).trim().replace(/\D/g, '');
+  const cleanPassword = String(newPassword);
+
+  if (cleanCode.length !== 8) {
+    return res.status(400).json({ error: 'O código deve conter exatamente 8 dígitos numéricos.' });
+  }
+  if (cleanPassword.length < 6) {
+    return res.status(400).json({ error: 'A nova senha deve ter no mínimo 6 caracteres.' });
+  }
+
+  const record = db.prepare(`
+    SELECT * FROM verification_codes
+    WHERE email = ? AND type = 'reset_password'
+    ORDER BY id DESC LIMIT 1
+  `).get(cleanEmail);
+
+  if (!record || new Date(record.expires_at).getTime() < Date.now()) {
+    return res.status(400).json({ error: 'Código de recuperação expirado ou inválido. Solicite novamente.' });
+  }
+
+  if (record.attempts >= 5) {
+    db.prepare('DELETE FROM verification_codes WHERE id = ?').run(record.id);
+    return res.status(400).json({ error: 'Limite de tentativas excedido. Solicite um novo código.' });
+  }
+
+  if (record.code !== cleanCode) {
+    db.prepare('UPDATE verification_codes SET attempts = attempts + 1 WHERE id = ?').run(record.id);
+    return res.status(400).json({ error: 'Código incorreto. Verifique os 8 dígitos recebidos por e-mail.' });
+  }
+
+  const user = db.prepare('SELECT id FROM users WHERE email = ?').get(cleanEmail);
+  if (!user) {
+    return res.status(404).json({ error: 'Usuário não encontrado.' });
+  }
+
+  const passwordHash = bcrypt.hashSync(cleanPassword, 10);
+  db.prepare('UPDATE users SET password_hash = ? WHERE email = ?').run(passwordHash, cleanEmail);
+  db.prepare('DELETE FROM verification_codes WHERE id = ?').run(record.id);
+
+  res.json({
+    success: true,
+    message: 'Senha alterada com sucesso! Você já pode entrar com sua nova senha.'
+  });
+});
+
+app.post('/api/auth/resend-code', async (req, res) => {
+  const { email, type } = req.body || {};
+  if (!email || !type) return res.status(400).json({ error: 'Parâmetros insuficientes.' });
+
+  const cleanEmail = String(email).trim().toLowerCase();
+  if (type !== 'register' && type !== 'reset_password') {
+    return res.status(400).json({ error: 'Tipo de verificação inválido.' });
+  }
+
+  const record = db.prepare(`
+    SELECT * FROM verification_codes
+    WHERE email = ? AND type = ?
+    ORDER BY id DESC LIMIT 1
+  `).get(cleanEmail, type);
+
+  if (!record) {
+    return res.status(400).json({
+      error: type === 'register'
+        ? 'Sessão de cadastro expirada. Preencha seus dados novamente.'
+        : 'Nenhuma solicitação de recuperação encontrada. Solicite o código novamente.'
+    });
+  }
+
+  const elapsed = Date.now() - new Date(record.created_at).getTime();
+  if (elapsed < 45000) {
+    const waitSec = Math.ceil((45000 - elapsed) / 1000);
+    return res.status(429).json({ error: `Aguarde ${waitSec} segundos antes de solicitar um novo código.` });
+  }
+
+  let userName = '';
+  if (type === 'register') {
+    try {
+      userName = JSON.parse(record.payload).name || '';
+    } catch (e) {}
+  } else {
+    const u = db.prepare('SELECT name FROM users WHERE email = ?').get(cleanEmail);
+    if (u) userName = u.name;
+  }
+
+  const newCode = generate8DigitCode();
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+
+  try {
+    await sendVerificationEmail({ to: cleanEmail, code: newCode, type, name: userName });
+  } catch (err) {
+    return res.status(502).json({ error: err.message || 'Erro ao enviar código por e-mail.' });
+  }
+
+  db.prepare(`
+    UPDATE verification_codes
+    SET code = ?, attempts = 0, expires_at = ?, created_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `).run(newCode, expiresAt, record.id);
+
+  res.json({
+    success: true,
+    message: 'Novo código de 8 dígitos enviado com sucesso!'
+  });
 });
 
 app.post('/api/auth/login', (req, res) => {
@@ -933,16 +1296,19 @@ app.post('/api/user/logout-all', authMiddleware, (req, res) => {
 });
 
 app.get('/api/members', authMiddleware, (req, res) => {
+  const accountOwnerId = req.user.owner_id || req.user.id;
   const members = db.prepare(`
-    SELECT id, name, email, role, status, avatar_url, created_at
+    SELECT id, name, email, role, status, avatar_url, created_at, owner_id
     FROM users
-    ORDER BY id ASC
-  `).all();
-  res.json({ members });
+    WHERE id = ? OR owner_id = ?
+    ORDER BY CASE WHEN id = ? THEN 0 ELSE 1 END, id ASC
+  `).all(accountOwnerId, accountOwnerId, accountOwnerId);
+  res.json({ members, accountOwnerId });
 });
 
 app.post('/api/members', authMiddleware, (req, res) => {
-  if (req.user.role !== 'owner') {
+  const accountOwnerId = req.user.owner_id || req.user.id;
+  if (req.user.owner_id && req.user.role !== 'admin' && req.user.role !== 'owner') {
     return res.status(403).json({ error: 'Apenas administradores podem adicionar membros.' });
   }
   const { name, email, role, password } = req.body || {};
@@ -955,22 +1321,30 @@ app.post('/api/members', authMiddleware, (req, res) => {
     return res.status(400).json({ error: 'Já existe um usuário com este e-mail.' });
   }
   const hash = bcrypt.hashSync(password, 10);
-  const memberRole = role === 'owner' ? 'owner' : 'member';
+  const memberRole = role === 'admin' ? 'admin' : 'member';
   const info = db.prepare(`
-    INSERT INTO users (name, email, password_hash, role, status, onboarding_completed)
-    VALUES (?, ?, ?, ?, 'approved', 1)
-  `).run(name.trim().slice(0, 60), cleanEmail, hash, memberRole);
+    INSERT INTO users (name, email, password_hash, role, status, onboarding_completed, owner_id)
+    VALUES (?, ?, ?, ?, 'approved', 1, ?)
+  `).run(name.trim().slice(0, 60), cleanEmail, hash, memberRole, accountOwnerId);
 
   res.json({ success: true, id: info.lastInsertRowid });
 });
 
 app.delete('/api/members/:id', authMiddleware, (req, res) => {
-  if (req.user.role !== 'owner') {
+  const accountOwnerId = req.user.owner_id || req.user.id;
+  if (req.user.owner_id && req.user.role !== 'admin' && req.user.role !== 'owner') {
     return res.status(403).json({ error: 'Apenas administradores podem remover membros.' });
   }
   const targetId = parseInt(req.params.id, 10);
   if (targetId === req.user.id) {
     return res.status(400).json({ error: 'Você não pode remover sua própria conta.' });
+  }
+  if (targetId === accountOwnerId) {
+    return res.status(403).json({ error: 'O proprietário da conta não pode ser removido.' });
+  }
+  const member = db.prepare('SELECT id, owner_id FROM users WHERE id = ?').get(targetId);
+  if (!member || member.owner_id !== accountOwnerId) {
+    return res.status(404).json({ error: 'Membro não encontrado na sua equipe.' });
   }
   db.prepare('DELETE FROM users WHERE id = ?').run(targetId);
   res.json({ success: true });
