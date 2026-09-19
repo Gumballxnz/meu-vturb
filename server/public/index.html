@@ -2662,6 +2662,11 @@
     }
 
     async function initSession() {
+      const isAuthRoute = window.location.pathname === '/login' || window.location.pathname === '/cadastro';
+      if (isAuthRoute || !token) {
+        showAuth(window.location.pathname === '/cadastro' ? 'register' : 'login');
+      }
+
       try {
         appConfig = await fetch('/api/config').then(r => r.json()).catch(() => appConfig);
         document.getElementById('sidebarAppName').textContent = appConfig.appName || 'CloudVTurb';
@@ -2671,8 +2676,12 @@
         document.getElementById('lblTopologyDash').textContent = appConfig.dashDomain || window.location.origin;
       } catch (e) {}
 
+      if (isAuthRoute) {
+        return;
+      }
+
       if (!token) {
-        showAuth(window.location.pathname === '/cadastro' ? 'register' : 'login');
+        showAuth('login');
         return;
       }
 
