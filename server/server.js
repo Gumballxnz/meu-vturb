@@ -72,12 +72,55 @@ if (!getSetting('require_approval', null)) {
   setSetting('require_approval', '1');
 }
 
-// 2. Middlewares
+// 2. Middlewares Globais
 app.use(cors());
 app.use(express.json());
+
+// -------------------------------------------------------------
+// ROTEAMENTO POR SUBDOMÍNIO (Landing vs Dash vs Player)
+// -------------------------------------------------------------
+app.use((req, res, next) => {
+  const host = (req.headers.host || '').toLowerCase();
+
+  // 1. Subdomínio player.roleta-sorte.online
+  if (host.startsWith('player.')) {
+    if (req.path.startsWith('/videos/')) {
+      return next(); // Streaming de vídeo
+    }
+    if (req.path === '/player.html' || req.path === '/' || req.path === '') {
+      return res.sendFile(path.join(PUBLIC_DIR, 'player.html'));
+    }
+  }
+
+  // 2. Domínio Principal: roleta-sorte.online (Landing Page)
+  if (host === 'roleta-sorte.online' || host === 'www.roleta-sorte.online') {
+    if (req.path === '/login') {
+      return res.redirect(301, 'https://dash.roleta-sorte.online/login');
+    }
+    if (req.path === '/cadastro') {
+      return res.redirect(301, 'https://dash.roleta-sorte.online/cadastro');
+    }
+    if (req.path === '/' || req.path === '/index.html' || req.path === '') {
+      return res.sendFile(path.join(PUBLIC_DIR, 'landing.html'));
+    }
+    if (!req.path.startsWith('/api/') && !req.path.startsWith('/videos/')) {
+      return res.sendFile(path.join(PUBLIC_DIR, 'landing.html'));
+    }
+  }
+
+  // 3. Subdomínio dash.roleta-sorte.online (ou localhost)
+  const dashRoutes = ['/', '/login', '/cadastro', '/videos', '/metricas', '/usuarios', '/servidor'];
+  if (dashRoutes.includes(req.path)) {
+    return res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
+  }
+
+  next();
+});
+
+// Arquivos Estáticos Gerais
 app.use(express.static(PUBLIC_DIR));
 
-// Calcular espaço usado nos vídeos
+// Espaço usado
 function getUsedStorageBytes() {
   try {
     let total = 0;
@@ -92,7 +135,7 @@ function getUsedStorageBytes() {
   }
 }
 
-// Middleware de Autenticação JWT
+// Auth Middleware
 function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -120,7 +163,7 @@ function ownerMiddleware(req, res, next) {
   }
 }
 
-// 3. Upload de Arquivos
+// Multer
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, VIDEOS_DIR);
@@ -151,7 +194,6 @@ app.post('/api/auth/register', (req, res) => {
   const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
   const passwordHash = bcrypt.hashSync(password, 10);
 
-  // Primeiro usuário é OWNER
   if (userCount === 0) {
     const info = db.prepare(`
       INSERT INTO users (name, email, password_hash, role, status)
@@ -179,7 +221,7 @@ app.post('/api/auth/register', (req, res) => {
     return res.json({
       success: true,
       pendingApproval: true,
-      message: 'Cadastro realizado com sucesso! Aguarde a aprovação do Administrador/Owner.'
+      message: 'Cadastro realizado! Aguarde a aprovação do Administrador/Owner para poder acessar.'
     });
   } else {
     const token = jwt.sign({ id: info.lastInsertRowid, email: cleanEmail, role: 'member' }, JWT_SECRET, { expiresIn: '30d' });
@@ -362,7 +404,7 @@ app.delete('/api/videos/:id', authMiddleware, (req, res) => {
   res.json({ success: true });
 });
 
-// Endpoint de Registro de Play (Aberto para o Player chamar)
+// Endpoint de Registro de Play
 app.post('/api/videos/:id/play', (req, res) => {
   const vidId = req.params.id;
   try {
@@ -374,7 +416,7 @@ app.post('/api/videos/:id/play', (req, res) => {
   }
 });
 
-// Upload de Vídeo com Otimização FastStart Automática
+// Upload de Vídeo com FastStart e Subdomínio player.
 app.post('/api/upload', authMiddleware, upload.single('videoFile'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado.' });
 
@@ -384,7 +426,6 @@ app.post('/api/upload', authMiddleware, upload.single('videoFile'), (req, res) =
     return res.status(400).json({ error: 'Cota de armazenamento da VPS (30 GB) atingida.' });
   }
 
-  // Otimização FastStart: move moov atom para o início instantaneamente
   const originalPath = req.file.path;
   const fastPath = originalPath + '.fast.mp4';
 
@@ -395,12 +436,13 @@ app.post('/api/upload', authMiddleware, upload.single('videoFile'), (req, res) =
       fs.renameSync(fastPath, originalPath);
     }
   } catch (err) {
-    console.log('FastStart ignorado ou ffmpeg em fallback:', err.message);
+    console.log('FastStart log:', err.message);
   }
 
-  const host = req.get('host');
-  const protocol = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
-  const videoUrl = `${protocol}://${host}/videos/${req.file.filename}`;
+  const host = req.get('host') || '';
+  const isProd = host.includes('roleta-sorte.online');
+  const videoDomain = isProd ? 'https://player.roleta-sorte.online' : `${req.protocol}://${host}`;
+  const videoUrl = `${videoDomain}/videos/${req.file.filename}`;
 
   const finalStat = fs.statSync(originalPath);
 
@@ -414,7 +456,7 @@ app.post('/api/upload', authMiddleware, upload.single('videoFile'), (req, res) =
 });
 
 // -------------------------------------------------------------
-// STREAMING DE VÍDEO DE ALTA PERFORMANCE (Adaptive Chunking 1.5MB)
+// STREAMING DE VÍDEO (Adaptive Chunking 1.5MB HTTP 206)
 // -------------------------------------------------------------
 app.get('/videos/:filename', (req, res) => {
   const filePath = path.join(VIDEOS_DIR, req.params.filename);
@@ -430,8 +472,6 @@ app.get('/videos/:filename', (req, res) => {
   if (range) {
     const parts = range.replace(/bytes=/, "").split("-");
     const start = parseInt(parts[0], 10);
-    
-    // Chunk ideal para VSL instantânea: 1.5 MB por pacote
     const MAX_CHUNK = 1.5 * 1024 * 1024;
     let end = parts[1] ? parseInt(parts[1], 10) : start + MAX_CHUNK - 1;
     if (end >= fileSize) end = fileSize - 1;
@@ -454,7 +494,6 @@ app.get('/videos/:filename', (req, res) => {
     res.writeHead(206, head);
     file.pipe(res);
   } else {
-    // Se não pediu Range, envia os primeiros 2MB para carregar instantâneo
     const MAX_INITIAL = Math.min(2 * 1024 * 1024, fileSize);
     const file = fs.createReadStream(filePath, { start: 0, end: MAX_INITIAL - 1 });
     const head = {
@@ -470,11 +509,7 @@ app.get('/videos/:filename', (req, res) => {
 });
 
 app.get('*', (req, res) => {
-  if (fs.existsSync(path.join(PUBLIC_DIR, 'index.html'))) {
-    res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
-  } else {
-    res.send('CloudVTurb Server Online');
-  }
+  res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
 
 app.listen(PORT, () => {
