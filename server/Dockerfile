@@ -8,6 +8,7 @@ COPY package.json ./
 RUN npm install --production
 
 COPY server.js ./
+COPY vturb-analytics-api.js ./
 COPY public ./public
 
 EXPOSE 4000

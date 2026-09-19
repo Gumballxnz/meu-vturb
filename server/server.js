@@ -131,6 +131,47 @@ db.exec(`
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS comparison_groups (
+    id TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    started_at DATETIME,
+    finished_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS comparison_group_players (
+    id TEXT PRIMARY KEY,
+    comparison_group_id TEXT NOT NULL,
+    player_id TEXT NOT NULL,
+    traffic_percentage REAL DEFAULT 50,
+    started_at DATETIME,
+    locked INTEGER DEFAULT 0,
+    FOREIGN KEY(comparison_group_id) REFERENCES comparison_groups(id) ON DELETE CASCADE,
+    FOREIGN KEY(player_id) REFERENCES videos(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS custom_metrics (
+    id TEXT PRIMARY KEY,
+    player_id TEXT NOT NULL,
+    user_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    time INTEGER NOT NULL,
+    sequential_number INTEGER NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(player_id) REFERENCES videos(id) ON DELETE CASCADE,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS api_quota_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    api_key_id TEXT NOT NULL,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    queries_count INTEGER DEFAULT 1,
+    read_bytes INTEGER DEFAULT 1024
+  );
+
   CREATE INDEX IF NOT EXISTS idx_analytics_vid_event ON analytics_events(video_id, event_type);
   CREATE INDEX IF NOT EXISTS idx_analytics_vid_created ON analytics_events(video_id, created_at);
   CREATE INDEX IF NOT EXISTS idx_analytics_vid_visitor ON analytics_events(video_id, visitor_id);
@@ -144,6 +185,26 @@ const userCols = ['full_name', 'country', 'phone', 'address_street', 'postal_cod
 for (const col of userCols) {
   try { db.exec(`ALTER TABLE users ADD COLUMN ${col} TEXT`); } catch (e) {}
 }
+
+const analyticsCols = [
+  'device TEXT DEFAULT "desktop"',
+  'browser TEXT DEFAULT "Chrome"',
+  'os TEXT DEFAULT "Windows"',
+  'country TEXT DEFAULT "Brazil"',
+  'domain TEXT',
+  'utm_source TEXT',
+  'utm_medium TEXT',
+  'utm_campaign TEXT',
+  'utm_content TEXT',
+  'utm_term TEXT',
+  'conversion_amount REAL DEFAULT 0',
+  'conversion_currency TEXT DEFAULT "BRL"',
+  'platform TEXT'
+];
+for (const colDef of analyticsCols) {
+  try { db.exec(`ALTER TABLE analytics_events ADD COLUMN ${colDef}`); } catch (e) {}
+}
+
 try { db.exec("ALTER TABLE users ADD COLUMN onboarding_completed INTEGER DEFAULT 0"); } catch (e) {}
 try { db.exec("ALTER TABLE videos ADD COLUMN file_size INTEGER DEFAULT 0"); } catch (e) {}
 try { db.exec("ALTER TABLE videos ADD COLUMN folder_id TEXT"); } catch (e) {}
@@ -154,6 +215,7 @@ try { db.exec("ALTER TABLE videos ADD COLUMN smartautoplay_url TEXT DEFAULT NULL
 try { db.exec("ALTER TABLE api_keys ADD COLUMN token TEXT"); } catch (e) {}
 try { db.exec("CREATE INDEX IF NOT EXISTS idx_videos_folder ON videos(folder_id)"); } catch (e) {}
 try { db.exec("CREATE INDEX IF NOT EXISTS idx_videos_deleted ON videos(deleted_at)"); } catch (e) {}
+try { db.exec("CREATE INDEX IF NOT EXISTS idx_quota_logs_key_time ON api_quota_logs(api_key_id, timestamp)"); } catch (e) {}
 
 try {
   db.prepare("UPDATE users SET onboarding_completed = 1 WHERE role = 'owner' OR onboarding_completed IS NULL").run();
@@ -284,7 +346,8 @@ app.use((req, res, next) => {
   }
 
   const dashRoutes = ['/', '/login', '/cadastro', '/videos', '/metricas', '/usuarios', '/servidor', '/analytics', '/configuracoes', '/settings'];
-  if (dashRoutes.includes(req.path) || req.path.startsWith('/players/') || req.path.startsWith('/settings/') || req.path.startsWith('/configuracoes/') || req.path.startsWith('/folders/')) {
+  const isPlayerEditRoute = /^\/players\/[^/]+\/edit\/?$/.test(req.path);
+  if (dashRoutes.includes(req.path) || isPlayerEditRoute || req.path.startsWith('/settings/') || req.path.startsWith('/configuracoes/') || req.path.startsWith('/folders/')) {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
@@ -297,6 +360,10 @@ app.use((req, res, next) => {
 
   next();
 });
+
+const vturbAnalyticsRouter = require('./vturb-analytics-api')(db);
+app.use('/', vturbAnalyticsRouter);
+app.use('/api/v1', vturbAnalyticsRouter);
 
 app.use(express.static(PUBLIC_DIR));
 
@@ -1454,10 +1521,32 @@ app.post('/api/analytics/event', (req, res) => {
     if (exists) return res.json({ success: true, duplicate: true });
   }
 
+  const cleanDevice = req.body.device || 'desktop';
+  const cleanBrowser = req.body.browser || 'Chrome';
+  const cleanOs = req.body.os || 'Windows';
+  const cleanCountry = req.body.country || 'Brazil';
+  const cleanDomain = req.body.domain || (req.headers.referer ? (() => { try { return new URL(req.headers.referer).hostname; } catch(e){ return null; } })() : null);
+  const cleanUtmSource = req.body.utm_source || null;
+  const cleanUtmMedium = req.body.utm_medium || null;
+  const cleanUtmCampaign = req.body.utm_campaign || null;
+  const cleanUtmContent = req.body.utm_content || null;
+  const cleanUtmTerm = req.body.utm_term || null;
+  const cleanAmount = typeof req.body.conversion_amount === 'number' ? req.body.conversion_amount : 0;
+  const cleanCurrency = req.body.conversion_currency || 'BRL';
+  const cleanPlatform = req.body.platform || null;
+
   db.prepare(`
-    INSERT INTO analytics_events (video_id, visitor_id, session_id, event_type, milestone, watch_time)
-    VALUES (?, ?, ?, ?, ?, ?)
-  `).run(cleanVidId, cleanVisitorId, cleanSessionId, eventType, cleanMilestone, cleanWatchTime);
+    INSERT INTO analytics_events (
+      video_id, visitor_id, session_id, event_type, milestone, watch_time,
+      device, browser, os, country, domain, utm_source, utm_medium, utm_campaign, utm_content, utm_term,
+      conversion_amount, conversion_currency, platform
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    cleanVidId, cleanVisitorId, cleanSessionId, eventType, cleanMilestone, cleanWatchTime,
+    cleanDevice, cleanBrowser, cleanOs, cleanCountry, cleanDomain, cleanUtmSource, cleanUtmMedium, cleanUtmCampaign, cleanUtmContent, cleanUtmTerm,
+    cleanAmount, cleanCurrency, cleanPlatform
+  );
 
   if (eventType === 'play') {
     const playRecordedForSession = db.prepare(`
