@@ -6987,7 +6987,11 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       const sortVal = document.getElementById('storageSortSelect')?.value || 'size_desc';
 
       let videos = (data.videos || []).filter(v => {
-        if (searchVal && !v.title.toLowerCase().includes(searchVal)) return false;
+        if (searchVal) {
+          const titleMatch = v.title.toLowerCase().includes(searchVal);
+          const userMatch = (v.userName || '').toLowerCase().includes(searchVal) || (v.userEmail || '').toLowerCase().includes(searchVal);
+          if (!titleMatch && !userMatch) return false;
+        }
         if (statusVal === 'active' && v.isTrash) return false;
         if (statusVal === 'trash' && !v.isTrash) return false;
         if (userVal !== 'all' && v.userEmail !== userVal && v.userName !== userVal) return false;
