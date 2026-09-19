@@ -1511,6 +1511,7 @@
     }
 
     .settings-empty-state {
+      display: block;
       text-align: center;
       padding: 60px 20px;
     }
@@ -6593,7 +6594,7 @@
         const tbody = document.getElementById('membersTableBody');
 
         if (!members.length) {
-          emptyState.style.display = 'flex';
+          emptyState.style.display = 'block';
           tableWrapper.style.display = 'none';
           return;
         }
@@ -6712,7 +6713,7 @@
         const tbody = document.getElementById('apiKeysTableBody');
 
         if (!keys.length) {
-          emptyState.style.display = 'flex';
+          emptyState.style.display = 'block';
           tableWrapper.style.display = 'none';
           return;
         }
@@ -6822,7 +6823,7 @@
         const tbody = document.getElementById('webhooksTableBody');
 
         if (!hooks.length) {
-          emptyState.style.display = 'flex';
+          emptyState.style.display = 'block';
           tableWrapper.style.display = 'none';
           return;
         }

@@ -151,6 +151,7 @@ try { db.exec("ALTER TABLE videos ADD COLUMN deleted_at DATETIME DEFAULT NULL");
 try { db.exec("ALTER TABLE videos ADD COLUMN hls_ready INTEGER DEFAULT 0"); } catch (e) {}
 try { db.exec("ALTER TABLE videos ADD COLUMN hls_manifest TEXT DEFAULT NULL"); } catch (e) {}
 try { db.exec("ALTER TABLE videos ADD COLUMN smartautoplay_url TEXT DEFAULT NULL"); } catch (e) {}
+try { db.exec("ALTER TABLE api_keys ADD COLUMN token TEXT"); } catch (e) {}
 try { db.exec("CREATE INDEX IF NOT EXISTS idx_videos_folder ON videos(folder_id)"); } catch (e) {}
 try { db.exec("CREATE INDEX IF NOT EXISTS idx_videos_deleted ON videos(deleted_at)"); } catch (e) {}
 
@@ -873,27 +874,28 @@ app.delete('/api/members/:id', authMiddleware, (req, res) => {
 });
 
 app.get('/api/keys', authMiddleware, (req, res) => {
-  const keys = db.prepare(`
-    SELECT id, name, key_prefix, created_at, last_used_at
+  const key = db.prepare(`
+    SELECT id, name, key_prefix, token, created_at, last_used_at
     FROM api_keys
     WHERE user_id = ?
     ORDER BY created_at DESC
-  `).all(req.user.id);
-  res.json({ keys });
+    LIMIT 1
+  `).get(req.user.id);
+  res.json({ key: key || null, keys: key ? [key] : [] });
 });
 
 app.post('/api/keys', authMiddleware, (req, res) => {
-  const { name } = req.body || {};
-  const keyName = (name || 'Nova Chave de API').trim().slice(0, 60);
-  const rawKey = 'vturb_live_' + crypto.randomBytes(24).toString('hex');
-  const keyPrefix = rawKey.slice(0, 15) + '••••' + rawKey.slice(-4);
+  db.prepare('DELETE FROM api_keys WHERE user_id = ?').run(req.user.id);
+  const rawKey = crypto.randomBytes(32).toString('hex');
+  const keyPrefix = rawKey.slice(0, 8) + '••••' + rawKey.slice(-4);
   const keyHash = bcrypt.hashSync(rawKey, 8);
   const keyId = 'key_' + Date.now();
+  const keyName = 'Chave de API';
 
   db.prepare(`
-    INSERT INTO api_keys (id, user_id, name, key_prefix, key_hash)
-    VALUES (?, ?, ?, ?, ?)
-  `).run(keyId, req.user.id, keyName, keyPrefix, keyHash);
+    INSERT INTO api_keys (id, user_id, name, key_prefix, key_hash, token)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(keyId, req.user.id, keyName, keyPrefix, keyHash, rawKey);
 
   res.json({
     success: true,
@@ -907,8 +909,8 @@ app.post('/api/keys', authMiddleware, (req, res) => {
   });
 });
 
-app.delete('/api/keys/:id', authMiddleware, (req, res) => {
-  db.prepare('DELETE FROM api_keys WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
+app.delete('/api/keys/:id?', authMiddleware, (req, res) => {
+  db.prepare('DELETE FROM api_keys WHERE user_id = ?').run(req.user.id);
   res.json({ success: true });
 });
 
