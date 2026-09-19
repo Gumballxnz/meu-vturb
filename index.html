@@ -10,19 +10,73 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="alternate icon" href="/favicon.ico">
   <script>
-(function() {
+    (function() {
       var p = window.location.pathname.replace(/\/$/, '') || '/';
+      var hasToken = false;
+      try { hasToken = !!localStorage.getItem('cloudvturb_token'); } catch (e) {}
+
       if (p === '/login' || p === '/cadastro') {
-        try { localStorage.removeItem('cloudvturb_token'); } catch (e) {}
+        try {
+          localStorage.removeItem('cloudvturb_token');
+          localStorage.removeItem('cloudvturb_user');
+          localStorage.removeItem('cloudvturb_storage');
+          localStorage.removeItem('cloudvturb_overview');
+          localStorage.removeItem('cloudvturb_top_videos');
+        } catch (e) {}
         document.documentElement.classList.add('auth-pending');
         if (p === '/cadastro') {
           document.documentElement.classList.add('auth-mode-register');
         }
-      } else if (!localStorage.getItem('cloudvturb_token')) {
+      } else if (!hasToken) {
         document.documentElement.classList.add('auth-pending');
+      } else {
+        var tabId = 'viewOverview';
+        var navId = 'navOverview';
+        var title = 'Visão Geral';
+        var extraCss = '';
+
+        if (p === '/usuarios') {
+          tabId = 'viewUsers';
+          navId = 'navUsers';
+          title = 'Gestão de Usuários';
+          extraCss = '#navUsers { display: flex !important; } #ownerCategoryLabel { display: block !important; }';
+        } else if (p === '/analytics' || p === '/metricas') {
+          tabId = 'viewAnalytics';
+          navId = 'navAnalytics';
+          title = 'Analytics Real';
+        } else if (p === '/servidor' || p === '/armazenamento') {
+          tabId = 'viewStorage';
+          navId = 'navStorage';
+          title = 'Armazenamento';
+        } else if (p.indexOf('/settings') === 0 || p.indexOf('/configuracoes') === 0) {
+          tabId = 'viewSettings';
+          navId = 'navSettings';
+          title = 'Configurações';
+          if (p.indexOf('members') !== -1 || p.indexOf('membros') !== -1) {
+            extraCss = '#settingsPaneAccount { display: none !important; } #settingsPaneMembers { display: block !important; } #btnSettingsAccount { color: var(--text-muted) !important; background: transparent !important; } #btnSettingsMembers { color: var(--color-primary) !important; background: var(--color-primary-soft) !important; }';
+          } else if (p.indexOf('api') !== -1) {
+            extraCss = '#settingsPaneAccount { display: none !important; } #settingsPaneApi { display: block !important; } #btnSettingsAccount { color: var(--text-muted) !important; background: transparent !important; } #btnSettingsApi { color: var(--color-primary) !important; background: var(--color-primary-soft) !important; }';
+          } else if (p.indexOf('webhooks') !== -1) {
+            extraCss = '#settingsPaneAccount { display: none !important; } #settingsPaneWebhooks { display: block !important; } #btnSettingsAccount { color: var(--text-muted) !important; background: transparent !important; } #btnSettingsWebhooks { color: var(--color-primary) !important; background: var(--color-primary-soft) !important; }';
+          }
+        } else if (p.indexOf('/players/') === 0) {
+          tabId = 'viewEditor';
+          navId = 'navVideos';
+          title = 'Configurações de Vídeo';
+        } else if (p.indexOf('/folders') === 0 || p === '/videos') {
+          tabId = 'viewVideos';
+          navId = 'navVideos';
+          title = 'Biblioteca de Vídeos';
+        }
+
+        window.__initialRoute = { tabId: tabId, navId: navId, title: title };
+        var st = document.createElement('style');
+        st.id = 'earlyRouteStyle';
+        st.textContent = '#' + tabId + ' { display: block !important; } #' + navId + ' { color: var(--color-primary) !important; background: var(--color-primary-soft) !important; border-left: 3px solid var(--color-primary) !important; } ' + extraCss;
+        document.head.appendChild(st);
       }
     })();
-</script>
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -901,13 +955,12 @@
       position: absolute;
       right: 0;
       top: 100%;
-      margin-top: 4px;
       min-width: 180px;
       background: var(--bg-card);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-md);
-      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-      z-index: 1000;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+      z-index: 99999;
       padding: 6px 0;
       animation: dropdownFadeIn 0.12s ease;
     }
@@ -917,8 +970,8 @@
     }
 
     @keyframes dropdownFadeIn {
-      from { opacity: 0; transform: translateY(-4px); }
-      to { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
     .user-actions-dropdown button {
@@ -1271,6 +1324,156 @@
     .badge-status.yellow { background: var(--warning-light); color: #fbbf24; }
     .badge-status.red { background: var(--danger-light); color: #f87171; }
 
+    .table-vsl-cell {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .table-vsl-thumb {
+      position: relative;
+      width: 56px;
+      height: 32px;
+      border-radius: 4px;
+      background: #0f172a;
+      overflow: hidden;
+      flex-shrink: 0;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid var(--border-subtle);
+    }
+    .table-vsl-thumb video,
+    .table-vsl-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .table-vsl-thumb-play {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.4);
+      color: #ffffff;
+      opacity: 0.9;
+      transition: opacity 0.15s ease, background 0.15s ease;
+    }
+    .table-vsl-thumb:hover .table-vsl-thumb-play {
+      background: rgba(0, 0, 0, 0.6);
+      opacity: 1;
+    }
+    .table-vsl-thumb-play svg {
+      width: 12px;
+      height: 12px;
+      fill: #ffffff;
+      margin-left: 1px;
+    }
+    .table-vsl-info {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+    }
+    .table-vsl-title {
+      font-weight: 600;
+      color: var(--text-main);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 250px;
+      cursor: pointer;
+      text-decoration: none;
+    }
+    .table-vsl-title:hover {
+      color: var(--primary);
+    }
+    .table-vsl-edit-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 4px;
+      transition: color 0.15s;
+    }
+    .table-vsl-edit-btn:hover {
+      color: var(--primary);
+    }
+    .table-actions-group {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      justify-content: flex-end;
+      position: relative;
+    }
+    .btn-table-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-dim);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-table-icon:hover {
+      background: var(--bg-hover);
+      color: var(--text-main);
+      border-color: var(--border-subtle);
+    }
+    .table-actions-menu {
+      position: fixed;
+      z-index: 99999;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+      padding: 6px;
+      min-width: 180px;
+      display: none;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .table-actions-menu.active {
+      display: flex;
+    }
+    .table-actions-menu-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 8px 12px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-main);
+      background: transparent;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.12s, color 0.12s;
+    }
+    .table-actions-menu-item:hover {
+      background: var(--bg-hover);
+      color: var(--primary);
+    }
+    .table-actions-menu-item.danger {
+      color: #ef4444;
+    }
+    .table-actions-menu-item.danger:hover {
+      background: rgba(239, 68, 68, 0.1);
+      color: #ef4444;
+    }
+
     .modal-overlay {
       position: fixed;
       inset: 0;
@@ -1524,7 +1727,8 @@
     }
 
     .settings-empty-state .btn-primary-action {
-      margin-top: 20px;
+      margin: 20px auto 0;
+      align-self: center;
     }
 
     .vturb-api-card {
@@ -2797,7 +3001,7 @@
 
       <nav class="sidebar-nav">
         <div class="nav-category">Principal</div>
-        <div class="nav-item active" id="navOverview" onclick="navigateTo('overview')">
+        <div class="nav-item" id="navOverview" onclick="navigateTo('overview')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
           Visão Geral
         </div>
@@ -2831,7 +3035,7 @@
         <div class="storage-mini-card">
           <div class="storage-mini-header">
             <span>Armazenamento</span>
-            <span id="miniStorageUsageLabel">0 MB / 3 GB</span>
+            <span id="miniStorageUsageLabel"></span>
           </div>
           <div class="progress-bar-bg">
             <div class="progress-bar-fill-violet" id="miniStorageProgressBar" style="width: 0%;"></div>
@@ -2843,8 +3047,8 @@
             <div class="popover-user-summary">
               <div class="user-avatar" id="popoverAvatar">U</div>
               <div class="popover-user-text">
-                <span class="popover-user-name" id="popoverUserName">Usuário</span>
-                <span class="popover-user-email" id="popoverUserEmail">carregando...</span>
+                <span class="popover-user-name" id="popoverUserName"></span>
+                <span class="popover-user-email" id="popoverUserEmail"></span>
               </div>
             </div>
             <div class="popover-divider"></div>
@@ -2866,8 +3070,8 @@
           <button class="sidebar-profile-trigger" id="sidebarProfileTrigger" onclick="toggleProfileMenu(event)">
             <div class="user-avatar" id="sidebarAvatar">U</div>
             <div class="sidebar-user-details">
-              <span class="sidebar-user-name" id="sidebarUserName">Carregando...</span>
-              <span class="sidebar-user-role" id="sidebarUserRole">Membro</span>
+              <span class="sidebar-user-name" id="sidebarUserName"></span>
+              <span class="sidebar-user-role" id="sidebarUserRole"></span>
             </div>
             <svg class="sidebar-chevron-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>
           </button>
@@ -3013,19 +3217,16 @@
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
         </button>
         <div class="page-title" id="pageTitleLabel">Visão Geral</div>
+        <script>if (window.__initialRoute && document.getElementById('pageTitleLabel')) document.getElementById('pageTitleLabel').textContent = window.__initialRoute.title;</script>
       </div>
 
       <div class="topbar-right">
-        <button class="btn-primary-action" id="btnTopNewVsl" onclick="openNewVideoModal()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          Nova VSL
-        </button>
       </div>
     </header>
 
     <main class="content-container">
 
-      <section class="tab-view active" id="viewOverview">
+      <section class="tab-view" id="viewOverview">
         <div class="metrics-grid">
           <div class="metric-card">
             <div class="metric-header">
@@ -3301,8 +3502,8 @@
 
           <div style="margin-bottom: 24px;">
             <div style="display: flex; justify-content: space-between; font-size: 13.5px; font-weight: 600; margin-bottom: 8px;">
-              <span id="storageDetailedUsage">0 MB usados</span>
-              <span id="storageCapacityLabel" style="color: var(--text-dim);">Capacidade: 3 GB</span>
+              <span id="storageDetailedUsage"></span>
+              <span id="storageCapacityLabel" style="color: var(--text-dim);"></span>
             </div>
             <div class="progress-bar-bg" style="height: 10px;">
               <div class="progress-bar-fill-violet" id="storageDetailedFill" style="width: 0%;"></div>
@@ -3467,7 +3668,7 @@
                 <div class="settings-empty-text">
                   Os membros da sua equipe aparecerão aqui, adicione um primeiro membro e configure suas permissões
                 </div>
-                <button type="button" class="btn-primary-action" onclick="openAddMemberModal()">Adicionar membro</button>
+                <button type="button" class="btn-primary-action" onclick="openAddMemberModal()" style="margin: 20px auto 0; align-self: center;">Adicionar membro</button>
               </div>
 
               <div id="membersTableWrapper" style="display: none;" class="table-responsive">
@@ -4480,7 +4681,7 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
         <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 16px;">
           <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; margin-bottom: 6px;">
             <span style="color: var(--text-muted);">Armazenamento de Vídeos</span>
-            <span id="modalProfileStorageLabel" style="color: var(--text-main);">0 MB de 3 GB usados</span>
+            <span id="modalProfileStorageLabel" style="color: var(--text-main);"></span>
           </div>
           <div class="progress-bar-bg" style="height: 8px;">
             <div class="progress-bar-fill-violet" id="modalProfileStorageProgress" style="width: 0%;"></div>
@@ -4821,6 +5022,30 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
     </div>
   </div>
 
+  <div id="topVideoFloatingMenu" class="table-actions-menu">
+    <button type="button" class="table-actions-menu-item" onclick="handleTopMenuAction('edit')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+      <span>Editar Vídeo</span>
+    </button>
+    <button type="button" class="table-actions-menu-item" onclick="handleTopMenuAction('analytics')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+      <span>Ver Analytics</span>
+    </button>
+    <button type="button" class="table-actions-menu-item" onclick="handleTopMenuAction('embed')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+      <span>Código Embed</span>
+    </button>
+    <button type="button" class="table-actions-menu-item" onclick="handleTopMenuAction('move')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+      <span>Mover para Pasta</span>
+    </button>
+    <div style="height: 1px; background: var(--border-subtle); margin: 4px 0;"></div>
+    <button type="button" class="table-actions-menu-item danger" onclick="handleTopMenuAction('trash')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+      <span>Mover para Lixeira</span>
+    </button>
+  </div>
+
   <div class="toast-msg" id="appToast">
     <span id="toastText">Operação realizada com sucesso</span>
   </div>
@@ -4886,53 +5111,87 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
       if (bd) bd.classList.toggle('active', willOpen);
     }
 
+    function hydrateCachedSession() {
+      try {
+        const cachedUser = localStorage.getItem('cloudvturb_user');
+        if (cachedUser) {
+          currentUser = JSON.parse(cachedUser);
+          setupUserHeader();
+        }
+        const cachedStorage = localStorage.getItem('cloudvturb_storage');
+        if (cachedStorage && typeof applyStorageUI === 'function') {
+          applyStorageUI(JSON.parse(cachedStorage));
+        }
+        const cachedOverview = localStorage.getItem('cloudvturb_overview');
+        if (cachedOverview && typeof applyOverviewUI === 'function') {
+          applyOverviewUI(JSON.parse(cachedOverview));
+        }
+        const cachedTop = localStorage.getItem('cloudvturb_top_videos');
+        if (cachedTop) {
+          topVideos = JSON.parse(cachedTop);
+        }
+      } catch (e) {}
+    }
+
     async function initSession() {
       const p = window.location.pathname.replace(/\/$/, '') || '/';
       const isAuthRoute = p === '/login' || p === '/cadastro';
 
       if (isAuthRoute) {
         token = '';
-        try { localStorage.removeItem('cloudvturb_token'); } catch (e) {}
+        try {
+          localStorage.removeItem('cloudvturb_token');
+          localStorage.removeItem('cloudvturb_user');
+          localStorage.removeItem('cloudvturb_storage');
+          localStorage.removeItem('cloudvturb_overview');
+          localStorage.removeItem('cloudvturb_top_videos');
+        } catch (e) {}
         document.documentElement.classList.add('auth-pending');
         showAuth(p === '/cadastro' ? 'register' : 'login');
-      } else if (!token) {
-        document.documentElement.classList.add('auth-pending');
-        showAuth('login');
+        return;
       }
 
-      try {
-        appConfig = await fetch('/api/config').then(r => r.json()).catch(() => appConfig);
+      if (!token) {
+        document.documentElement.classList.add('auth-pending');
+        showAuth('login');
+        return;
+      }
+
+      routeByUrl();
+
+      fetch('/api/config').then(r => r.json()).then(cfg => {
+        appConfig = cfg || appConfig;
         const sbAppEl = document.getElementById('sidebarAppName');
         if (sbAppEl) sbAppEl.textContent = appConfig.appName || 'CloudVTurb';
         const cfgAppInput = document.getElementById('cfgAppNameInput');
         if (cfgAppInput) cfgAppInput.value = appConfig.appName || 'CloudVTurb';
         const cfgDomainInput = document.getElementById('cfgBaseDomainInput');
         if (cfgDomainInput) cfgDomainInput.value = appConfig.baseDomain || window.location.hostname;
-      } catch (e) {}
-
-      if (isAuthRoute) {
-        return;
-      }
-
-      if (!token) {
-        showAuth('login');
-        return;
-      }
+      }).catch(() => {});
 
       try {
         const me = await api('/api/auth/me');
         currentUser = me.user;
+        try { localStorage.setItem('cloudvturb_user', JSON.stringify(currentUser)); } catch (e) {}
         document.documentElement.classList.remove('auth-pending', 'auth-mode-register');
         setupUserHeader();
-        await loadAllDashboardData();
+
         if (currentUser && currentUser.onboarding_completed === false) {
           startOnboarding();
-        } else {
-          routeByUrl();
+          return;
         }
+
+        routeByUrl();
+        loadAllDashboardData();
       } catch (err) {
         token = '';
-        localStorage.removeItem('cloudvturb_token');
+        try {
+          localStorage.removeItem('cloudvturb_token');
+          localStorage.removeItem('cloudvturb_user');
+          localStorage.removeItem('cloudvturb_storage');
+          localStorage.removeItem('cloudvturb_overview');
+          localStorage.removeItem('cloudvturb_top_videos');
+        } catch (e) {}
         document.documentElement.classList.add('auth-pending');
         const curP = window.location.pathname.replace(/\/$/, '') || '/';
         showAuth(curP === '/cadastro' ? 'register' : 'login');
@@ -5183,15 +5442,19 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
         token = res.token;
         localStorage.setItem('cloudvturb_token', token);
         currentUser = res.user;
+        try { localStorage.setItem('cloudvturb_user', JSON.stringify(currentUser)); } catch (e) {}
         document.documentElement.classList.remove('auth-pending', 'auth-mode-register');
         document.getElementById('authBackdrop').style.display = 'none';
         setupUserHeader();
-        await loadAllDashboardData();
+        const curPath = window.location.pathname.replace(/\/$/, '') || '/';
         if (currentUser && currentUser.onboarding_completed === false) {
           startOnboarding();
-        } else {
+        } else if (curPath === '/login' || curPath === '/cadastro' || curPath === '/') {
           navigateTo('overview');
+        } else {
+          routeByUrl();
         }
+        loadAllDashboardData();
         showToast('Login realizado com sucesso!');
       } catch (err) {
         alert.style.display = 'block';
@@ -5271,12 +5534,15 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
           document.documentElement.classList.remove('auth-pending', 'auth-mode-register');
           document.getElementById('authBackdrop').style.display = 'none';
           setupUserHeader();
-          await loadAllDashboardData();
+          const curP = window.location.pathname.replace(/\/$/, '') || '/';
           if (currentUser && currentUser.onboarding_completed === false) {
             startOnboarding();
-          } else {
+          } else if (curP === '/login' || curP === '/cadastro' || curP === '/') {
             navigateTo('overview');
+          } else {
+            routeByUrl();
           }
+          loadAllDashboardData();
           showToast('Conta confirmada com sucesso!');
         }
       } catch (err) {
@@ -5425,7 +5691,13 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
             await new Promise(r => setTimeout(r, 250));
             token = '';
             currentUser = null;
-            try { localStorage.removeItem('cloudvturb_token'); } catch (e) {}
+            try {
+              localStorage.removeItem('cloudvturb_token');
+              localStorage.removeItem('cloudvturb_user');
+              localStorage.removeItem('cloudvturb_storage');
+              localStorage.removeItem('cloudvturb_overview');
+              localStorage.removeItem('cloudvturb_top_videos');
+            } catch (e) {}
             closeConfirmModal();
             window.location.href = '/login';
           } finally {
@@ -5468,7 +5740,13 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
       }
 
       if (p === '/analytics' || p === '/metricas') navigateTo('analytics', false);
-      else if (p === '/usuarios') navigateTo('users', false);
+      else if (p === '/usuarios') {
+        if (currentUser && currentUser.role !== 'owner' && currentUser.role !== 'admin') {
+          navigateTo('overview', true);
+        } else {
+          navigateTo('users', false);
+        }
+      }
       else if (p === '/servidor' || p === '/armazenamento') navigateTo('storage', false);
       else if (p === '/settings/members' || p === '/configuracoes/members' || p === '/configuracoes/membros') {
         navigateTo('settings', false);
@@ -5535,6 +5813,8 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
 
       if (tabEl) tabEl.classList.add('active');
       if (navEl) navEl.classList.add('active');
+      const earlyStyle = document.getElementById('earlyRouteStyle');
+      if (earlyStyle) earlyStyle.remove();
       document.getElementById('pageTitleLabel').textContent = target.title;
 
       if (tabName === 'analytics') {
@@ -5556,48 +5836,79 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
 
     window.addEventListener('popstate', () => routeByUrl());
 
+    function applyStorageUI(s, isOwnerOverride) {
+      if (!s) return;
+      const isOwner = isOwnerOverride !== undefined ? isOwnerOverride : (s.isOwner !== undefined ? s.isOwner : (currentUser && currentUser.role === 'owner'));
+      const totalFormatted = s.totalFormatted || (isOwner ? '30 GB' : '3 GB');
+      const formattedUsage = s.formattedUsage || '0 MB';
+      const usageText = `${formattedUsage} / ${totalFormatted}`;
+      const miniEl = document.getElementById('miniStorageUsageLabel');
+      if (miniEl) miniEl.textContent = usageText;
+      const detUsage = document.getElementById('storageDetailedUsage');
+      if (detUsage) detUsage.textContent = `${formattedUsage} usados`;
+      const capLabel = document.getElementById('storageCapacityLabel');
+      if (capLabel) capLabel.textContent = isOwner ? 'Capacidade do Servidor: 30 GB' : 'Sua Cota Individual: 3 GB';
+      const pct = Math.min(100, Math.max(s.usedBytes > 0 ? 1 : 0, parseFloat(s.usagePercent || '0')));
+      const miniBar = document.getElementById('miniStorageProgressBar');
+      if (miniBar) miniBar.style.width = `${pct}%`;
+      const detFill = document.getElementById('storageDetailedFill');
+      if (detFill) detFill.style.width = `${pct}%`;
+      const modalLabel = document.getElementById('modalProfileStorageLabel');
+      if (modalLabel) modalLabel.textContent = `${formattedUsage} de ${totalFormatted} usados`;
+      const modalProg = document.getElementById('modalProfileStorageProgress');
+      if (modalProg) modalProg.style.width = `${pct}%`;
+    }
+
+    function applyOverviewUI(aData) {
+      if (!aData) return;
+      const elViews = document.getElementById('statOverviewViews');
+      if (elViews && aData.totalViews !== undefined) elViews.textContent = Number(aData.totalViews).toLocaleString();
+      const elPlays = document.getElementById('statOverviewPlays');
+      if (elPlays && aData.uniquePlays !== undefined) elPlays.textContent = Number(aData.uniquePlays).toLocaleString();
+      const elComp = document.getElementById('statOverviewCompletion');
+      if (elComp && aData.completionRate !== undefined) elComp.textContent = `${aData.completionRate}%`;
+      const elCta = document.getElementById('statOverviewCtaClicks');
+      if (elCta && aData.ctaClicks !== undefined) elCta.textContent = Number(aData.ctaClicks).toLocaleString();
+      const elCtaRate = document.getElementById('statOverviewCtaRate');
+      if (elCtaRate && aData.conversionRate !== undefined) elCtaRate.textContent = `${aData.conversionRate}% de conversão no CTA`;
+    }
+
     async function loadAllDashboardData() {
       try {
-        const fData = await api('/api/folders').catch(() => ({ folders: [] }));
+        const [fData, tData, vData, aData, sData] = await Promise.all([
+          api('/api/folders').catch(() => ({ folders: [] })),
+          api('/api/videos?trash=1').catch(() => ({ videos: [] })),
+          api('/api/videos').catch(() => ({ videos: [] })),
+          api('/api/analytics/overview').catch(() => ({})),
+          api('/api/admin/settings').catch(() => ({}))
+        ]);
+
         folders = fData.folders || [];
         renderFoldersGrid();
         populateFolderSelects();
 
-        const tData = await api('/api/videos?trash=1').catch(() => ({ videos: [] }));
         trashVideos = tData.videos || [];
         const trashBadge = document.getElementById('trashCountBadge');
         if (trashBadge) trashBadge.textContent = trashVideos.length;
 
-        const vData = await api('/api/videos');
         videos = vData.videos || [];
         renderVideosGrid();
         renderOverviewRecent();
 
-        const aData = await api('/api/analytics/overview');
-        document.getElementById('statOverviewViews').textContent = (aData.totalViews || 0).toLocaleString();
-        document.getElementById('statOverviewPlays').textContent = (aData.uniquePlays || 0).toLocaleString();
-        document.getElementById('statOverviewCompletion').textContent = `${aData.completionRate || '0.0'}%`;
-        document.getElementById('statOverviewCtaClicks').textContent = (aData.ctaClicks || 0).toLocaleString();
-        document.getElementById('statOverviewCtaRate').textContent = `${aData.conversionRate || '0.0'}% de conversão no CTA`;
-
-        const sData = await api('/api/admin/settings');
-        if (sData && sData.storage) {
-          const isOwner = sData.isOwner;
-          const usageText = `${sData.storage.formattedUsage} / ${sData.storage.totalFormatted}`;
-          document.getElementById('miniStorageUsageLabel').textContent = usageText;
-          document.getElementById('storageDetailedUsage').textContent = `${sData.storage.formattedUsage} usados`;
-          document.getElementById('storageCapacityLabel').textContent = isOwner ? 'Capacidade do Servidor: 30 GB' : 'Sua Cota Individual: 3 GB';
-          const pct = Math.min(100, Math.max(sData.storage.usedBytes > 0 ? 1 : 0, parseFloat(sData.storage.usagePercent || '0')));
-          document.getElementById('miniStorageProgressBar').style.width = `${pct}%`;
-          document.getElementById('storageDetailedFill').style.width = `${pct}%`;
-
-          if (document.getElementById('modalProfileStorageLabel')) {
-            document.getElementById('modalProfileStorageLabel').textContent = `${sData.storage.formattedUsage} de ${sData.storage.totalFormatted} usados`;
-            document.getElementById('modalProfileStorageProgress').style.width = `${pct}%`;
-          }
+        if (aData) {
+          applyOverviewUI(aData);
+          try { localStorage.setItem('cloudvturb_overview', JSON.stringify(aData)); } catch (e) {}
         }
 
-        if (currentUser && currentUser.role === 'owner' && sData.requireApproval !== undefined) {
+        if (sData && sData.storage) {
+          const isOwner = sData.isOwner;
+          applyStorageUI(sData.storage, isOwner);
+          try {
+            localStorage.setItem('cloudvturb_storage', JSON.stringify({ ...sData.storage, isOwner }));
+          } catch (e) {}
+        }
+
+        if (currentUser && currentUser.role === 'owner' && sData && sData.requireApproval !== undefined) {
           document.getElementById('cfgApprovalCheckbox').checked = sData.requireApproval;
         }
       } catch (err) {
@@ -5885,40 +6196,136 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
       });
     }
 
-    async function loadTopVideos() {
+    function renderTopVideosTable(list) {
       const tbody = document.getElementById('topVideosTableBody');
       if (!tbody) return;
+      tbody.innerHTML = '';
+
+      if (!list || list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-dim);">Nenhum dado analítico registrado ainda. As métricas reais das reproduções aparecerão aqui.</td></tr>';
+        return;
+      }
+
+      list.forEach((v, index) => {
+        const tr = document.createElement('tr');
+        const thumbUrl = v.thumbnail || (v.video_url ? `${v.video_url}#t=0.5` : '');
+        tr.innerHTML = `
+          <td><strong style="color:var(--primary);">#${index + 1}</strong></td>
+          <td>
+            <div class="table-vsl-cell">
+              <div class="table-vsl-thumb" onclick="openEditor('${v.id}')" title="Editar ${escapeHtml(v.title)}">
+                <video src="${escapeHtml(thumbUrl)}" preload="metadata" muted playsinline></video>
+                <div class="table-vsl-thumb-play">
+                  <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                </div>
+              </div>
+              <div class="table-vsl-info">
+                <span class="table-vsl-title" onclick="openEditor('${v.id}')" title="${escapeHtml(v.title)}">${escapeHtml(v.title)}</span>
+                <button class="table-vsl-edit-btn" onclick="openEditor('${v.id}')" title="Editar VSL">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                </button>
+              </div>
+            </div>
+          </td>
+          <td>${v.duration || '10:00'}</td>
+          <td>${(v.plays || 0).toLocaleString()}</td>
+          <td>${v.completionRate || '0.0'}%</td>
+          <td>${(v.ctaClicks || 0).toLocaleString()}</td>
+          <td><span class="badge-status green">${v.ctaRate || '0.0'}%</span></td>
+          <td style="text-align: right;">
+            <div class="table-actions-group">
+              <button class="btn-table-icon" onclick="openVideoAnalytics('${v.id}')" title="Ver Analytics">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg>
+              </button>
+              <button class="btn-table-icon" onclick="openEmbedModal('${v.id}')" title="Código Embed">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+              </button>
+              <button class="btn-table-icon btn-dots" onclick="toggleTopVideoMenu(event, '${v.id}')" title="Mais Opções">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="2"></circle><circle cx="12" cy="12" r="2"></circle><circle cx="12" cy="19" r="2"></circle></svg>
+              </button>
+            </div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function toggleTopVideoMenu(e, videoId) {
+      e.stopPropagation();
+      const menu = document.getElementById('topVideoFloatingMenu');
+      if (!menu) return;
+
+      if (menu.classList.contains('active') && menu.dataset.activeVideoId === videoId) {
+        closeAllTopVidMenus();
+        return;
+      }
+
+      menu.dataset.activeVideoId = videoId;
+      const btn = e.currentTarget;
+      const rect = btn.getBoundingClientRect();
+      menu.style.top = `${rect.bottom + 6}px`;
+      menu.style.left = `${Math.max(10, rect.right - 180)}px`;
+      menu.classList.add('active');
+    }
+
+    function closeAllTopVidMenus() {
+      const menu = document.getElementById('topVideoFloatingMenu');
+      if (menu) {
+        menu.classList.remove('active');
+        delete menu.dataset.activeVideoId;
+      }
+    }
+
+    function handleTopMenuAction(action) {
+      const menu = document.getElementById('topVideoFloatingMenu');
+      const vidId = menu ? menu.dataset.activeVideoId : null;
+      closeAllTopVidMenus();
+      if (!vidId) return;
+
+      if (action === 'edit') openEditor(vidId);
+      else if (action === 'analytics') openVideoAnalytics(vidId);
+      else if (action === 'embed') openEmbedModal(vidId);
+      else if (action === 'move') openMoveVideoModal(vidId);
+      else if (action === 'trash') trashVideoPrompt(vidId);
+    }
+
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('#topVideoFloatingMenu') && !e.target.closest('.btn-dots')) {
+        closeAllTopVidMenus();
+      }
+    });
+
+    window.addEventListener('scroll', () => closeAllTopVidMenus(), true);
+
+    async function loadTopVideos(forceRefresh = false) {
+      const tbody = document.getElementById('topVideosTableBody');
+      if (!tbody) return;
+
+      if (topVideos && topVideos.length > 0) {
+        renderTopVideosTable(topVideos);
+        if (!forceRefresh) {
+          api('/api/videos/top').then(res => {
+            if (res && res.topVideos) {
+              topVideos = res.topVideos;
+              try { localStorage.setItem('cloudvturb_top_videos', JSON.stringify(topVideos)); } catch (e) {}
+              renderTopVideosTable(topVideos);
+            }
+          }).catch(() => {});
+          return;
+        }
+      }
+
       tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-dim);">Carregando métricas dos melhores vídeos...</td></tr>';
 
       try {
         const res = await api('/api/videos/top');
         topVideos = res.topVideos || [];
-        tbody.innerHTML = '';
-
-        if (topVideos.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-dim);">Nenhum dado analítico registrado ainda. As métricas reais das reproduções aparecerão aqui.</td></tr>';
-          return;
-        }
-
-        topVideos.forEach((v, index) => {
-          const tr = document.createElement('tr');
-          tr.innerHTML = `
-            <td><strong style="color:var(--primary);">#${index + 1}</strong></td>
-            <td><strong>${escapeHtml(v.title)}</strong></td>
-            <td>${v.duration || '10:00'}</td>
-            <td>${(v.plays || 0).toLocaleString()}</td>
-            <td>${v.completionRate || '0.0'}%</td>
-            <td>${(v.ctaClicks || 0).toLocaleString()}</td>
-            <td><span class="badge-status green">${v.ctaRate || '0.0'}%</span></td>
-            <td style="text-align: right;">
-              <button class="btn-clean-secondary" style="padding:4px 10px;margin-right:6px;" onclick="openEditor('${v.id}')">Editar</button>
-              <button class="btn-clean-secondary" style="padding:4px 10px;" onclick="openVideoAnalytics('${v.id}')">Analytics</button>
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });
+        try { localStorage.setItem('cloudvturb_top_videos', JSON.stringify(topVideos)); } catch (e) {}
+        renderTopVideosTable(topVideos);
       } catch (err) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:#f87171;">Falha ao carregar ranking.</td></tr>';
+        if (!topVideos || topVideos.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:#f87171;">Falha ao carregar ranking.</td></tr>';
+        }
       }
     }
 
@@ -6990,9 +7397,10 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
 
     let currentEmbedSnippetTab = 'js';
 
-    function openEmbedModal() {
+    function openEmbedModal(videoId) {
+      if (videoId) currentEditingVideoId = videoId;
       if (!currentEditingVideoId) return;
-      const v = videos.find(x => x.id === currentEditingVideoId);
+      const v = videos.find(x => x.id === currentEditingVideoId) || (topVideos && topVideos.find(x => x.id === currentEditingVideoId));
       if (!v) return;
       updateEmbedCodeDisplay();
       document.getElementById('vturbEmbedModal').classList.add('active');
@@ -7018,7 +7426,7 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
 
     function updateEmbedCodeDisplay() {
       if (!currentEditingVideoId) return;
-      const v = videos.find(x => x.id === currentEditingVideoId);
+      const v = videos.find(x => x.id === currentEditingVideoId) || (topVideos && topVideos.find(x => x.id === currentEditingVideoId));
       if (!v) return;
 
       const playerHost = appConfig.playerDomain || window.location.origin;
@@ -7473,10 +7881,19 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
     }
 
     async function loadUsersTable() {
-      if (!currentUser || (currentUser.role !== 'owner' && currentUser.role !== 'admin')) return;
+      const tbody = document.getElementById('usersListBody');
+      if (!currentUser) {
+        if (tbody && !tbody.innerHTML.trim()) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:32px; color:var(--text-muted);"><span class="btn-spinner" style="border-color:var(--color-primary); border-top-color:transparent; width:18px; height:18px; display:inline-block; margin-right:8px; vertical-align:middle;"></span> Carregando usuários...</td></tr>';
+        }
+        return;
+      }
+      if (currentUser.role !== 'owner' && currentUser.role !== 'admin') return;
       try {
+        if (tbody && (!tbody.children.length || tbody.textContent.includes('Carregando'))) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:32px; color:var(--text-muted);"><span class="btn-spinner" style="border-color:var(--color-primary); border-top-color:transparent; width:18px; height:18px; display:inline-block; margin-right:8px; vertical-align:middle;"></span> Carregando usuários...</td></tr>';
+        }
         const data = await api('/api/admin/users');
-        const tbody = document.getElementById('usersListBody');
         if (!tbody) return;
         tbody.innerHTML = '';
 
@@ -7540,16 +7957,44 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
       const dropdown = btn.nextElementSibling;
       const isOpen = dropdown.classList.contains('active');
       closeAllUserMenus();
-      if (!isOpen) dropdown.classList.add('active');
+      if (!isOpen) {
+        dropdown.classList.add('active');
+        dropdown.style.position = 'fixed';
+        dropdown.style.zIndex = '99999';
+        const rect = btn.getBoundingClientRect();
+        const dropdownRect = dropdown.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const neededHeight = dropdownRect.height || 210;
+
+        if (spaceBelow < neededHeight && rect.top > neededHeight) {
+          dropdown.style.top = 'auto';
+          dropdown.style.bottom = `${window.innerHeight - rect.top + 4}px`;
+        } else {
+          dropdown.style.top = `${rect.bottom + 4}px`;
+          dropdown.style.bottom = 'auto';
+        }
+        dropdown.style.left = 'auto';
+        dropdown.style.right = `${Math.max(10, window.innerWidth - rect.right)}px`;
+      }
     }
 
     function closeAllUserMenus() {
-      document.querySelectorAll('.user-actions-dropdown.active').forEach(d => d.classList.remove('active'));
+      document.querySelectorAll('.user-actions-dropdown.active').forEach(d => {
+        d.classList.remove('active');
+        d.style.position = '';
+        d.style.top = '';
+        d.style.bottom = '';
+        d.style.left = '';
+        d.style.right = '';
+      });
     }
 
     document.addEventListener('click', closeAllUserMenus);
+    window.addEventListener('scroll', closeAllUserMenus, true);
+    window.addEventListener('resize', closeAllUserMenus);
 
     function execUserAction(id, action) {
+      closeAllUserMenus();
       const actionLabels = {
         approve: 'aprovar este usuário',
         block: 'bloquear o acesso deste usuário',
@@ -7791,7 +8236,7 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
         const tbody = document.getElementById('membersTableBody');
 
         if (!members.length) {
-          emptyState.style.display = 'block';
+          emptyState.style.display = 'flex';
           tableWrapper.style.display = 'none';
           return;
         }
@@ -8277,12 +8722,14 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
 
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', () => {
+        hydrateCachedSession();
         initSession();
         setupVerificationCodeInputs();
         setupImportDropZoneEvents();
         setupOnboardingDropZoneEvents();
       });
     } else {
+      hydrateCachedSession();
       initSession();
       setupVerificationCodeInputs();
       setupImportDropZoneEvents();
