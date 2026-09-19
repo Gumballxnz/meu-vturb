@@ -12,9 +12,8 @@ const Database = require('better-sqlite3');
 const app = express();
 const PORT = process.env.PORT || 4000;
 const JWT_SECRET = process.env.JWT_SECRET || 'cloudvturb_ultra_secret_key_2026_jwt_token_99';
-const MAX_STORAGE_BYTES = 30 * 1024 * 1024 * 1024; // 30 GB cota
+const MAX_STORAGE_BYTES = 30 * 1024 * 1024 * 1024;
 
-// Diretórios
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const VIDEOS_DIR = process.env.VIDEOS_DIR || path.join(__dirname, 'videos');
 const PUBLIC_DIR = process.env.PUBLIC_DIR || path.join(__dirname, 'public');
@@ -23,7 +22,6 @@ if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 if (!fs.existsSync(VIDEOS_DIR)) fs.mkdirSync(VIDEOS_DIR, { recursive: true });
 if (!fs.existsSync(PUBLIC_DIR)) fs.mkdirSync(PUBLIC_DIR, { recursive: true });
 
-// 1. Inicialização do Banco SQLite
 const db = new Database(path.join(DATA_DIR, 'cloudvturb.db'));
 db.pragma('journal_mode = WAL');
 
@@ -61,8 +59,8 @@ db.exec(`
 
 try {
   db.prepare(`
-    UPDATE videos 
-    SET video_url = REPLACE(video_url, 'https://roleta-sorte.online/videos/', 'https://player.roleta-sorte.online/videos/') 
+    UPDATE videos
+    SET video_url = REPLACE(video_url, 'https://roleta-sorte.online/videos/', 'https://player.roleta-sorte.online/videos/')
     WHERE video_url LIKE '%roleta-sorte.online/videos/%'
   `).run();
 } catch (e) {}
@@ -80,17 +78,12 @@ if (!getSetting('require_approval', null)) {
   setSetting('require_approval', '1');
 }
 
-// 2. Middlewares Globais
 app.use(cors());
 app.use(express.json());
 
-// -------------------------------------------------------------
-// ROTEAMENTO POR SUBDOMÍNIO (Landing vs Dash vs Player)
-// -------------------------------------------------------------
 app.use((req, res, next) => {
   const host = (req.headers.host || '').toLowerCase();
 
-  // 1. Subdomínio player.roleta-sorte.online
   if (host.startsWith('player.')) {
     if (req.path.startsWith('/videos/') || req.path.startsWith('/api/')) {
       return next();
@@ -108,7 +101,6 @@ app.use((req, res, next) => {
     }
   }
 
-  // 2. Domínio Principal: roleta-sorte.online (Landing Page)
   if (host === 'roleta-sorte.online' || host === 'www.roleta-sorte.online') {
     if (req.path === '/login') {
       return res.redirect(301, 'https://dash.roleta-sorte.online/login');
@@ -124,7 +116,6 @@ app.use((req, res, next) => {
     }
   }
 
-  // 3. Subdomínio dash.roleta-sorte.online (ou localhost)
   const dashRoutes = ['/', '/login', '/cadastro', '/videos', '/metricas', '/usuarios', '/servidor'];
   if (dashRoutes.includes(req.path)) {
     return res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
@@ -137,10 +128,8 @@ app.use((req, res, next) => {
   next();
 });
 
-// Arquivos Estáticos Gerais
 app.use(express.static(PUBLIC_DIR));
 
-// Espaço usado
 function getUsedStorageBytes() {
   try {
     let total = 0;
@@ -155,7 +144,6 @@ function getUsedStorageBytes() {
   }
 }
 
-// Auth Middleware
 function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -183,7 +171,6 @@ function ownerMiddleware(req, res, next) {
   }
 }
 
-// Multer
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, VIDEOS_DIR);
@@ -200,9 +187,6 @@ const upload = multer({
   limits: { fileSize: 2 * 1024 * 1024 * 1024 }
 });
 
-// -------------------------------------------------------------
-// ROTAS DE AUTENTICAÇÃO
-// -------------------------------------------------------------
 app.post('/api/auth/register', (req, res) => {
   const { name, email, password } = req.body;
   if (!name || !email || !password) return res.status(400).json({ error: 'Preencha todos os campos.' });
@@ -283,9 +267,6 @@ app.get('/api/auth/me', authMiddleware, (req, res) => {
   res.json({ user: req.user });
 });
 
-// -------------------------------------------------------------
-// ROTAS DO OWNER
-// -------------------------------------------------------------
 app.get('/api/admin/users', authMiddleware, ownerMiddleware, (req, res) => {
   const users = db.prepare('SELECT id, name, email, role, status, created_at FROM users ORDER BY created_at DESC').all();
   res.json({ users });
@@ -319,8 +300,8 @@ app.get('/api/admin/settings', authMiddleware, (req, res) => {
 
   const usedMB = (usedBytes / (1024 * 1024)).toFixed(1);
   const usedGB = (usedBytes / (1024 * 1024 * 1024)).toFixed(2);
-  const formattedUsage = usedBytes >= (1024 * 1024 * 1024) 
-    ? `${usedGB} GB` 
+  const formattedUsage = usedBytes >= (1024 * 1024 * 1024)
+    ? `${usedGB} GB`
     : `${usedMB} MB`;
 
   const percent = ((usedBytes / totalBytes) * 100);
@@ -347,9 +328,6 @@ app.post('/api/admin/settings', authMiddleware, ownerMiddleware, (req, res) => {
   res.json({ success: true });
 });
 
-// -------------------------------------------------------------
-// ROTAS DE VÍDEOS & TRACKING DE PLAYS
-// -------------------------------------------------------------
 app.get('/api/videos', authMiddleware, (req, res) => {
   let rows;
   if (req.user.role === 'owner') {
@@ -398,7 +376,7 @@ app.put('/api/videos/:id', authMiddleware, (req, res) => {
   }
 
   db.prepare(`
-    UPDATE videos SET 
+    UPDATE videos SET
       title = COALESCE(?, title),
       duration = COALESCE(?, duration),
       settings_json = COALESCE(?, settings_json)
@@ -424,7 +402,6 @@ app.delete('/api/videos/:id', authMiddleware, (req, res) => {
   res.json({ success: true });
 });
 
-// Endpoint de Registro de Play
 app.post('/api/videos/:id/play', (req, res) => {
   const vidId = req.params.id;
   try {
@@ -461,7 +438,6 @@ app.get('/api/videos/:id/public', (req, res) => {
   }
 });
 
-// Upload de Vídeo com FastStart e Subdomínio player.
 app.post('/api/upload', authMiddleware, upload.single('videoFile'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado.' });
 
@@ -475,7 +451,7 @@ app.post('/api/upload', authMiddleware, upload.single('videoFile'), (req, res) =
   const fastPath = originalPath + '.fast.mp4';
 
   try {
-    execSync(`ffmpeg -y -i "${originalPath}" -c copy -movflags +faststart "${fastPath}"`, { timeout: 30000 });
+    execSync(`nice -n 19 ffmpeg -y -i "${originalPath}" -c copy -movflags +faststart "${fastPath}"`, { timeout: 30000 });
     if (fs.existsSync(fastPath)) {
       fs.unlinkSync(originalPath);
       fs.renameSync(fastPath, originalPath);
@@ -500,9 +476,6 @@ app.post('/api/upload', authMiddleware, upload.single('videoFile'), (req, res) =
   });
 });
 
-// -------------------------------------------------------------
-// STREAMING DE VÍDEO (Adaptive Chunking 1.5MB HTTP 206)
-// -------------------------------------------------------------
 app.get('/videos/:filename', (req, res) => {
   const filePath = path.join(VIDEOS_DIR, req.params.filename);
 

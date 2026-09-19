@@ -54,41 +54,71 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.45);
+      background: rgba(0, 0, 0, 0.38);
       backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
       z-index: 30;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       transition: opacity 0.35s ease, visibility 0.35s ease;
-      padding: 20px;
-      text-align: center;
+      padding: 16px;
     }
     .smart-autoplay-overlay.hidden {
       opacity: 0;
       visibility: hidden;
       pointer-events: none;
     }
-    .pulse-badge {
-      display: flex;
+
+    .pulse-badge-wrapper {
+      position: relative;
+      display: inline-flex;
       align-items: center;
-      gap: 12px;
-      background: rgba(15, 23, 42, 0.85);
-      border: 1.5px solid rgba(255, 255, 255, 0.25);
-      padding: 16px 28px;
-      border-radius: 9999px;
-      color: #ffffff;
-      font-size: 16px;
-      font-weight: 700;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6), 0 0 0 0 rgba(37, 99, 235, 0.6);
-      animation: pulse-border 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+      justify-content: center;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+      user-select: none;
+      -webkit-user-select: none;
       max-width: 90%;
     }
+    .pulse-badge-wrapper:hover {
+      transform: scale(1.03);
+    }
+    .pulse-badge-wrapper:active {
+      transform: scale(0.98);
+    }
+
+    .pulse-badge-halo {
+      position: absolute;
+      inset: -8px;
+      border-radius: 9999px;
+      background: rgba(37, 99, 235, 0.2);
+      border: 2px solid rgba(59, 130, 246, 0.45);
+      pointer-events: none;
+      animation: vturb-halo-pulse 2.2s infinite ease-in-out;
+      box-shadow: 0 0 24px rgba(37, 99, 235, 0.35);
+    }
+
+    .pulse-badge {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: rgba(11, 17, 32, 0.94);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      padding: 10px 22px 10px 12px;
+      border-radius: 9999px;
+      box-shadow: 0 16px 36px -6px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      z-index: 2;
+    }
+
     .pulse-icon-box {
       width: 44px;
       height: 44px;
+      min-width: 44px;
       border-radius: 50%;
       background: #2563eb;
       display: flex;
@@ -96,27 +126,47 @@
       justify-content: center;
       color: #fff;
       flex-shrink: 0;
-      animation: pulse-scale 1.8s infinite ease-in-out;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.5);
+      animation: vturb-icon-pulse 2s infinite ease-in-out;
     }
     .pulse-icon-box svg {
-      width: 24px;
-      height: 24px;
-      fill: currentColor;
+      width: 22px;
+      height: 22px;
+      color: #ffffff;
     }
-    @keyframes pulse-border {
+
+    .pulse-text-block {
+      display: flex;
+      flex-direction: column;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #ffffff;
+      line-height: 1.35;
+      text-align: left;
+      letter-spacing: -0.01em;
+      white-space: pre-line;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+    }
+
+    @keyframes vturb-halo-pulse {
       0%, 100% {
-        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.65), 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+        transform: scale(0.96);
+        opacity: 0.85;
+        border-color: rgba(59, 130, 246, 0.45);
       }
       50% {
-        box-shadow: 0 0 0 16px rgba(37, 99, 235, 0), 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+        transform: scale(1.08);
+        opacity: 0.3;
+        border-color: rgba(59, 130, 246, 0.75);
       }
     }
-    @keyframes pulse-scale {
+
+    @keyframes vturb-icon-pulse {
       0%, 100% {
         transform: scale(1);
       }
       50% {
-        transform: scale(1.1);
+        transform: scale(1.07);
       }
     }
 
@@ -313,13 +363,18 @@
     </div>
 
     <div class="smart-autoplay-overlay" id="smartOverlay">
-      <div class="pulse-badge" id="pulseBadge">
-        <div class="pulse-icon-box" id="pulseIcon">
-          <svg viewBox="0 0 24 24">
-            <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
-          </svg>
+      <div class="pulse-badge-wrapper" id="pulseBadgeWrapper">
+        <div class="pulse-badge-halo" id="pulseHalo"></div>
+        <div class="pulse-badge" id="pulseBadge">
+          <div class="pulse-icon-box" id="pulseIcon">
+            <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07" fill="none" stroke-width="2.2"></path>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14" fill="none" stroke-width="2.2"></path>
+            </svg>
+          </div>
+          <div class="pulse-text-block" id="overlayText">Seu vídeo já&#10;começou. Toque&#10;para ativar o som</div>
         </div>
-        <span id="overlayText">Seu vídeo já começou. Toque para ativar o som</span>
       </div>
     </div>
 
@@ -347,7 +402,7 @@
   </div>
 
   <script>
-    (async function () {
+(async function () {
       'use strict';
 
       const params = new URLSearchParams(window.location.search);
@@ -419,9 +474,28 @@
       if (barColor) {
         progressBarFill.style.backgroundColor = barColor;
         pulseIcon.style.backgroundColor = barColor;
+        pulseIcon.style.boxShadow = `0 4px 14px ${barColor}80`;
+        const pulseHalo = document.getElementById('pulseHalo');
+        if (pulseHalo) {
+          pulseHalo.style.background = `${barColor}26`;
+          pulseHalo.style.borderColor = `${barColor}66`;
+          pulseHalo.style.boxShadow = `0 0 24px ${barColor}40`;
+        }
       }
+
+      const isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+      const defaultText = `Seu vídeo já\ncomeçou. ${isTouch ? 'Toque' : 'Clique'}\npara ativar o som`;
+
       if (overlayCustomText) {
-        overlayText.textContent = overlayCustomText;
+        if (overlayCustomText.includes('\n')) {
+          overlayText.textContent = overlayCustomText;
+        } else if (overlayCustomText.toLowerCase().includes('começou')) {
+          overlayText.textContent = overlayCustomText.replace(/(\.|\?|!)\s*/g, '$1\n');
+        } else {
+          overlayText.textContent = overlayCustomText;
+        }
+      } else {
+        overlayText.textContent = defaultText;
       }
       if (ctaColor) {
         ctaBtn.style.background = ctaColor;
@@ -496,7 +570,7 @@
           const playPromise = video.play();
           if (playPromise !== undefined) {
             playPromise.then(function () {
-              // Iniciou mudo com sucesso
+
               registerPlay();
             }).catch(function (err) {
               console.log('Autoplay bloqueado pelo navegador, aguardando clique:', err);
