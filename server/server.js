@@ -110,7 +110,7 @@ db.exec(`
     source_type TEXT DEFAULT 'remote',
     file_path TEXT,
     video_url TEXT NOT NULL,
-    duration TEXT DEFAULT '05:00',
+    duration TEXT DEFAULT NULL,
     file_size INTEGER DEFAULT 0,
     plays INTEGER DEFAULT 0,
     settings_json TEXT,
