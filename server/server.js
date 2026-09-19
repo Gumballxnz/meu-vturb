@@ -131,6 +131,19 @@ db.exec(`
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS webhook_deliveries (
+    id TEXT PRIMARY KEY,
+    webhook_id TEXT NOT NULL,
+    event_id TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    status_code INTEGER,
+    response_body TEXT,
+    success INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(webhook_id) REFERENCES webhooks(id) ON DELETE CASCADE
+  );
+
   CREATE TABLE IF NOT EXISTS comparison_groups (
     id TEXT PRIMARY KEY,
     user_id INTEGER NOT NULL,
@@ -288,6 +301,13 @@ app.get(['/favicon.ico', '/favicon.svg'], (req, res) => {
 });
 
 app.use((req, res, next) => {
+  if (req.path === '/analytics-api' || req.path.startsWith('/analytics-api/')) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    return res.sendFile(path.join(PUBLIC_DIR, 'analytics-api.html'));
+  }
+
   const host = (req.headers.host || '').toLowerCase();
 
   if (host === PLAYER_DOMAIN || host.startsWith('player.')) {
@@ -403,6 +423,11 @@ function processVideoHLS(vidId) {
   const v = db.prepare('SELECT * FROM videos WHERE id = ?').get(vidId);
   if (!v || !v.file_path || !fs.existsSync(v.file_path)) return;
 
+  dispatchWebhookEvent(v.user_id, 'video.processing', {
+    video_id: vidId,
+    name: v.title || ''
+  });
+
   const videoDir = path.join(VIDEOS_DIR, vidId);
   if (!fs.existsSync(videoDir)) fs.mkdirSync(videoDir, { recursive: true });
 
@@ -484,6 +509,17 @@ function processVideoHLS(vidId) {
             try {
               db.prepare('UPDATE videos SET hls_ready = 1, hls_manifest = ? WHERE id = ?').run(manifestUrl, vidId);
             } catch (e) {}
+            dispatchWebhookEvent(v.user_id, 'video.ready', {
+              video_id: vidId,
+              name: v.title || '',
+              hls_manifest: manifestUrl
+            });
+          } else {
+            dispatchWebhookEvent(v.user_id, 'video.failed', {
+              video_id: vidId,
+              name: v.title || '',
+              error: 'Erro no processamento HLS'
+            });
           }
         });
       } catch (hlsErr) {}
@@ -981,6 +1017,83 @@ app.delete('/api/keys/:id?', authMiddleware, (req, res) => {
   res.json({ success: true });
 });
 
+function generateWebhookSecret() {
+  return 'whsec_' + crypto.randomBytes(16).toString('hex');
+}
+
+function generateEventId() {
+  return 'evt_' + Date.now().toString(36) + crypto.randomBytes(8).toString('hex');
+}
+
+async function dispatchWebhookEvent(userId, eventType, data) {
+  if (!userId) return;
+  try {
+    const hooks = db.prepare(`
+      SELECT id, url, events_json, secret
+      FROM webhooks
+      WHERE user_id = ? AND is_active = 1
+    `).all(userId);
+
+    for (const hook of hooks) {
+      let events = [];
+      try { events = JSON.parse(hook.events_json || '[]'); } catch (e) {}
+      if (!events.includes(eventType)) continue;
+
+      const eventId = generateEventId();
+      const payload = {
+        event_id: eventId,
+        event_type: eventType,
+        v: 1,
+        org_id: String(userId),
+        occurred_at: new Date().toISOString(),
+        data: data || {}
+      };
+
+      const payloadStr = JSON.stringify(payload);
+
+      (async () => {
+        const deliveryId = 'del_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex');
+        let statusCode = null;
+        let responseBody = null;
+        let success = 0;
+
+        try {
+          const res = await fetch(hook.url, {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              'user-agent': 'VTurb-Webhooks/1.0',
+              'webhook-id': eventId,
+              'webhook-signature': hook.secret
+            },
+            body: payloadStr,
+            signal: AbortSignal.timeout(8000)
+          });
+
+          statusCode = res.status;
+          success = (statusCode >= 200 && statusCode < 300) ? 1 : 0;
+          try {
+            responseBody = (await res.text()).slice(0, 1000);
+          } catch (e) {}
+        } catch (err) {
+          responseBody = err.message;
+        }
+
+        try {
+          db.prepare(`
+            INSERT INTO webhook_deliveries (id, webhook_id, event_id, event_type, payload, status_code, response_body, success)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+          `).run(deliveryId, hook.id, eventId, eventType, payloadStr, statusCode, responseBody, success);
+        } catch (e) {}
+      })();
+    }
+  } catch (err) {}
+}
+
+app.get('/api/webhooks/generate-secret', authMiddleware, (req, res) => {
+  res.json({ secret: generateWebhookSecret() });
+});
+
 app.get('/api/webhooks', authMiddleware, (req, res) => {
   const hooks = db.prepare(`
     SELECT id, url, events_json, secret, is_active, created_at
@@ -990,26 +1103,46 @@ app.get('/api/webhooks', authMiddleware, (req, res) => {
   `).all(req.user.id);
 
   const parsed = hooks.map(h => ({
-    ...h,
-    events: JSON.parse(h.events_json || '[]')
+    id: h.id,
+    url: h.url,
+    events: JSON.parse(h.events_json || '[]'),
+    secret: h.secret,
+    isActive: h.is_active,
+    created_at: h.created_at
   }));
   res.json({ webhooks: parsed });
 });
 
 app.post('/api/webhooks', authMiddleware, (req, res) => {
-  const { url, events } = req.body || {};
-  if (!url || typeof url !== 'string' || (!url.startsWith('http://') && !url.startsWith('https://'))) {
-    return res.status(400).json({ error: 'URL do webhook inválida. Deve começar com https:// ou http://.' });
+  const { url, events, secret } = req.body || {};
+  if (!url || typeof url !== 'string' || (!url.startsWith('https://') && !url.startsWith('http://'))) {
+    return res.status(400).json({ error: 'URL do webhook inválida. Deve começar com https://' });
   }
+
   const cleanUrl = url.trim();
   const hookId = 'whk_' + Date.now();
-  const secret = 'whsec_' + crypto.randomBytes(20).toString('hex');
-  const eventsArray = Array.isArray(events) && events.length > 0 ? events : ['video.play', 'video.complete', 'cta.clicked'];
+  const cleanSecret = (secret && typeof secret === 'string' && secret.startsWith('whsec_'))
+    ? secret.trim()
+    : generateWebhookSecret();
+
+  const allowedEvents = [
+    'video.upload.completed',
+    'video.created',
+    'video.processing',
+    'video.ready',
+    'video.failed',
+    'video.updated',
+    'video.deleted'
+  ];
+
+  const eventsArray = Array.isArray(events) && events.length > 0
+    ? events.filter(e => allowedEvents.includes(e))
+    : allowedEvents;
 
   db.prepare(`
     INSERT INTO webhooks (id, user_id, url, events_json, secret, is_active)
     VALUES (?, ?, ?, ?, ?, 1)
-  `).run(hookId, req.user.id, cleanUrl, JSON.stringify(eventsArray), secret);
+  `).run(hookId, req.user.id, cleanUrl, JSON.stringify(eventsArray), cleanSecret);
 
   res.json({
     success: true,
@@ -1017,7 +1150,7 @@ app.post('/api/webhooks', authMiddleware, (req, res) => {
       id: hookId,
       url: cleanUrl,
       events: eventsArray,
-      secret,
+      secret: cleanSecret,
       isActive: 1,
       createdAt: new Date().toISOString()
     }
@@ -1033,12 +1166,18 @@ app.post('/api/webhooks/:id/test', authMiddleware, async (req, res) => {
   const hook = db.prepare('SELECT * FROM webhooks WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
   if (!hook) return res.status(404).json({ error: 'Webhook não encontrado.' });
 
+  const eventId = generateEventId();
   const testPayload = {
-    event: 'ping',
-    timestamp: new Date().toISOString(),
-    webhookId: hook.id,
+    event_id: eventId,
+    event_type: 'video.upload.completed',
+    v: 1,
+    org_id: String(req.user.id),
+    occurred_at: new Date().toISOString(),
     data: {
-      message: 'Teste de webhook VTurb disparado com sucesso!'
+      video_id: 'vid_' + Date.now().toString(36),
+      name: 'video-teste-vturb.mp4',
+      size_bytes: 14820914,
+      source: 'dashboard'
     }
   };
 
@@ -1046,18 +1185,21 @@ app.post('/api/webhooks/:id/test', authMiddleware, async (req, res) => {
     const response = await fetch(hook.url, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'X-VTurb-Signature': hook.secret,
-        'User-Agent': 'VTurb-Webhook/1.0'
+        'content-type': 'application/json',
+        'user-agent': 'VTurb-Webhooks/1.0',
+        'webhook-id': eventId,
+        'webhook-signature': hook.secret
       },
       body: JSON.stringify(testPayload),
       signal: AbortSignal.timeout(10000)
     });
 
+    const isSuccess = response.status >= 200 && response.status < 300;
     res.json({
-      success: true,
+      success: isSuccess,
       httpStatus: response.status,
-      statusText: response.statusText
+      statusText: response.statusText,
+      eventId
     });
   } catch (err) {
     res.status(502).json({ error: 'Falha ao enviar webhook de teste: ' + err.message });
@@ -1256,7 +1398,20 @@ app.post('/api/videos', authMiddleware, (req, res) => {
 
   if (sourceType === 'local' && filePath) {
     processVideoHLS(vidId);
+    dispatchWebhookEvent(req.user.id, 'video.upload.completed', {
+      video_id: vidId,
+      name: cleanTitle,
+      size_bytes: resolvedSize,
+      source: 'dashboard'
+    });
   }
+
+  dispatchWebhookEvent(req.user.id, 'video.created', {
+    video_id: vidId,
+    name: cleanTitle,
+    size_bytes: resolvedSize,
+    source: sourceType === 'local' ? 'dashboard' : 'remote'
+  });
 
   res.json({ success: true, id: vidId });
 });
@@ -1294,6 +1449,10 @@ app.patch('/api/videos/:id/trash', authMiddleware, (req, res) => {
   }
 
   db.prepare('UPDATE videos SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?').run(vidId);
+  dispatchWebhookEvent(existing.user_id, 'video.deleted', {
+    video_id: vidId,
+    name: existing.title || ''
+  });
   res.json({ success: true });
 });
 
@@ -1345,6 +1504,11 @@ app.put('/api/videos/:id', authMiddleware, (req, res) => {
     cleanFolderId,
     vidId
   );
+
+  dispatchWebhookEvent(existing.user_id, 'video.updated', {
+    video_id: vidId,
+    name: title || ''
+  });
 
   res.json({ success: true });
 });
@@ -1864,6 +2028,19 @@ app.post('/api/upload/google-drive', authMiddleware, checkStorageQuotaPre, async
 
     processVideoHLS(vidId);
 
+    dispatchWebhookEvent(req.user.id, 'video.upload.completed', {
+      video_id: vidId,
+      name: cleanTitle,
+      size_bytes: finalStat.size,
+      source: 'google_drive'
+    });
+    dispatchWebhookEvent(req.user.id, 'video.created', {
+      video_id: vidId,
+      name: cleanTitle,
+      size_bytes: finalStat.size,
+      source: 'google_drive'
+    });
+
     res.json({
       success: true,
       id: vidId,
@@ -1985,6 +2162,9 @@ app.get('/videos/:filename', (req, res) => {
 });
 
 app.get('*', (req, res) => {
+  if (req.path === '/analytics-api' || req.path.startsWith('/analytics-api/')) {
+    return res.sendFile(path.join(PUBLIC_DIR, 'analytics-api.html'));
+  }
   res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
 });
 

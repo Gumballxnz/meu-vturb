@@ -4,6 +4,15 @@ module.exports = function createVturbAnalyticsRouter(db) {
   const router = express.Router();
 
   function vturbAuth(req, res, next) {
+    const vturbPaths = [
+      '/conversions', '/events', '/times', '/clicks',
+      '/headlines', '/turbo', '/sessions', '/traffic_origin',
+      '/players', '/custom_metrics', '/comparison_groups', '/quota'
+    ];
+    if (!vturbPaths.some(p => req.path === p || req.path.startsWith(p + '/'))) {
+      return next();
+    }
+
     const token = req.headers['x-api-token'] || (req.headers['authorization'] ? req.headers['authorization'].replace(/^Bearer\s+/i, '') : null);
     const version = req.headers['x-api-version'] || req.query['api_version'] || 'v1';
 
@@ -801,7 +810,7 @@ module.exports = function createVturbAnalyticsRouter(db) {
         name: r.name || 'Sem título',
         pitch_time: pitchTime,
         duration: Math.round(r.duration || 0),
-        created_at: new Date(r.created_at).toISOString()
+        created_at: r.created_at ? new Date(r.created_at).toISOString() : null
       };
     });
 
@@ -865,7 +874,7 @@ module.exports = function createVturbAnalyticsRouter(db) {
         })),
         started_at: g.started_at ? new Date(g.started_at).toISOString() : null,
         finished_at: g.finished_at ? new Date(g.finished_at).toISOString() : null,
-        created_at: new Date(g.created_at).toISOString()
+        created_at: g.created_at ? new Date(g.created_at).toISOString() : null
       };
     });
 

@@ -10,7 +10,7 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="alternate icon" href="/favicon.ico">
   <script>
-    (function() {
+(function() {
       var p = window.location.pathname.replace(/\/$/, '') || '/';
       if (p === '/login' || p === '/cadastro') {
         try { localStorage.removeItem('cloudvturb_token'); } catch (e) {}
@@ -22,14 +22,18 @@
         document.documentElement.classList.add('auth-pending');
       }
     })();
-  </script>
+</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
-  <script src="https://apis.google.com/js/api.js" async defer></script>
+  <script src="https://accounts.google.com/gsi/client" async defer>
+
+</script>
+  <script src="https://apis.google.com/js/api.js" async defer>
+
+</script>
   <style>
-    :root {
+:root {
       --color-primary: #2563EB;
       --color-primary-hover: #1D4ED8;
       --color-primary-soft: #EFF6FF;
@@ -1890,6 +1894,151 @@
       line-height: 1.5;
     }
 
+    .webhook-doc-link {
+      color: #38bdf8;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13.5px;
+      font-weight: 500;
+      cursor: pointer;
+      margin-top: 6px;
+      transition: color 0.15s ease;
+    }
+
+    .webhook-doc-link:hover {
+      color: #60a5fa;
+      text-decoration: underline;
+    }
+
+    .webhook-info-tip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.12);
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 700;
+      margin-left: 6px;
+      cursor: help;
+      position: relative;
+    }
+
+    .webhook-info-tip:hover .webhook-tooltip-box {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .webhook-tooltip-box {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%) translateY(4px);
+      background: #18181b;
+      border: 1px solid #27272a;
+      color: #e4e4e7;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 400;
+      line-height: 1.4;
+      white-space: normal;
+      width: 240px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.15s ease, transform 0.15s ease;
+      z-index: 10000;
+      text-align: left;
+    }
+
+    .webhook-secret-input-wrap {
+      display: flex;
+      align-items: center;
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 8px;
+      padding: 2px 4px 2px 12px;
+      transition: border-color 0.15s ease;
+    }
+
+    .webhook-secret-input-wrap:focus-within {
+      border-color: #3b82f6;
+    }
+
+    .webhook-secret-field {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #f4f4f5;
+      font-family: monospace;
+      font-size: 13.5px;
+      padding: 8px 0;
+    }
+
+    .webhook-action-btn-sm {
+      background: transparent;
+      border: none;
+      color: #a1a1aa;
+      padding: 6px 8px;
+      cursor: pointer;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s ease, background 0.15s ease;
+    }
+
+    .webhook-action-btn-sm:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .webhook-events-2col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px 20px;
+      margin-top: 10px;
+    }
+
+    .webhook-checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13.5px;
+      color: #e4e4e7;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .webhook-checkbox-label input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      accent-color: #2563eb;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+
+    .webhook-doc-code {
+      background: #09090b;
+      border: 1px solid #27272a;
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-family: monospace;
+      font-size: 12.5px;
+      line-height: 1.5;
+      color: #e4e4e7;
+      overflow-x: auto;
+      margin: 8px 0 16px;
+    }
+
     .auth-backdrop {
       position: fixed;
       top: 0;
@@ -1908,11 +2057,11 @@
       display: flex !important;
     }
 
+    html.auth-pending .app-main,
     html.auth-pending .sidebar,
-    html.auth-pending .main,
-    html.auth-pending .sidebar-backdrop,
-    html.auth-pending .header,
-    html.auth-pending .app-header {
+    html.auth-pending .topbar,
+    html.auth-pending .content-container,
+    html.auth-pending .sidebar-backdrop {
       display: none !important;
     }
 
@@ -2227,9 +2376,7 @@
         padding: 24px 18px;
       }
     }
-    /* ====================================================
-       VTURB VIDEO EDITOR STYLES
-       ==================================================== */
+
     body.is-editor-mode .topbar {
       display: none !important;
     }
@@ -2618,7 +2765,7 @@
       background: var(--bg-card);
       color: var(--text-main);
     }
-  </style>
+</style>
 </head>
 <body>
   <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar(false)"></div>
@@ -2716,7 +2863,6 @@
       </div>
     </div>
 
-    <!-- SIDEBAR DE EDIÇÃO DE VÍDEO NO PADRÃO VTURB -->
     <div id="sidebarEditor" style="display: none; flex-direction: column; height: 100%;">
       <div class="vturb-editor-sidebar-header">
         <button type="button" class="btn-vturb-back" onclick="exitEditor()">
@@ -2935,7 +3081,6 @@
           </button>
         </div>
 
-        <!-- Subpane 1: Biblioteca & Pastas -->
         <div id="libPaneFiles">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
             <div class="breadcrumb-bar" id="libraryBreadcrumb" style="margin-bottom: 0;">
@@ -2997,7 +3142,6 @@
           <div class="video-grid" id="mainVideoGrid"></div>
         </div>
 
-        <!-- Subpane 2: Top Vídeos -->
         <div id="libPaneTop" style="display: none;">
           <div class="card-panel">
             <div class="panel-header">
@@ -3027,7 +3171,6 @@
           </div>
         </div>
 
-        <!-- Subpane 3: Lixeira -->
         <div id="libPaneTrash" style="display: none;">
           <div class="card-panel" style="padding: 16px 20px; margin-bottom: 20px; background: rgba(239, 68, 68, 0.05); border-color: rgba(239, 68, 68, 0.2);">
             <div style="display: flex; align-items: center; gap: 12px;">
@@ -3177,13 +3320,12 @@
                 API do Analytics
               </button>
               <button class="settings-tab-btn" id="btnSettingsWebhooks" onclick="switchSettingsTab('webhooks')">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 16.98h-5.99c-1.1 0-1.95.94-2.48 1.9A4 4 0 0 1 2 17c.01-.7.2-1.4.57-2"></path><path d="m6 17 3.13-5.78c.53-.97.1-2.18-.5-3.1a4 4 0 1 1 6.89-4.06l3.19 5.86"></path><circle cx="18" cy="18" r="2.5"></circle><circle cx="6" cy="17" r="2.5"></circle><circle cx="12" cy="5" r="2.5"></circle></svg>
                 Webhooks
               </button>
             </div>
           </div>
 
-          <!-- ABA 1: CONTA -->
           <div id="settingsPaneAccount">
             <div class="card-panel" style="margin-bottom: 24px;">
               <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px;">Informações</span>
@@ -3296,7 +3438,6 @@
             </div>
           </div>
 
-          <!-- ABA 2: MEMBROS -->
           <div id="settingsPaneMembers" style="display: none;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; gap: 16px; flex-wrap: wrap;">
               <p style="font-size: 13.5px; color: var(--text-muted); max-width: 650px; line-height: 1.5; margin: 0;">
@@ -3334,15 +3475,13 @@
             </div>
           </div>
 
-          <!-- ABA 3: API DO ANALYTICS -->
           <div id="settingsPaneApi" style="display: none;">
             <div style="margin-bottom: 24px;">
               <p style="font-size: 13.5px; color: var(--text-muted); max-width: 750px; line-height: 1.5; margin: 0;">
-                Ao gerar uma chave de acesso à API, você poderá integrar seus sistemas ao VTurb para consultar visualizações e conversões dos seus vídeos. Consulte a <a href="javascript:void(0)" style="color: var(--primary); text-decoration: underline;">documentação</a> para saber mais.
+                Ao gerar uma chave de acesso à API, você poderá integrar seus sistemas ao VTurb para consultar visualizações e conversões dos seus vídeos. Consulte a <a href="/analytics-api" target="_blank" style="color: var(--primary); text-decoration: underline;">documentação</a> para saber mais.
               </p>
             </div>
 
-            <!-- ESTADO VAZIO: NENHUMA CHAVE -->
             <div id="apiKeysEmptyState" class="vturb-api-card empty-view">
               <div class="vturb-key-badge">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -3359,7 +3498,6 @@
               </button>
             </div>
 
-            <!-- ESTADO ATIVO: CHAVE GERADA -->
             <div id="apiKeysActiveCard" class="vturb-api-card active-view" style="display: none;">
               <div class="vturb-api-header">
                 <div class="vturb-api-header-texts">
@@ -3422,19 +3560,18 @@
             </div>
           </div>
 
-          <!-- ABA 4: WEBHOOKS -->
           <div id="settingsPaneWebhooks" style="display: none;">
             <div style="margin-bottom: 24px;">
               <p style="font-size: 13.5px; color: var(--text-muted); max-width: 800px; line-height: 1.5; margin: 0;">
                 Registre webhooks e receba eventos JSON da sua conta. Cada entrega inclui o segredo do webhook, para que o seu servidor confirme que a requisição veio da VTurb. Entregas com falha são reenviadas automaticamente.<br>
-                <a href="javascript:void(0)" style="color: var(--primary); text-decoration: underline; display: inline-flex; align-items: center; gap: 4px; margin-top: 4px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg> O que seu endpoint recebe</a>
+                <a href="javascript:void(0)" onclick="openWebhookDocModal()" class="webhook-doc-link"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg> O que seu endpoint recebe</a>
               </p>
             </div>
 
             <div class="card-panel">
               <div id="webhooksEmptyState" class="settings-empty-state">
                 <div class="settings-empty-icon gray">
-                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 16.98h-5.99c-1.1 0-1.95.94-2.48 1.9A4 4 0 0 1 2 17c.01-.7.2-1.4.57-2"></path><path d="m6 17 3.13-5.78c.53-.97.1-2.18-.5-3.1a4 4 0 1 1 6.89-4.06l3.19 5.86"></path><circle cx="18" cy="18" r="2.5"></circle><circle cx="6" cy="17" r="2.5"></circle><circle cx="12" cy="5" r="2.5"></circle></svg>
                 </div>
                 <div class="settings-empty-title">Nenhum webhook ainda</div>
                 <div class="settings-empty-sub">Adicione um webhook para começar a receber os eventos da sua conta.</div>
@@ -3468,7 +3605,7 @@
 
       <section class="tab-view" id="viewEditor">
         <div class="vturb-editor-layout">
-          <!-- BARRA SUPERIOR DO EDITOR NO PADRÃO VTURB -->
+
           <div class="vturb-editor-topbar">
             <div class="vturb-editor-title-wrap">
               <h1 class="vturb-editor-title" id="vturbEditorTitle" onclick="promptRenameVideo()" title="Clique para renomear">
@@ -3500,9 +3637,8 @@
             </div>
           </div>
 
-          <!-- CONTAINER CENTRAL DO EDITOR -->
           <div class="vturb-stage-container">
-            <!-- PAINEL LATERAL DESLIZANTE DE CONFIGURAÇÕES -->
+
             <div class="vturb-settings-drawer" id="vturbSettingsDrawer">
               <div class="vturb-drawer-header">
                 <div style="display: flex; align-items: center; gap: 8px;">
@@ -3513,7 +3649,7 @@
               </div>
 
               <div class="vturb-drawer-body" id="vturbDrawerBody">
-                <!-- 1. ESTILO -->
+
                 <div id="drawerPanelEstilo" class="drawer-panel-section">
                   <div class="form-row">
                     <label class="form-label">Título da VSL</label>
@@ -3544,7 +3680,6 @@
                   </div>
                 </div>
 
-                <!-- 2. PROGRESSO INTELIGENTE -->
                 <div id="drawerPanelProgresso" class="drawer-panel-section" style="display: none;">
                   <div class="toggle-row-clean">
                     <div>
@@ -3568,7 +3703,6 @@
                   </div>
                 </div>
 
-                <!-- 3. SMART AUTOPLAY -->
                 <div id="drawerPanelAutoplay" class="drawer-panel-section" style="display: none;">
                   <div class="toggle-row-clean">
                     <div>
@@ -3656,7 +3790,6 @@
                   </div>
                 </div>
 
-                <!-- 4. TURBO -->
                 <div id="drawerPanelTurbo" class="drawer-panel-section" style="display: none;">
                   <div class="toggle-row-clean">
                     <div>
@@ -3673,7 +3806,6 @@
                   </p>
                 </div>
 
-                <!-- 5. HEADLINES -->
                 <div id="drawerPanelHeadlines" class="drawer-panel-section" style="display: none;">
                   <div class="toggle-row-clean">
                     <div>
@@ -3691,7 +3823,6 @@
                   </div>
                 </div>
 
-                <!-- 6. FILTRO DE TRÁFEGO -->
                 <div id="drawerPanelFiltro" class="drawer-panel-section" style="display: none;">
                   <div class="toggle-row-clean">
                     <div>
@@ -3708,7 +3839,6 @@
                   </p>
                 </div>
 
-                <!-- 7. BOTÕES DE AÇÃO (CTA) -->
                 <div id="drawerPanelCta" class="drawer-panel-section" style="display: none;">
                   <div class="toggle-row-clean">
                     <div>
@@ -3748,7 +3878,6 @@
                   </div>
                 </div>
 
-                <!-- 8. THUMBSNIPER -->
                 <div id="drawerPanelThumb" class="drawer-panel-section" style="display: none;">
                   <div class="toggle-row-clean">
                     <div>
@@ -3765,7 +3894,6 @@
                   </p>
                 </div>
 
-                <!-- 9. CONTINUAR ASSISTINDO -->
                 <div id="drawerPanelResume" class="drawer-panel-section" style="display: none;">
                   <div class="toggle-row-clean">
                     <div>
@@ -3782,7 +3910,6 @@
                   </p>
                 </div>
 
-                <!-- 10. MINI-GANCHOS -->
                 <div id="drawerPanelGanchos" class="drawer-panel-section" style="display: none;">
                   <div class="toggle-row-clean">
                     <div>
@@ -3799,7 +3926,6 @@
                   </p>
                 </div>
 
-                <!-- 11. PIXELS -->
                 <div id="drawerPanelPixels" class="drawer-panel-section" style="display: none;">
                   <div class="toggle-row-clean">
                     <div>
@@ -3816,7 +3942,6 @@
                   </p>
                 </div>
 
-                <!-- 12. LEGENDAS -->
                 <div id="drawerPanelLegendas" class="drawer-panel-section" style="display: none;">
                   <div class="toggle-row-clean">
                     <div>
@@ -3833,7 +3958,6 @@
                   </p>
                 </div>
 
-                <!-- 13. OPÇÕES DE REPRODUÇÃO -->
                 <div id="drawerPanelPlayback" class="drawer-panel-section" style="display: none;">
                   <div class="form-row">
                     <label class="form-label">Velocidade de Reprodução</label>
@@ -3862,16 +3986,14 @@
               </div>
             </div>
 
-            <!-- PALCO CENTRAL DE PREVIEW -->
             <div class="vturb-preview-stage" id="vturbPreviewStage">
-              <!-- DESKTOP CANVAS -->
+
               <div class="vturb-desktop-canvas" id="vturbDesktopCanvas">
                 <div class="preview-iframe-wrapper" id="previewWrapper">
                   <iframe id="editorPreviewFrame" allow="autoplay; fullscreen"></iframe>
                 </div>
               </div>
 
-              <!-- MOBILE MOCKUP CANVAS (PADRÃO VTURB) -->
               <div class="vturb-mobile-mockup-wrap" id="vturbMobileCanvas" style="display: none;">
                 <div class="vturb-phone-mockup">
                   <div class="phone-speaker-bar"></div>
@@ -3881,7 +4003,6 @@
                 </div>
               </div>
 
-              <!-- STATUS FLUTUANTE INFERIOR -->
               <div class="vturb-floating-status">
                 <span>1 concluído</span>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
@@ -4052,7 +4173,6 @@
         </div>
       </div>
 
-      <!-- Step 1: Upload / Add First Video -->
       <div id="onbStep1Pane">
         <div style="margin-bottom: 20px;">
           <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 4px;">Suba o seu primeiro vídeo</h3>
@@ -4093,7 +4213,6 @@
         </div>
       </div>
 
-      <!-- Step 2: Registration Profile Data -->
       <div id="onbStep2Pane" style="display: none;">
         <div style="margin-bottom: 20px;">
           <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 4px;">Informações de Contato e Faturamento</h3>
@@ -4156,6 +4275,129 @@
       <div class="modal-footer-clean">
         <button class="btn-clean-secondary" onclick="closeConfirmModal()">Cancelar</button>
         <button class="btn-solid-danger" id="confirmModalBtn" onclick="executeConfirmAction()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="newWebhookModal">
+    <div class="modal-box" style="max-width: 520px; background: #18181b; border: 1px solid #27272a; border-radius: 14px;">
+      <div class="modal-header-clean" style="border-bottom: 1px solid #27272a; padding: 18px 24px;">
+        <div class="modal-title-clean" style="font-size: 16px; font-weight: 700; color: #f4f4f5;">Novo webhook</div>
+        <button class="btn-icon" onclick="closeNewWebhookModal()">&times;</button>
+      </div>
+      <div class="modal-body-clean" style="padding: 20px 24px;">
+        <div class="form-row" style="margin-bottom: 18px;">
+          <div style="display: flex; align-items: center; margin-bottom: 6px;">
+            <label class="form-label" style="margin-bottom: 0; font-size: 13.5px; font-weight: 600; color: #e4e4e7;">URL do webhook</label>
+            <span class="webhook-info-tip">?
+              <span class="webhook-tooltip-box">Para onde os eventos são enviados. Precisa ser um endereço HTTPS que responda com status 2xx.</span>
+            </span>
+          </div>
+          <input type="url" id="inputWebhookUrl" class="form-input-text" placeholder="https://example.com/api/pbd/?u=5df7741ff..." style="background: #18181b; border: 1px solid #27272a; border-radius: 8px; color: #f4f4f5; padding: 10px 14px; font-size: 13.5px;" oninput="validateWebhookUrlInput(this)">
+          <div id="webhookUrlErrorMsg" style="color: #ef4444; font-size: 12px; margin-top: 6px; display: none;">Campo obrigatório</div>
+        </div>
+
+        <div class="form-row" style="margin-bottom: 22px;">
+          <div style="display: flex; align-items: center; margin-bottom: 6px;">
+            <label class="form-label" style="margin-bottom: 0; font-size: 13.5px; font-weight: 600; color: #e4e4e7;">Secret de assinatura</label>
+            <span class="webhook-info-tip">?
+              <span class="webhook-tooltip-box">Usado para validar a integridade no header webhook-signature da sua requisição.</span>
+            </span>
+          </div>
+          <div class="webhook-secret-input-wrap">
+            <input type="password" id="inputWebhookSecret" class="webhook-secret-field" readonly value="whsec_">
+            <button type="button" class="webhook-action-btn-sm" id="btnToggleWebhookSecret" onclick="toggleWebhookSecretVisibility()" title="Exibir/ocultar segredo">
+              <svg id="iconSecretEye" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            </button>
+            <button type="button" class="webhook-action-btn-sm" onclick="copyWebhookSecretValue()" title="Copiar secret">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="form-row" style="margin-bottom: 8px;">
+          <label class="form-label" style="font-size: 13.5px; font-weight: 600; color: #e4e4e7; margin-bottom: 4px;">Eventos de mídia</label>
+          <div class="webhook-events-2col">
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <label class="webhook-checkbox-label">
+                <input type="checkbox" class="webhook-event-cb" value="video.upload.completed" checked>
+                <span>Upload de vídeo concluído</span>
+              </label>
+              <label class="webhook-checkbox-label">
+                <input type="checkbox" class="webhook-event-cb" value="video.processing" checked>
+                <span>Processando vídeo</span>
+              </label>
+              <label class="webhook-checkbox-label">
+                <input type="checkbox" class="webhook-event-cb" value="video.failed" checked>
+                <span>Falha no vídeo</span>
+              </label>
+              <label class="webhook-checkbox-label">
+                <input type="checkbox" class="webhook-event-cb" value="video.deleted" checked>
+                <span>Vídeo excluído</span>
+              </label>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+              <label class="webhook-checkbox-label">
+                <input type="checkbox" class="webhook-event-cb" value="video.created" checked>
+                <span>Vídeo criado</span>
+              </label>
+              <label class="webhook-checkbox-label">
+                <input type="checkbox" class="webhook-event-cb" value="video.ready" checked>
+                <span>Vídeo pronto</span>
+              </label>
+              <label class="webhook-checkbox-label">
+                <input type="checkbox" class="webhook-event-cb" value="video.updated" checked>
+                <span>Vídeo atualizado</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer-clean" style="border-top: 1px solid #27272a; padding: 16px 24px; display: flex; justify-content: flex-end; gap: 12px;">
+        <button type="button" class="btn-clean-secondary" onclick="closeNewWebhookModal()" style="border-radius: 8px; padding: 9px 18px;">Cancelar</button>
+        <button type="button" class="btn-primary-action" id="btnSubmitWebhook" onclick="submitNewWebhook()" style="border-radius: 8px; padding: 9px 20px;">Adicionar webhook</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="webhookDocModal">
+    <div class="modal-box" style="max-width: 580px; background: #18181b; border: 1px solid #27272a; border-radius: 14px;">
+      <div class="modal-header-clean" style="border-bottom: 1px solid #27272a; padding: 18px 24px;">
+        <div class="modal-title-clean" style="font-size: 16px; font-weight: 700; color: #f4f4f5;">O que seu endpoint recebe</div>
+        <button class="btn-icon" onclick="closeWebhookDocModal()">&times;</button>
+      </div>
+      <div class="modal-body-clean" style="padding: 20px 24px; max-height: 75vh; overflow-y: auto;">
+        <p style="font-size: 13.5px; color: #a1a1aa; line-height: 1.5; margin-bottom: 16px;">
+          Cada entrega é um POST com estes headers e um corpo JSON.
+        </p>
+
+        <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: #71717a; letter-spacing: 0.5px;">Headers</span>
+        <pre class="webhook-doc-code">content-type: application/json
+user-agent: VTurb-Webhooks/1.0
+webhook-id: evt_01m0ddbgsya6f5ne8nk6fmvm5a
+webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
+
+        <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: #71717a; letter-spacing: 0.5px;">Corpo</span>
+        <pre class="webhook-doc-code">{
+  "event_id": "evt_01m0ddbgsya6f5ne8nk6fmvm5a",
+  "event_type": "video.upload.completed",
+  "v": 1,
+  "org_id": "6a85d79fa5267d77ef2717ae",
+  "occurred_at": "2026-08-19T16:23:31.000Z",
+  "data": {
+    "video_id": "6a85d880a5267d77ef271818",
+    "name": "my-video.mp4",
+    "size_bytes": 3635130,
+    "source": "dashboard"
+  }
+}</pre>
+
+        <p style="font-size: 13px; color: #a1a1aa; line-height: 1.5; margin-top: 14px; background: rgba(37, 99, 235, 0.08); border: 1px solid rgba(37, 99, 235, 0.2); padding: 12px 14px; border-radius: 8px;">
+          Seu endpoint precisa responder 2xx. Entregas com falha são reenviadas automaticamente e o mesmo evento pode chegar mais de uma vez, então faça a deduplicação por <code style="color: #60a5fa; font-family: monospace;">event_id</code>.
+        </p>
+      </div>
+      <div class="modal-footer-clean" style="border-top: 1px solid #27272a; padding: 14px 24px; display: flex; justify-content: flex-end;">
+        <button type="button" class="btn-primary-action" onclick="closeWebhookDocModal()" style="border-radius: 8px; padding: 8px 20px;">Entendido</button>
       </div>
     </div>
   </div>
@@ -4254,7 +4496,6 @@
     </div>
   </div>
 
-  <!-- MODAL: SUBSTITUIR CHAVE DE API -->
   <div class="modal-overlay" id="replaceApiKeyModal">
     <div class="vturb-confirm-modal-box">
       <div class="vturb-confirm-header">
@@ -4291,7 +4532,6 @@
     </div>
   </div>
 
-  <!-- MODAL: REMOVER CHAVE DE API -->
   <div class="modal-overlay" id="deleteApiKeyModal">
     <div class="vturb-confirm-modal-box">
       <div class="vturb-confirm-header">
@@ -4501,7 +4741,7 @@
   </div>
 
   <script>
-    'use strict';
+'use strict';
 
     let token = localStorage.getItem('cloudvturb_token') || '';
     let currentUser = null;
@@ -4594,7 +4834,8 @@
         token = '';
         localStorage.removeItem('cloudvturb_token');
         document.documentElement.classList.add('auth-pending');
-        showAuth('login');
+        const curP = window.location.pathname.replace(/\/$/, '') || '/';
+        showAuth(curP === '/cadastro' ? 'register' : 'login');
       }
     }
 
@@ -4872,7 +5113,13 @@
     }
 
     function routeByUrl() {
-      const p = window.location.pathname;
+      const p = window.location.pathname.replace(/\/$/, '') || '/';
+
+      if (p === '/login' || p === '/cadastro') {
+        document.documentElement.classList.add('auth-pending');
+        showAuth(p === '/cadastro' ? 'register' : 'login');
+        return;
+      }
 
       if (p === '/onboarding/upload' || p === '/onboarding') {
         if (currentUser && currentUser.onboarding_completed === false) {
@@ -6262,7 +6509,7 @@
 
       let snippet = '';
       if (currentEmbedSnippetTab === 'js') {
-        snippet = `<!-- VTurb Smart Player Code -->\n<div id="smartplayer_wrapper_${v.id}" style="position:relative;width:100%;padding-top:${padding};overflow:hidden;border-radius:${rad};">\n  <iframe id="smartplayer_frame_${v.id}" src="${fullUrl}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allow="autoplay; fullscreen" loading="lazy"></iframe>\n</div>\n<script type="text/javascript">\n  window._vturb = window._vturb || [];\n  window._vturb.push({ id: "${v.id}" });\n<\/script>`;
+        snippet = `\n<div id="smartplayer_wrapper_${v.id}" style="position:relative;width:100%;padding-top:${padding};overflow:hidden;border-radius:${rad};">\n  <iframe id="smartplayer_frame_${v.id}" src="${fullUrl}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allow="autoplay; fullscreen" loading="lazy"></iframe>\n</div>\n<script type="text/javascript">\n  window._vturb = window._vturb || [];\n  window._vturb.push({ id: "${v.id}" });\n<\/script>`;
       } else {
         snippet = `<div style="position:relative;width:100%;padding-top:${padding};overflow:hidden;border-radius:${rad};">\n  <iframe src="${fullUrl}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allow="autoplay; fullscreen" loading="lazy"></iframe>\n</div>`;
       }
@@ -7298,7 +7545,12 @@
               </td>
               <td>${eventsBadges}</td>
               <td>
-                <code style="background: var(--bg-surface); padding: 3px 6px; border-radius: 4px; font-size: 11px; border: 1px solid var(--border-subtle); color: var(--text-muted);">${escapeHtml(h.secret.slice(0, 10))}••••</code>
+                <div style="display: inline-flex; align-items: center; gap: 6px;">
+                  <code style="background: var(--bg-surface); padding: 3px 6px; border-radius: 4px; font-size: 11px; border: 1px solid var(--border-subtle); color: var(--text-muted); font-family: monospace;">${escapeHtml(h.secret.slice(0, 10))}••••</code>
+                  <button type="button" class="btn-icon" style="padding: 2px;" title="Copiar secret completo" onclick="copyTableSecret('${escapeHtml(h.secret)}')">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                  </button>
+                </div>
               </td>
               <td style="color: var(--text-dim); font-size: 12.5px;">${dateStr}</td>
               <td style="text-align: right;">
@@ -7319,39 +7571,115 @@
       }
     }
 
-    function openNewWebhookModal() {
-      document.getElementById('inputWebhookUrl').value = '';
+    function openWebhookDocModal() {
+      const modal = document.getElementById('webhookDocModal');
+      if (modal) modal.classList.add('active');
+    }
+
+    function closeWebhookDocModal() {
+      const modal = document.getElementById('webhookDocModal');
+      if (modal) modal.classList.remove('active');
+    }
+
+    async function openNewWebhookModal() {
+      const urlInput = document.getElementById('inputWebhookUrl');
+      const errEl = document.getElementById('webhookUrlErrorMsg');
+      const secretInput = document.getElementById('inputWebhookSecret');
+
+      if (urlInput) urlInput.value = '';
+      if (errEl) errEl.style.display = 'none';
+
+      try {
+        const res = await api('/api/webhooks/generate-secret');
+        if (res && res.secret && secretInput) {
+          secretInput.value = res.secret;
+        }
+      } catch (e) {
+        if (secretInput) {
+          const randHex = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+            .map(b => b.toString(16).padStart(2, '0')).join('');
+          secretInput.value = 'whsec_' + randHex;
+        }
+      }
+
       document.querySelectorAll('.webhook-event-cb').forEach(cb => cb.checked = true);
-      document.getElementById('newWebhookModal').classList.add('active');
+      const modal = document.getElementById('newWebhookModal');
+      if (modal) modal.classList.add('active');
     }
 
     function closeNewWebhookModal() {
-      document.getElementById('newWebhookModal').classList.remove('active');
+      const modal = document.getElementById('newWebhookModal');
+      if (modal) modal.classList.remove('active');
+    }
+
+    function validateWebhookUrlInput(input) {
+      const errEl = document.getElementById('webhookUrlErrorMsg');
+      if (!errEl) return;
+      const val = (input.value || '').trim();
+      if (!val || (!val.startsWith('https://') && !val.startsWith('http://'))) {
+        errEl.style.display = 'block';
+      } else {
+        errEl.style.display = 'none';
+      }
+    }
+
+    function toggleWebhookSecretVisibility() {
+      const input = document.getElementById('inputWebhookSecret');
+      if (!input) return;
+      input.type = input.type === 'password' ? 'text' : 'password';
+    }
+
+    function copyWebhookSecretValue() {
+      const input = document.getElementById('inputWebhookSecret');
+      if (!input || !input.value) return;
+      navigator.clipboard.writeText(input.value).then(() => {
+        showToast('Secret copiado para a área de transferência!');
+      }).catch(() => {
+        showToast('Falha ao copiar secret.', true);
+      });
+    }
+
+    function copyTableSecret(secret) {
+      if (!secret) return;
+      navigator.clipboard.writeText(secret).then(() => {
+        showToast('Secret copiado!');
+      }).catch(() => {
+        showToast('Falha ao copiar secret.', true);
+      });
     }
 
     async function submitNewWebhook() {
       const btn = document.getElementById('btnSubmitWebhook');
-      const url = document.getElementById('inputWebhookUrl').value.trim();
+      const urlInput = document.getElementById('inputWebhookUrl');
+      const errEl = document.getElementById('webhookUrlErrorMsg');
+      const secretInput = document.getElementById('inputWebhookSecret');
+
+      const url = urlInput ? urlInput.value.trim() : '';
+      const secret = secretInput ? secretInput.value.trim() : '';
       const events = Array.from(document.querySelectorAll('.webhook-event-cb:checked')).map(cb => cb.value);
 
-      if (!url || (!url.startsWith('http://') && !url.startsWith('https://'))) {
-        return showToast('Informe uma URL válida iniciando com http:// ou https://', true);
+      if (!url || (!url.startsWith('https://') && !url.startsWith('http://'))) {
+        if (errEl) errEl.style.display = 'block';
+        if (urlInput) urlInput.focus();
+        return showToast('Informe uma URL válida com https://', true);
       }
+      if (errEl) errEl.style.display = 'none';
+
       if (!events.length) {
-        return showToast('Selecione pelo menos um evento.', true);
+        return showToast('Selecione ao menos um evento de mídia.', true);
       }
 
-      setButtonLoading(btn, true, 'Salvando...');
+      setButtonLoading(btn, true, 'Adicionando...');
       try {
         await api('/api/webhooks', {
           method: 'POST',
-          body: JSON.stringify({ url, events })
+          body: JSON.stringify({ url, events, secret })
         });
         closeNewWebhookModal();
-        showToast('Webhook cadastrado com sucesso!');
+        showToast('Webhook adicionado com sucesso!');
         await loadWebhooks();
       } catch (err) {
-        showToast(err.message, true);
+        showToast(err.message || 'Erro ao adicionar webhook.', true);
       } finally {
         setButtonLoading(btn, false);
       }
@@ -7359,9 +7687,13 @@
 
     async function testWebhook(id) {
       try {
-        showToast('Enviando ping de teste...');
+        showToast('Enviando entrega de teste...');
         const res = await api(`/api/webhooks/${id}/test`, { method: 'POST' });
-        showToast(`Webhook respondeu com HTTP ${res.httpStatus || 200}!`);
+        if (res.success) {
+          showToast(`Sucesso! Endpoint respondeu com HTTP ${res.httpStatus}.`);
+        } else {
+          showToast(`Endpoint respondeu com HTTP ${res.httpStatus}.`, true);
+        }
       } catch (err) {
         showToast(`Falha no teste: ${err.message}`, true);
       }
@@ -7403,6 +7735,6 @@
       initSession();
       setupImportDropZoneEvents();
     }
-  </script>
+</script>
 </body>
 </html>

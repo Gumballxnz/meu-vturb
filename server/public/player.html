@@ -8,7 +8,7 @@
   <title>CloudVTurb Player</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <style>
-    * {
+* {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
@@ -488,8 +488,10 @@
       visibility: visible;
       transform: translate(-50%, -50%) scale(1);
     }
-  </style>
-  <script src="/js/hls.min.js"></script>
+</style>
+  <script src="/js/hls.min.js">
+
+</script>
 </head>
 <body>
   <div class="player-wrapper" id="playerWrapper">
@@ -545,7 +547,7 @@
   </div>
 
   <script>
-    (async function () {
+(async function () {
       'use strict';
 
       function getOrCreateVisitorId() {
@@ -1124,6 +1126,6 @@
         } catch (e) {}
       });
     })();
-  </script>
+</script>
 </body>
 </html>

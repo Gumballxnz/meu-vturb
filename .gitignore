@@ -52,3 +52,7 @@ teste_temp*
 *.dump.sql
 vps_oracle.key
 docs api vturb.md
+
+# Blindagem de Segredos e Chaves SSH (Clean Code)
+client_secret_701955485147-qbtf3iptjn84862e7135i2j2s5b9ke68.apps.googleusercontent.com.json
+S2.pem
