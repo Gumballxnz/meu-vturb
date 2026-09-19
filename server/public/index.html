@@ -2757,22 +2757,6 @@
       border: none;
     }
 
-    .vturb-floating-status {
-      position: absolute;
-      bottom: 20px;
-      right: 24px;
-      background: var(--bg-card);
-      border: 1px solid var(--border-subtle);
-      border-radius: 6px;
-      padding: 6px 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--text-muted);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-    }
     .vturb-embed-tabs {
       display: flex;
       border: 1px solid var(--border-subtle);
@@ -3506,7 +3490,7 @@
           <div id="settingsPaneApi" style="display: none;">
             <div style="margin-bottom: 24px;">
               <p style="font-size: 13.5px; color: var(--text-muted); max-width: 750px; line-height: 1.5; margin: 0;">
-                Ao gerar uma chave de acesso à API, você poderá integrar seus sistemas ao VTurb para consultar visualizações e conversões dos seus vídeos. Consulte a <a href="/analytics-api" target="_blank" style="color: var(--primary); text-decoration: underline;">documentação</a> para saber mais.
+                Ao gerar uma chave de acesso à API, você poderá integrar seus sistemas ao CloudVTurb para consultar visualizações e conversões dos seus vídeos. Consulte a <a href="/analytics-api" target="_blank" style="color: var(--primary); text-decoration: underline;">documentação</a> para saber mais.
               </p>
             </div>
 
@@ -3520,7 +3504,7 @@
                 </svg>
               </div>
               <div class="vturb-api-empty-title">Nenhuma chave de API foi criada ainda</div>
-              <div class="vturb-api-empty-sub">Clique no botão abaixo para gerar sua chave e começar a integrar com a API do VTurb</div>
+              <div class="vturb-api-empty-sub">Clique no botão abaixo para gerar sua chave e começar a integrar com a API do CloudVTurb</div>
               <button type="button" class="btn-vturb-generate" id="btnGenerateApiKey" onclick="generateApiKeyDirectly()">
                 Gerar nova chave de API
               </button>
@@ -3591,7 +3575,7 @@
           <div id="settingsPaneWebhooks" style="display: none;">
             <div style="margin-bottom: 24px;">
               <p style="font-size: 13.5px; color: var(--text-muted); max-width: 800px; line-height: 1.5; margin: 0;">
-                Registre webhooks e receba eventos JSON da sua conta. Cada entrega inclui o segredo do webhook, para que o seu servidor confirme que a requisição veio da VTurb. Entregas com falha são reenviadas automaticamente.<br>
+                Registre webhooks e receba eventos JSON da sua conta. Cada entrega inclui o segredo do webhook, para que o seu servidor confirme que a requisição veio da CloudVTurb. Entregas com falha são reenviadas automaticamente.<br>
                 <a href="javascript:void(0)" onclick="openWebhookDocModal()" class="webhook-doc-link"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg> O que seu endpoint recebe</a>
               </p>
             </div>
@@ -4029,11 +4013,6 @@
                     <iframe id="editorPreviewFrameMobile" allow="autoplay; fullscreen"></iframe>
                   </div>
                 </div>
-              </div>
-
-              <div class="vturb-floating-status">
-                <span>1 concluído</span>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
               </div>
             </div>
           </div>
@@ -4736,7 +4715,7 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <div>
               <strong style="font-size: 13.5px; color: var(--text-main); display: block;">Otimizar Velocidade de Carregamento</strong>
-              <span style="font-size: 12px; color: var(--text-muted);">Use o código de velocidade do VTurb para carregar o player mais rápido</span>
+              <span style="font-size: 12px; color: var(--text-muted);">Use o código de velocidade do CloudVTurb para carregar o player mais rápido</span>
             </div>
             <label class="switch-clean">
               <input type="checkbox" id="embedSpeedSwitch" checked onchange="toggleSpeedCodeBox(this.checked)">
@@ -7493,41 +7472,52 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
     }
 
     async function loadUsersTable() {
-      if (!currentUser || currentUser.role !== 'owner') return;
+      if (!currentUser || (currentUser.role !== 'owner' && currentUser.role !== 'admin')) return;
       try {
         const data = await api('/api/admin/users');
         const tbody = document.getElementById('usersListBody');
+        if (!tbody) return;
         tbody.innerHTML = '';
 
-        (data.users || []).forEach(u => {
-          const isSelf = u.id === currentUser.id;
+        const usersList = data.users || [];
+        if (!usersList.length) {
+          tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:32px; color:var(--text-muted);">Nenhum usuário cadastrado na plataforma.</td></tr>';
+          return;
+        }
+
+        usersList.forEach(u => {
+          const isSelf = currentUser && u.id === currentUser.id;
+          const uRole = (u.role || 'member').toLowerCase();
+          const uStatus = (u.status || 'pending').toLowerCase();
           let statusBadge = '<span class="badge-status yellow">Pendente</span>';
-          if (u.status === 'approved') statusBadge = '<span class="badge-status green">Aprovado</span>';
-          if (u.status === 'blocked') statusBadge = '<span class="badge-status red">Bloqueado</span>';
+          if (uStatus === 'approved') statusBadge = '<span class="badge-status green">Aprovado</span>';
+          if (uStatus === 'blocked') statusBadge = '<span class="badge-status red">Bloqueado</span>';
 
           let menuItems = '';
           if (!isSelf) {
-            if (u.status !== 'approved') {
+            if (uStatus !== 'approved') {
               menuItems += `<button onclick="execUserAction(${u.id}, 'approve'); closeAllUserMenus()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Aprovar</button>`;
             }
-            if (u.status !== 'blocked') {
+            if (uStatus !== 'blocked') {
               menuItems += `<button onclick="execUserAction(${u.id}, 'block'); closeAllUserMenus()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>Bloquear</button>`;
             }
-            if (u.role !== 'owner') {
+            if (uRole !== 'owner') {
               menuItems += `<button onclick="execUserAction(${u.id}, 'make_owner'); closeAllUserMenus()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>Tornar Owner</button>`;
             }
             menuItems += `<div class="dropdown-divider"></div>`;
             menuItems += `<button class="danger" onclick="execUserAction(${u.id}, 'delete'); closeAllUserMenus()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>Excluir</button>`;
           }
 
+          const createdDate = u.created_at ? new Date(u.created_at).toLocaleDateString('pt-BR') : '-';
+          const roleLabel = uRole === 'owner' ? 'OWNER' : (uRole === 'admin' ? 'ADMIN' : 'MEMBRO');
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td><strong>${escapeHtml(u.name)}</strong></td>
-            <td>${escapeHtml(u.email)}</td>
-            <td><span class="user-role-tag">${u.role.toUpperCase()}</span></td>
+            <td><strong>${escapeHtml(u.name || 'Sem nome')}</strong></td>
+            <td>${escapeHtml(u.email || '-')}</td>
+            <td><span class="user-role-tag">${roleLabel}</span></td>
             <td><span style="font-size:12.5px;font-weight:600;color:var(--text-main);">${u.storageFormatted || '0 MB'}</span> <span style="font-size:11px;color:var(--text-dim);">(${u.videoCount || 0} vídeos)</span></td>
             <td>${statusBadge}</td>
-            <td>${new Date(u.created_at).toLocaleDateString('pt-BR')}</td>
+            <td>${createdDate}</td>
             <td style="text-align: right;">
               ${isSelf ? '<span style="font-size:12px;color:var(--text-dim);">Sua Conta</span>' : `
                 <div class="user-actions-wrap">
@@ -7540,7 +7530,7 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
           tbody.appendChild(tr);
         });
       } catch (err) {
-        console.error('Falha ao listar usuários:', err);
+        showToast('Falha ao listar usuários: ' + err.message, true);
       }
     }
 

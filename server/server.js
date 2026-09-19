@@ -594,10 +594,10 @@ function authMiddleware(req, res, next) {
 }
 
 function ownerMiddleware(req, res, next) {
-  if (req.user && req.user.role === 'owner') {
+  if (req.user && (req.user.role === 'owner' || req.user.role === 'admin')) {
     next();
   } else {
-    res.status(403).json({ error: 'Acesso restrito ao Owner.' });
+    res.status(403).json({ error: 'Acesso restrito ao Administrador.' });
   }
 }
 
@@ -1109,18 +1109,27 @@ app.post('/api/onboarding/complete', authMiddleware, (req, res) => {
 });
 
 app.get('/api/admin/users', authMiddleware, ownerMiddleware, (req, res) => {
-  const users = db.prepare('SELECT id, name, email, role, status, created_at FROM users ORDER BY created_at DESC').all();
-  const usersWithStorage = users.map(u => {
-    const usedBytes = getUserStorageBytes(u.id);
-    const videoCount = db.prepare('SELECT COUNT(*) as count FROM videos WHERE user_id = ?').get(u.id).count;
-    return {
-      ...u,
-      storageBytes: usedBytes,
-      storageFormatted: formatStorage(usedBytes),
-      videoCount
-    };
-  });
-  res.json({ users: usersWithStorage });
+  try {
+    const users = db.prepare('SELECT id, name, email, role, status, created_at FROM users ORDER BY created_at DESC').all();
+    const usersWithStorage = users.map(u => {
+      let usedBytes = 0;
+      let videoCount = 0;
+      try {
+        usedBytes = getUserStorageBytes(u.id);
+        const countRow = db.prepare('SELECT COUNT(*) as count FROM videos WHERE user_id = ?').get(u.id);
+        videoCount = countRow ? countRow.count : 0;
+      } catch (err) {}
+      return {
+        ...u,
+        storageBytes: usedBytes,
+        storageFormatted: formatStorage(usedBytes),
+        videoCount
+      };
+    });
+    res.json({ users: usersWithStorage });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao listar usuários: ' + err.message });
+  }
 });
 
 app.post('/api/admin/users/:id/action', authMiddleware, ownerMiddleware, (req, res) => {
@@ -1300,9 +1309,9 @@ app.get('/api/members', authMiddleware, (req, res) => {
   const members = db.prepare(`
     SELECT id, name, email, role, status, avatar_url, created_at, owner_id
     FROM users
-    WHERE id = ? OR owner_id = ?
-    ORDER BY CASE WHEN id = ? THEN 0 ELSE 1 END, id ASC
-  `).all(accountOwnerId, accountOwnerId, accountOwnerId);
+    WHERE owner_id = ?
+    ORDER BY id ASC
+  `).all(accountOwnerId);
   res.json({ members, accountOwnerId });
 });
 
@@ -1691,7 +1700,7 @@ app.get('/api/videos', authMiddleware, (req, res) => {
 
 app.get('/api/videos/top', authMiddleware, (req, res) => {
   const isOwner = req.user.role === 'owner';
-  let videosQuery = 'SELECT id, title, video_url, duration, plays, created_at FROM videos WHERE deleted_at IS NULL ';
+  let videosQuery = 'SELECT id, title, video_url, duration, plays, settings_json, created_at FROM videos WHERE deleted_at IS NULL ';
   const params = [];
   if (!isOwner) {
     videosQuery += 'AND user_id = ? ';
@@ -1701,6 +1710,8 @@ app.get('/api/videos/top', authMiddleware, (req, res) => {
 
   const rows = db.prepare(videosQuery).all(...params);
   const topVideos = rows.map(v => {
+    let settings = {};
+    try { if (v.settings_json) settings = JSON.parse(v.settings_json); } catch (e) {}
     const ctaClicks = db.prepare("SELECT COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'cta_clicked'").get(v.id).count;
     const completes = db.prepare("SELECT COUNT(DISTINCT session_id) as count FROM analytics_events WHERE video_id = ? AND (event_type = 'complete' OR (event_type = 'progress' AND milestone = 100))").get(v.id).count;
     const completionRate = v.plays > 0 ? ((completes / v.plays) * 100).toFixed(1) : '0.0';
@@ -1709,6 +1720,8 @@ app.get('/api/videos/top', authMiddleware, (req, res) => {
     return {
       id: v.id,
       title: v.title,
+      video_url: v.video_url,
+      thumbnail: settings.thumbnailUrl || (v.video_url ? `${v.video_url}#t=0.5` : null),
       duration: v.duration,
       plays: v.plays || 0,
       ctaClicks,
