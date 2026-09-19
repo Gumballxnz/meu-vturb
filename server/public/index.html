@@ -2102,25 +2102,38 @@
       bottom: 24px;
       right: 24px;
       padding: 12px 20px;
-      border-radius: var(--radius-sm);
-      background: var(--bg-card);
+      border-radius: 8px;
+      background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
-      color: #fff;
-      font-size: 13px;
+      color: var(--text-main);
+      font-size: 13.5px;
       font-weight: 600;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
       display: flex;
       align-items: center;
       gap: 10px;
       transform: translateY(100px);
       opacity: 0;
       transition: all 0.25s ease;
-      z-index: 9999;
+      z-index: 99999999;
+      pointer-events: none;
     }
 
     .toast-msg.show {
       transform: translateY(0);
       opacity: 1;
+    }
+
+    .toast-msg.toast-error {
+      background: #fef2f2 !important;
+      border-color: #f87171 !important;
+      color: #991b1b !important;
+    }
+
+    .toast-msg.toast-success {
+      background: #f0fdf4 !important;
+      border-color: #86efac !important;
+      color: #166534 !important;
     }
 
     @media (max-width: 960px) {
@@ -4822,10 +4835,16 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
 
     function showToast(text, isError = false) {
       const toast = document.getElementById('appToast');
-      document.getElementById('toastText').textContent = text;
-      toast.style.borderColor = isError ? 'var(--danger)' : 'var(--primary)';
+      if (!toast) return;
+      const textEl = document.getElementById('toastText');
+      if (textEl) textEl.textContent = text;
+      toast.classList.remove('toast-error', 'toast-success');
+      toast.classList.add(isError ? 'toast-error' : 'toast-success');
       toast.classList.add('show');
-      setTimeout(() => toast.classList.remove('show'), 3200);
+      if (toast._timer) clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3500);
     }
 
     function toggleSidebar(open) {
