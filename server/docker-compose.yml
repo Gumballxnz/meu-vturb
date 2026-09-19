@@ -1,0 +1,22 @@
+services:
+  cloudvturb:
+    build: .
+    container_name: cloudvturb
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - NODE_ENV=production
+      - DATA_DIR=/app/data
+      - VIDEOS_DIR=/app/videos
+      - PUBLIC_DIR=/app/public
+    volumes:
+      - /opt/apps/cloudvturb/data:/app/data
+      - /opt/apps/cloudvturb/videos:/app/videos
+    networks:
+      - dokploy-network
+
+networks:
+  dokploy-network:
+    external: true

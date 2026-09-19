@@ -1,0 +1,2355 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CloudVTurb — Dashboard de Vídeos e VSLs de Alta Conversão</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-main: #f8fafc;
+      --bg-card: #ffffff;
+      --border-color: #e2e8f0;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --success: #10b981;
+      --success-hover: #059669;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --radius: 12px;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top Navigation Header */
+    header {
+      background-color: var(--bg-card);
+      border-bottom: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .header-container {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 0 24px;
+      height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text-main);
+    }
+
+    .brand-logo-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    }
+
+    .brand-name {
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-name span {
+      color: var(--primary);
+    }
+
+    .badge-r2 {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .indicator-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+      animation: pulse-dot 2s infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.2); opacity: 0.7; }
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .btn-new-video {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+      box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+    }
+
+    .btn-new-video:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    .user-profile-menu {
+      position: relative;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: #2563eb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: white;
+      border: 2px solid white;
+      box-shadow: var(--shadow-sm);
+      cursor: pointer;
+    }
+
+    .user-role-badge {
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 700;
+      text-transform: uppercase;
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .btn-logout {
+      background: transparent;
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-logout:hover {
+      background: #fee2e2;
+      color: #b91c1c;
+      border-color: #fca5a5;
+    }
+
+    /* Subheader Tabs */
+    .tabs-bar {
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .tabs-container {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      gap: 32px;
+    }
+
+    .tab-item {
+      padding: 16px 4px;
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tab-item.active {
+      color: var(--primary);
+      border-bottom-color: var(--primary);
+    }
+
+    /* Main Content */
+    main {
+      flex: 1;
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 32px 24px;
+      width: 100%;
+    }
+
+    /* Banner Zero Egress & VPS Storage */
+    .savings-banner {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: white;
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: var(--shadow-md);
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .savings-info h3 {
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .savings-info p {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+
+    .savings-stat {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+    }
+
+    .stat-box {
+      text-align: right;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .stat-val {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--success);
+    }
+
+    /* Section Views */
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+
+    /* Video Library Grid */
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+    }
+
+    .section-title {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .video-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 24px;
+    }
+
+    .video-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s ease;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .video-card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+      border-color: #cbd5e1;
+    }
+
+    .video-thumb {
+      position: relative;
+      width: 100%;
+      height: 190px;
+      background: #0f172a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .video-thumb video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .thumb-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .play-btn-preview {
+      width: 48px;
+      height: 48px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #0f172a;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      transition: transform 0.2s;
+      cursor: pointer;
+    }
+
+    .video-card:hover .play-btn-preview {
+      transform: scale(1.1);
+      background: white;
+    }
+
+    .thumb-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(15, 23, 42, 0.85);
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 6px;
+      backdrop-filter: blur(4px);
+    }
+
+    .thumb-duration {
+      position: absolute;
+      bottom: 12px;
+      right: 12px;
+      background: rgba(0, 0, 0, 0.8);
+      color: white;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 6px;
+      border-radius: 4px;
+    }
+
+    .video-info {
+      padding: 18px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .video-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 8px;
+      line-height: 1.4;
+    }
+
+    .video-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    .video-meta-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .video-actions {
+      margin-top: auto;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-top: 1px solid var(--border-color);
+      padding-top: 14px;
+    }
+
+    .btn-action {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+
+    .btn-edit {
+      background: #eff6ff;
+      color: var(--primary);
+      border: 1px solid #bfdbfe;
+    }
+
+    .btn-edit:hover {
+      background: #dbeafe;
+    }
+
+    .btn-embed {
+      background: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
+    }
+
+    .btn-embed:hover {
+      background: #d1fae5;
+    }
+
+    .btn-delete {
+      background: transparent;
+      color: #94a3b8;
+      border: 1px solid transparent;
+      padding: 8px;
+      flex: 0;
+    }
+
+    .btn-delete:hover {
+      color: var(--danger);
+      background: #fef2f2;
+      border-color: #fecaca;
+    }
+
+    /* Modal Styles */
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-backdrop.active {
+      display: flex;
+    }
+
+    .modal-window {
+      background: white;
+      width: 100%;
+      max-width: 580px;
+      border-radius: 16px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+      overflow: hidden;
+      animation: modal-appear 0.25s ease-out;
+    }
+
+    @keyframes modal-appear {
+      from { opacity: 0; transform: scale(0.96) translateY(10px); }
+      to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .modal-body {
+      padding: 24px;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text-main);
+    }
+
+    .form-input, .form-select {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      color: var(--text-main);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .form-input:focus, .form-select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    .form-help {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .source-selector-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .source-btn {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid var(--border-color);
+      background: #f8fafc;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .source-btn.active {
+      border-color: var(--primary);
+      background: #eff6ff;
+      color: var(--primary);
+    }
+
+    .modal-footer {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border-color);
+      background: #f8fafc;
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    .btn-secondary {
+      background: white;
+      border: 1px solid var(--border-color);
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      color: var(--text-muted);
+    }
+
+    .btn-secondary:hover {
+      background: #f1f5f9;
+      color: var(--text-main);
+    }
+
+    /* Progress bar upload */
+    .upload-progress-box {
+      margin-top: 14px;
+      display: none;
+    }
+    .upload-progress-bar-bg {
+      width: 100%;
+      height: 8px;
+      background: #e2e8f0;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .upload-progress-bar-fill {
+      width: 0%;
+      height: 100%;
+      background: var(--primary);
+      transition: width 0.15s ease;
+    }
+
+    /* Editor Layout */
+    .editor-layout {
+      display: grid;
+      grid-template-columns: 480px 1fr;
+      gap: 24px;
+      min-height: 600px;
+    }
+
+    @media (max-width: 1024px) {
+      .editor-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .editor-sidebar {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 180px);
+      overflow-y: auto;
+    }
+
+    .editor-header-bar {
+      padding: 18px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      background: white;
+      z-index: 10;
+    }
+
+    .editor-accordion-item {
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .accordion-header {
+      padding: 16px 20px;
+      background: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 14px;
+      transition: background 0.15s;
+    }
+
+    .accordion-header:hover {
+      background: #f8fafc;
+    }
+
+    .accordion-header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .accordion-body {
+      padding: 18px 20px;
+      background: #fcfdfe;
+      display: none;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .editor-accordion-item.open .accordion-body {
+      display: block;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .toggle-label {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .toggle-desc {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* Switch Component */
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #cbd5e1;
+      transition: .3s;
+      border-radius: 24px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--primary);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(20px);
+    }
+
+    /* Live Preview Section */
+    .preview-panel {
+      display: flex;
+      flex-direction: column;
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .preview-controls-bar {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #f8fafc;
+    }
+
+    .device-switcher {
+      display: flex;
+      background: #e2e8f0;
+      padding: 3px;
+      border-radius: 8px;
+    }
+
+    .device-btn {
+      padding: 6px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s;
+    }
+
+    .device-btn.active {
+      background: white;
+      color: var(--text-main);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .preview-stage {
+      flex: 1;
+      background: #090d16;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+      min-height: 480px;
+    }
+
+    .preview-frame-container {
+      width: 100%;
+      max-width: 800px;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+      transition: all 0.3s ease;
+    }
+
+    .preview-frame-container.mobile {
+      max-width: 320px;
+      aspect-ratio: 9 / 16;
+      border: 6px solid #1e293b;
+      border-radius: 28px;
+    }
+
+    .preview-iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+
+    /* Tables */
+    .table-container {
+      background: white;
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+      overflow-x: auto;
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+
+    .table th {
+      background: #f8fafc;
+      padding: 14px 20px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .table td {
+      padding: 16px 20px;
+      font-size: 14px;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-main);
+    }
+
+    .metric-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 12px;
+    }
+
+    .metric-badge.green { background: #dcfce7; color: #15803d; }
+    .metric-badge.blue { background: #dbeafe; color: #1d4ed8; }
+    .metric-badge.yellow { background: #fef3c7; color: #92400e; }
+    .metric-badge.red { background: #fee2e2; color: #b91c1c; }
+
+    /* Auth Overlay */
+    .auth-overlay {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: #0f172a;
+      z-index: 2000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .auth-card {
+      background: white;
+      width: 100%;
+      max-width: 440px;
+      border-radius: 16px;
+      padding: 36px 32px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+    }
+    .auth-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .auth-toggle-link {
+      color: var(--primary);
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    .auth-alert {
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 18px;
+      display: none;
+    }
+    .auth-alert.error {
+      background: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+      display: block;
+    }
+    .auth-alert.info {
+      background: #eff6ff;
+      color: #1e40af;
+      border: 1px solid #bfdbfe;
+      display: block;
+    }
+
+    /* Embed Modal */
+    .code-box-wrapper {
+      position: relative;
+    }
+    .code-textarea {
+      width: 100%;
+      height: 140px;
+      background: #0f172a;
+      color: #e2e8f0;
+      font-family: monospace;
+      font-size: 13px;
+      padding: 14px;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      resize: none;
+      outline: none;
+    }
+    .btn-copy-code {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Tela de Login / Cadastro Obrigatória -->
+  <div class="auth-overlay" id="authOverlay" style="display: none;">
+    <div class="auth-card">
+      <div class="auth-logo">
+        <div class="brand-logo-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM10 17l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+          </svg>
+        </div>
+        <div class="brand-name">Cloud<span>VTurb</span></div>
+      </div>
+
+      <div id="authAlertBox" class="auth-alert"></div>
+
+      <!-- Formulário de Login -->
+      <form id="formLogin" onsubmit="handleLoginSubmit(event)">
+        <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 6px;">Acesse sua conta</h3>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">Gerencie suas VSLs e players de alta conversão.</p>
+
+        <div class="form-group">
+          <label class="form-label">E-mail</label>
+          <input type="email" id="loginEmail" class="form-input" required placeholder="seu@email.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Senha</label>
+          <input type="password" id="loginPassword" class="form-input" required placeholder="••••••••">
+        </div>
+        <button type="submit" class="btn-new-video" style="width: 100%; justify-content: center; margin-top: 10px;">
+          Entrar no Dashboard
+        </button>
+        <div style="margin-top: 18px; text-align: center; font-size: 13px; color: var(--text-muted);">
+          Não tem uma conta? <span class="auth-toggle-link" onclick="toggleAuthMode('register')">Criar conta</span>
+        </div>
+      </form>
+
+      <!-- Formulário de Cadastro -->
+      <form id="formRegister" style="display: none;" onsubmit="handleRegisterSubmit(event)">
+        <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 6px;">Criar nova conta</h3>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;" id="regNotice">A primeira conta criada assume privilégio de Owner.</p>
+
+        <div class="form-group">
+          <label class="form-label">Nome Completo</label>
+          <input type="text" id="regName" class="form-input" required placeholder="Seu Nome">
+        </div>
+        <div class="form-group">
+          <label class="form-label">E-mail</label>
+          <input type="email" id="regEmail" class="form-input" required placeholder="seu@email.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Senha</label>
+          <input type="password" id="regPassword" class="form-input" required placeholder="Mínimo 6 caracteres" minlength="6">
+        </div>
+        <button type="submit" class="btn-new-video" style="width: 100%; justify-content: center; margin-top: 10px; background: var(--success);">
+          Concluir Cadastro
+        </button>
+        <div style="margin-top: 18px; text-align: center; font-size: 13px; color: var(--text-muted);">
+          Já possui conta? <span class="auth-toggle-link" onclick="toggleAuthMode('login')">Fazer login</span>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header>
+    <div class="header-container">
+      <div style="display: flex; align-items: center; gap: 20px;">
+        <a href="#" class="brand" onclick="navigateTab('library')">
+          <div class="brand-logo-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM10 17l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            </svg>
+          </div>
+          <div class="brand-name">Cloud<span>VTurb</span></div>
+        </a>
+
+        <div class="badge-r2">
+          <span class="indicator-dot"></span>
+          <span>VPS Storage: <strong id="vpsUsageBadge">30 GB Alocados</strong></span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button class="btn-new-video" onclick="openNewVideoModal()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>Novo Vídeo</span>
+        </button>
+
+        <div class="user-profile-menu">
+          <div class="user-avatar" id="headerUserAvatar" title="Perfil">U</div>
+          <div style="display: flex; flex-direction: column;">
+            <span style="font-size: 13px; font-weight: 700;" id="headerUserName">Usuário</span>
+            <span class="user-role-badge" id="headerUserRole">Owner</span>
+          </div>
+          <button class="btn-logout" onclick="logoutUser()">Sair</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Tabs Subheader -->
+  <div class="tabs-bar">
+    <div class="tabs-container">
+      <div class="tab-item active" id="tabNavLibrary" onclick="navigateTab('library')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polygon points="23 7 16 12 23 17 23 7"></polygon>
+          <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+        </svg>
+        Biblioteca de Vídeos
+      </div>
+      <div class="tab-item" id="tabNavTop" onclick="navigateTab('top_vsls')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+          <polyline points="17 6 23 6 23 12"></polyline>
+        </svg>
+        Top VSLs (Métricas)
+      </div>
+      <div class="tab-item" id="tabNavUsers" style="display: none;" onclick="navigateTab('users')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="9" cy="7" r="4"></circle>
+          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+        </svg>
+        Gerenciar Usuários & Aprovações
+      </div>
+      <div class="tab-item" id="tabNavConfig" onclick="navigateTab('settings')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        Servidor & Armazenamento
+      </div>
+    </div>
+  </div>
+
+  <main>
+    <!-- Banner de Status & Armazenamento VPS -->
+    <div class="savings-banner">
+      <div class="savings-info">
+        <h3>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+            <line x1="6" y1="6" x2="6.01" y2="6"></line>
+            <line x1="6" y1="18" x2="6.01" y2="18"></line>
+          </svg>
+          Servidor VPS Contabo + Cloudflare CDN
+        </h3>
+        <p>Vídeos hospedados com streaming ultra-rápido (Range Requests 206) e banco SQLite WAL de alto desempenho.</p>
+      </div>
+      <div class="savings-stat">
+        <div class="stat-box">
+          <div class="stat-label">Espaço Alocado VPS</div>
+          <div class="stat-val" id="bannerStorageVal">0.00 / 30 GB</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">Uso de Cota</div>
+          <div class="stat-val" style="color: #60a5fa;" id="bannerStoragePercent">0%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA 1: BIBLIOTECA DE VÍDEOS -->
+    <div class="tab-content active" id="viewLibrary">
+      <div class="section-header">
+        <h2 class="section-title">Minhas VSLs Cadastradas</h2>
+      </div>
+      <div class="video-grid" id="videoGridContainer">
+        <!-- Vídeos renderizados via JS -->
+      </div>
+    </div>
+
+    <!-- ABA 2: TOP VSLS (MÉTRICAS) -->
+    <div class="tab-content" id="viewTopVsls">
+      <div class="section-header">
+        <h2 class="section-title">Desempenho e Retenção</h2>
+      </div>
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Vídeo / VSL</th>
+              <th>Total de Plays</th>
+              <th>Retenção Média</th>
+              <th>Chegaram ao Pitch</th>
+              <th>Cliques no CTA</th>
+              <th>Conversão</th>
+            </tr>
+          </thead>
+          <tbody id="topVslTableBody">
+            <!-- Dados de retenção -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ABA 3: GERENCIAR USUÁRIOS (APENAS OWNER) -->
+    <div class="tab-content" id="viewUsers">
+      <div class="section-header">
+        <h2 class="section-title">Controle de Usuários e Aprovações</h2>
+      </div>
+
+      <!-- Configuração de Aprovação de Novos Cadastros -->
+      <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius); padding: 20px 24px; margin-bottom: 24px;">
+        <div class="toggle-row" style="margin-bottom: 0;">
+          <div>
+            <div class="toggle-label" style="font-size: 15px;">Exigir Aprovação Manual do Owner para Novos Cadastros</div>
+            <div class="toggle-desc">Quando ativado, qualquer pessoa que se cadastrar ficará com status "Pendente" até você aprovar.</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="cfgRequireApprovalSwitch" onchange="toggleRequireApproval(this.checked)">
+            <span class="slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Tabela de Usuários -->
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>E-mail</th>
+              <th>Função</th>
+              <th>Status</th>
+              <th>Cadastrado em</th>
+              <th style="text-align: right;">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="usersTableBody">
+            <!-- Usuários carregados da API -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ABA 4: CONFIGURAÇÕES GLOBAIS -->
+    <div class="tab-content" id="viewSettings">
+      <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius); padding: 32px; max-width: 800px; margin: 0 auto;">
+        <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 12px;">Infraestrutura da VPS</h2>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">
+          Seu sistema está rodando nativamente na VPS Contabo conectada ao domínio <code>roleta-sorte.online</code> via Traefik.
+        </p>
+
+        <div style="margin-bottom: 20px;">
+          <h4 style="font-size: 14px; font-weight: 700; margin-bottom: 8px;">Uso de Armazenamento para Vídeos</h4>
+          <div class="upload-progress-bar-bg" style="height: 12px; border-radius: 6px;">
+            <div class="upload-progress-bar-fill" id="settingsStorageFill" style="width: 0%;"></div>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); margin-top: 6px;">
+            <span id="settingsStorageUsed">0 GB usados</span>
+            <span>Limite alocado: 30 GB</span>
+          </div>
+        </div>
+
+        <div style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; font-size: 13px; line-height: 1.6;">
+          <strong>Informações do Sistema:</strong><br>
+          • Banco de Dados: SQLite WAL (Em memória rápida + disco local)<br>
+          • Servidor de Streaming: Range Requests HTTP 206 (Instant Seek)<br>
+          • Roteador / SSL: Traefik + Cloudflare Edge Proxy<br>
+        </div>
+      </div>
+    </div>
+
+    <!-- ABA 5: EDITOR DE VSL & PREVIEW EM TEMPO REAL -->
+    <div class="tab-content" id="viewEditor">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <button class="btn-secondary" onclick="navigateTab('library')" style="display: flex; align-items: center; gap: 6px;">
+          ← Voltar para a Biblioteca
+        </button>
+        <button class="btn-new-video" onclick="saveCurrentEditingVideo()" style="background: var(--success);">
+          Salvar Alterações
+        </button>
+      </div>
+
+      <div class="editor-layout">
+        <!-- Sidebar de Controles do Vídeo -->
+        <div class="editor-sidebar">
+          <div class="editor-header-bar">
+            <div>
+              <h3 style="font-size: 16px; font-weight: 700;" id="editorVideoTitle">Editar VSL</h3>
+              <span style="font-size: 12px; color: var(--text-muted);">Personalização avançada de conversão</span>
+            </div>
+          </div>
+
+          <!-- Accordion 1: Estilo Visual -->
+          <div class="editor-accordion-item open">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+              <div class="accordion-header-left">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+                </svg>
+                <span>1. Estilo Visual & Cores</span>
+              </div>
+              <span>▾</span>
+            </div>
+            <div class="accordion-body">
+              <div class="form-group">
+                <label class="form-label">Cor da Barra de Progresso</label>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <input type="color" id="cfgBarColor" value="#2563eb" oninput="updateLivePreview()" style="width: 44px; height: 38px; border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer;">
+                  <input type="text" id="cfgBarColorHex" value="#2563eb" class="form-input" style="width: 110px;" oninput="syncColorInput(this.value, 'cfgBarColor')">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Raio dos Cantos (Border Radius)</label>
+                <select id="cfgBorderRadius" class="form-select" onchange="updateLivePreview()">
+                  <option value="0px">Reto (0px)</option>
+                  <option value="8px">Discreto (8px)</option>
+                  <option value="16px" selected>Moderno (16px)</option>
+                  <option value="24px">Arredondado (24px)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Proporção da VSL</label>
+                <select id="cfgAspectRatio" class="form-select" onchange="changeAspectRatio(this.value)">
+                  <option value="16:9" selected>Horizontal Tradicional (16:9)</option>
+                  <option value="9:16">Vertical Reels / TikTok (9:16)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Accordion 2: Smart Autoplay -->
+          <div class="editor-accordion-item">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+              <div class="accordion-header-left">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                </svg>
+                <span>2. Smart Autoplay</span>
+              </div>
+              <span>▾</span>
+            </div>
+            <div class="accordion-body">
+              <div class="toggle-row">
+                <div>
+                  <div class="toggle-label">Ativar Smart Autoplay</div>
+                  <div class="toggle-desc">Inicia no mudo e exibe o banner pulsante de som</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="cfgSmartAutoplay" checked onchange="updateLivePreview()">
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Texto da Tarja Pulsante</label>
+                <input type="text" id="cfgAutoplayText" class="form-input" value="Seu vídeo já começou. Toque para ativar o som" oninput="updateLivePreview()">
+              </div>
+            </div>
+          </div>
+
+          <!-- Accordion 3: Progresso Falso / Retenção -->
+          <div class="editor-accordion-item">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+              <div class="accordion-header-left">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                <span>3. Retenção & Barra Inteligente</span>
+              </div>
+              <span>▾</span>
+            </div>
+            <div class="accordion-body">
+              <div class="toggle-row">
+                <div>
+                  <div class="toggle-label">Progresso Acelerado no Início</div>
+                  <div class="toggle-desc">Avança mais rápido no começo para prender o lead</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="cfgFakeProgress" checked onchange="updateLivePreview()">
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <div class="toggle-row">
+                <div>
+                  <div class="toggle-label">Bloquear Avanço do Lead</div>
+                  <div class="toggle-desc">Impede o visitante de pular direto para o fim</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="cfgBlockSeek" checked onchange="updateLivePreview()">
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Accordion 4: Botão CTA Dinâmico (Pitch Delay) -->
+          <div class="editor-accordion-item">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+              <div class="accordion-header-left">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                  <line x1="8" y1="21" x2="16" y2="21"></line>
+                  <line x1="12" y1="17" x2="12" y2="21"></line>
+                </svg>
+                <span>4. Botão CTA (Pitch Delay)</span>
+              </div>
+              <span>▾</span>
+            </div>
+            <div class="accordion-body">
+              <div class="toggle-row">
+                <div>
+                  <div class="toggle-label">Ativar Botão de Pitch</div>
+                  <div class="toggle-desc">Aparece exatamente no minuto da oferta</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="cfgCtaEnabled" checked onchange="updateLivePreview()">
+                  <span class="slider"></span>
+                </label>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Segundo de Exibição do CTA (Delay)</label>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <input type="number" id="cfgCtaTime" class="form-input" value="10" min="0" oninput="updateTimeFormatDisplay(); updateLivePreview();">
+                  <span id="ctaFormattedTime" style="font-size: 13px; font-weight: 700; color: var(--primary); white-space: nowrap;">00:10</span>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Texto do Botão CTA</label>
+                <input type="text" id="cfgCtaText" class="form-input" value="QUERO GARANTIR MINHA VAGA AGORA" oninput="updateLivePreview()">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Link de Checkout / Venda</label>
+                <input type="url" id="cfgCtaUrl" class="form-input" value="https://kiwify.com.br" oninput="updateLivePreview()">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Cor do Botão CTA</label>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                  <input type="color" id="cfgCtaColor" value="#10b981" oninput="updateLivePreview()" style="width: 44px; height: 38px; border: 1px solid var(--border-color); border-radius: 6px; cursor: pointer;">
+                  <input type="text" id="cfgCtaColorHex" value="#10b981" class="form-input" style="width: 110px;" oninput="syncColorInput(this.value, 'cfgCtaColor')">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Subtexto de Garantia</label>
+                <input type="text" id="cfgCtaSubtext" class="form-input" value="Compra 100% Segura • Garantia de 30 Dias" oninput="updateLivePreview()">
+              </div>
+            </div>
+          </div>
+
+          <!-- Accordion 5: Continuar de Onde Parou -->
+          <div class="editor-accordion-item">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+              <div class="accordion-header-left">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path>
+                </svg>
+                <span>5. Continuar de Onde Parou</span>
+              </div>
+              <span>▾</span>
+            </div>
+            <div class="accordion-body">
+              <div class="toggle-row">
+                <div>
+                  <div class="toggle-label">Retomada Inteligente</div>
+                  <div class="toggle-desc">Salva o tempo assistido no navegador do visitante</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="cfgResume" checked onchange="updateLivePreview()">
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Accordion 6: Rastreamento de Pixels -->
+          <div class="editor-accordion-item">
+            <div class="accordion-header" onclick="toggleAccordion(this)">
+              <div class="accordion-header-left">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                </svg>
+                <span>6. Pixels de Rastreamento</span>
+              </div>
+              <span>▾</span>
+            </div>
+            <div class="accordion-body">
+              <div class="toggle-row">
+                <div>
+                  <div class="toggle-label">Disparo por Percentual e Pitch</div>
+                  <div class="toggle-desc">Envia eventos para 25%, 50%, 75%, 90% e Pitch</div>
+                </div>
+                <label class="switch">
+                  <input type="checkbox" id="cfgPixels" checked onchange="updateLivePreview()">
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Preview ao Vivo -->
+        <div class="preview-panel">
+          <div class="preview-controls-bar">
+            <div style="font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+              <span class="indicator-dot"></span>
+              Live Preview
+            </div>
+
+            <div style="display: flex; gap: 12px; align-items: center;">
+              <div class="device-switcher">
+                <button class="device-btn active" id="btnDeviceDesktop" onclick="setPreviewDevice('desktop')">Desktop</button>
+                <button class="device-btn" id="btnDeviceMobile" onclick="setPreviewDevice('mobile')">Mobile</button>
+              </div>
+              <button class="btn-secondary" onclick="reloadPreview()" title="Reiniciar Vídeo">↻ Reiniciar</button>
+            </div>
+          </div>
+
+          <div class="preview-stage">
+            <div class="preview-frame-container" id="previewContainer">
+              <iframe id="previewIframe" class="preview-iframe" allow="autoplay" allowfullscreen></iframe>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal Cadastrar Novo Vídeo -->
+  <div class="modal-backdrop" id="newVideoModal">
+    <div class="modal-window">
+      <div class="modal-header">
+        <h3 class="modal-title">Adicionar Novo Vídeo / VSL</h3>
+        <button class="modal-close" onclick="closeNewVideoModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Título da VSL</label>
+          <input type="text" id="newVideoTitle" class="form-input" placeholder="Ex: VSL Principal - Método 6 em 7">
+        </div>
+
+        <label class="form-label">Origem do Vídeo</label>
+        <div class="source-selector-tabs">
+          <button class="source-btn active" id="btnSourceVps" onclick="switchVideoSourceMode('vps')">
+            Upload no Servidor VPS (30 GB)
+          </button>
+          <button class="source-btn" id="btnSourceR2" onclick="switchVideoSourceMode('r2')">
+            Cloudflare R2 / URL Externa
+          </button>
+        </div>
+
+        <!-- Opção 1: Upload direto para o servidor -->
+        <div id="sourceVpsGroup" class="form-group">
+          <label class="form-label">Arquivo de Vídeo (.mp4)</label>
+          <input type="file" id="newVideoUploadFile" class="form-input" accept="video/mp4,video/webm">
+          <div class="form-help">O arquivo será armazenado na sua VPS com streaming HTTP 206 de alta performance.</div>
+
+          <div class="upload-progress-box" id="uploadProgressBox">
+            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+              <span>Enviando vídeo para o servidor...</span>
+              <span id="uploadPercentLabel">0%</span>
+            </div>
+            <div class="upload-progress-bar-bg">
+              <div class="upload-progress-bar-fill" id="uploadProgressBarFill"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Opção 2: URL direta R2 / CDN -->
+        <div id="sourceR2Group" class="form-group" style="display: none;">
+          <label class="form-label">URL Direta (.mp4 ou .m3u8)</label>
+          <input type="url" id="newVideoUrl" class="form-input" placeholder="https://pub-r2.meudominio.com/video.mp4">
+          <div class="form-help">Pode ser URL do seu Cloudflare R2, Cloudflare Stream ou qualquer CDN externa.</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeNewVideoModal()">Cancelar</button>
+        <button class="btn-new-video" id="btnSubmitVideo" onclick="submitNewVideo()">Salvar e Configurar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Gerador de Embed -->
+  <div class="modal-backdrop" id="embedModal">
+    <div class="modal-window" style="max-width: 640px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Código Embed da VSL</h3>
+        <button class="modal-close" onclick="closeEmbedModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="code-box-wrapper">
+          <button class="btn-copy-code" id="btnCopyCode" onclick="copyEmbedCode()">
+            <span id="copyBtnLabel">Copiar Código</span>
+          </button>
+          <textarea id="embedCodeTextarea" class="code-textarea" readonly></textarea>
+        </div>
+        <div style="margin-top: 14px; font-size: 13px; color: var(--text-muted);">
+          Cole este código no Elementor, WordPress ou na sua Landing Page.
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeEmbedModal()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // -------------------------------------------------------------
+    // ESTADO E AUTENTICAÇÃO
+    // -------------------------------------------------------------
+    let currentUser = null;
+    let authToken = localStorage.getItem('cloudvturb_token') || '';
+    let videos = [];
+    let currentEditingId = null;
+    let newVideoSourceType = 'vps';
+
+    const API_BASE = window.location.origin;
+
+    async function apiRequest(endpoint, options = {}) {
+      const headers = options.headers || {};
+      if (authToken) {
+        headers['Authorization'] = `Bearer ${authToken}`;
+      }
+      if (!(options.body instanceof FormData)) {
+        headers['Content-Type'] = 'application/json';
+      }
+
+      try {
+        const res = await fetch(API_BASE + endpoint, {
+          ...options,
+          headers
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Erro na requisição');
+        }
+        return data;
+      } catch (err) {
+        throw err;
+      }
+    }
+
+    // -------------------------------------------------------------
+    // FLUXO DE LOGIN & CADASTRO
+    // -------------------------------------------------------------
+    async function checkAuthSession() {
+      if (!authToken) {
+        showAuthModal('login');
+        return;
+      }
+
+      try {
+        const data = await apiRequest('/api/auth/me');
+        currentUser = data.user;
+        setupUserInterface();
+        loadDashboardData();
+      } catch (err) {
+        localStorage.removeItem('cloudvturb_token');
+        authToken = '';
+        showAuthModal('login');
+      }
+    }
+
+    function showAuthModal(mode) {
+      document.getElementById('authOverlay').style.display = 'flex';
+      toggleAuthMode(mode);
+    }
+
+    function toggleAuthMode(mode) {
+      const alertBox = document.getElementById('authAlertBox');
+      alertBox.className = 'auth-alert';
+      alertBox.textContent = '';
+
+      if (mode === 'register') {
+        document.getElementById('formLogin').style.display = 'none';
+        document.getElementById('formRegister').style.display = 'block';
+      } else {
+        document.getElementById('formRegister').style.display = 'none';
+        document.getElementById('formLogin').style.display = 'block';
+      }
+    }
+
+    async function handleLoginSubmit(e) {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const alertBox = document.getElementById('authAlertBox');
+
+      try {
+        const res = await apiRequest('/api/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ email, password })
+        });
+
+        authToken = res.token;
+        localStorage.setItem('cloudvturb_token', authToken);
+        currentUser = res.user;
+
+        document.getElementById('authOverlay').style.display = 'none';
+        setupUserInterface();
+        loadDashboardData();
+      } catch (err) {
+        alertBox.className = 'auth-alert error';
+        alertBox.textContent = err.message;
+      }
+    }
+
+    async function handleRegisterSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById('regName').value;
+      const email = document.getElementById('regEmail').value;
+      const password = document.getElementById('regPassword').value;
+      const alertBox = document.getElementById('authAlertBox');
+
+      try {
+        const res = await apiRequest('/api/auth/register', {
+          method: 'POST',
+          body: JSON.stringify({ name, email, password })
+        });
+
+        if (res.pendingApproval) {
+          alertBox.className = 'auth-alert info';
+          alertBox.textContent = res.message;
+          document.getElementById('formRegister').reset();
+          setTimeout(() => toggleAuthMode('login'), 3500);
+        } else {
+          authToken = res.token;
+          localStorage.setItem('cloudvturb_token', authToken);
+          currentUser = res.user;
+          document.getElementById('authOverlay').style.display = 'none';
+          setupUserInterface();
+          loadDashboardData();
+        }
+      } catch (err) {
+        alertBox.className = 'auth-alert error';
+        alertBox.textContent = err.message;
+      }
+    }
+
+    function logoutUser() {
+      localStorage.removeItem('cloudvturb_token');
+      authToken = '';
+      currentUser = null;
+      window.location.reload();
+    }
+
+    function setupUserInterface() {
+      if (!currentUser) return;
+      document.getElementById('headerUserName').textContent = currentUser.name;
+      document.getElementById('headerUserAvatar').textContent = currentUser.name.charAt(0).toUpperCase();
+      document.getElementById('headerUserRole').textContent = currentUser.role.toUpperCase();
+
+      if (currentUser.role === 'owner') {
+        document.getElementById('tabNavUsers').style.display = 'flex';
+        document.getElementById('headerUserRole').style.background = '#dcfce7';
+        document.getElementById('headerUserRole').style.color = '#15803d';
+      } else {
+        document.getElementById('tabNavUsers').style.display = 'none';
+      }
+    }
+
+    // -------------------------------------------------------------
+    // CARREGAMENTO DE DADOS
+    // -------------------------------------------------------------
+    async function loadDashboardData() {
+      try {
+        // Carregar vídeos da API
+        const data = await apiRequest('/api/videos');
+        videos = data.videos || [];
+        renderLibrary();
+        renderTopVsls();
+
+        // Carregar configurações e armazenamento da VPS
+        const setRes = await apiRequest('/api/admin/settings');
+        if (setRes.storage) {
+          document.getElementById('bannerStorageVal').textContent = `${setRes.storage.usedGB} / ${setRes.storage.totalGB} GB`;
+          document.getElementById('bannerStoragePercent').textContent = `${setRes.storage.usagePercent}%`;
+          document.getElementById('settingsStorageFill').style.width = `${setRes.storage.usagePercent}%`;
+          document.getElementById('settingsStorageUsed').textContent = `${setRes.storage.usedGB} GB usados`;
+          document.getElementById('vpsUsageBadge').textContent = `${setRes.storage.usedGB} GB / 30 GB`;
+        }
+        if (currentUser && currentUser.role === 'owner') {
+          document.getElementById('cfgRequireApprovalSwitch').checked = setRes.requireApproval;
+          loadUsersList();
+        }
+      } catch (e) {
+        console.error('Erro ao carregar dados:', e);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // GERENCIAMENTO DE USUÁRIOS (OWNER)
+    // -------------------------------------------------------------
+    async function loadUsersList() {
+      if (!currentUser || currentUser.role !== 'owner') return;
+      try {
+        const data = await apiRequest('/api/admin/users');
+        const tbody = document.getElementById('usersTableBody');
+        tbody.innerHTML = '';
+
+        data.users.forEach(u => {
+          const tr = document.createElement('tr');
+          let statusBadge = '';
+          if (u.status === 'approved') statusBadge = '<span class="metric-badge green">Aprovado</span>';
+          else if (u.status === 'pending') statusBadge = '<span class="metric-badge yellow">Pendente</span>';
+          else statusBadge = '<span class="metric-badge red">Bloqueado</span>';
+
+          const isSelf = u.id === currentUser.id;
+
+          tr.innerHTML = `
+            <td><strong>${escapeHtml(u.name)}</strong></td>
+            <td>${escapeHtml(u.email)}</td>
+            <td><span class="user-role-badge">${u.role.toUpperCase()}</span></td>
+            <td>${statusBadge}</td>
+            <td>${new Date(u.created_at).toLocaleDateString('pt-BR')}</td>
+            <td style="text-align: right;">
+              ${isSelf ? '<span style="font-size:12px;color:var(--text-muted);">Sua Conta</span>' : `
+                ${u.status !== 'approved' ? `<button class="btn-action btn-embed" style="display:inline-flex;padding:4px 8px;" onclick="userAction(${u.id}, 'approve')">Aprovar</button>` : ''}
+                ${u.status !== 'blocked' ? `<button class="btn-action btn-delete" style="display:inline-flex;padding:4px 8px;" onclick="userAction(${u.id}, 'block')">Bloquear</button>` : ''}
+                ${u.role !== 'owner' ? `<button class="btn-action btn-edit" style="display:inline-flex;padding:4px 8px;" onclick="userAction(${u.id}, 'make_owner')">Promover</button>` : ''}
+                <button class="btn-action btn-delete" style="display:inline-flex;padding:4px 8px;" onclick="userAction(${u.id}, 'delete')">Excluir</button>
+              `}
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    async function userAction(userId, action) {
+      if (action === 'delete' && !confirm('Excluir este usuário permanentemente?')) return;
+      try {
+        await apiRequest(`/api/admin/users/${userId}/action`, {
+          method: 'POST',
+          body: JSON.stringify({ action })
+        });
+        loadUsersList();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    async function toggleRequireApproval(val) {
+      try {
+        await apiRequest('/api/admin/settings', {
+          method: 'POST',
+          body: JSON.stringify({ requireApproval: val })
+        });
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // NAVEGAÇÃO DE TABS
+    // -------------------------------------------------------------
+    function navigateTab(tabName) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-item').forEach(el => el.classList.remove('active'));
+
+      if (tabName === 'library') {
+        document.getElementById('viewLibrary').classList.add('active');
+        document.getElementById('tabNavLibrary').classList.add('active');
+        renderLibrary();
+      } else if (tabName === 'top_vsls') {
+        document.getElementById('viewTopVsls').classList.add('active');
+        document.getElementById('tabNavTop').classList.add('active');
+        renderTopVsls();
+      } else if (tabName === 'users') {
+        document.getElementById('viewUsers').classList.add('active');
+        document.getElementById('tabNavUsers').classList.add('active');
+        loadUsersList();
+      } else if (tabName === 'settings') {
+        document.getElementById('viewSettings').classList.add('active');
+        document.getElementById('tabNavConfig').classList.add('active');
+      } else if (tabName === 'editor') {
+        document.getElementById('viewEditor').classList.add('active');
+      }
+    }
+
+    // -------------------------------------------------------------
+    // RENDERIZAÇÃO DA BIBLIOTECA
+    // -------------------------------------------------------------
+    function renderLibrary() {
+      const container = document.getElementById('videoGridContainer');
+      container.innerHTML = '';
+
+      if (videos.length === 0) {
+        container.innerHTML = `
+          <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; background: white; border-radius: 12px; border: 1px solid var(--border-color);">
+            <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 8px;">Nenhum vídeo cadastrado</h3>
+            <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">Faça upload do seu primeiro vídeo para a VPS de 30GB.</p>
+            <button class="btn-new-video" style="margin: 0 auto;" onclick="openNewVideoModal()">+ Novo Vídeo</button>
+          </div>
+        `;
+        return;
+      }
+
+      videos.forEach(v => {
+        const isLocal = v.source_type === 'local';
+        const card = document.createElement('div');
+        card.className = 'video-card';
+        card.innerHTML = `
+          <div class="video-thumb">
+            <video src="${v.video_url || v.videoUrl}#t=0.5" preload="metadata" muted playsinline></video>
+            <div class="thumb-overlay">
+              <div class="play-btn-preview" onclick="openEditor('${v.id}')">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                </svg>
+              </div>
+            </div>
+            <div class="thumb-badge">${isLocal ? 'VPS 30GB' : 'Cloudflare R2'}</div>
+            <div class="thumb-duration">${v.duration || '05:00'}</div>
+          </div>
+          <div class="video-info">
+            <div class="video-title">${escapeHtml(v.title)}</div>
+            <div class="video-meta">
+              <div class="video-meta-item">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+                </svg>
+                <span>${(v.plays || 0).toLocaleString()} plays</span>
+              </div>
+              <div class="video-meta-item">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
+                <span>${v.settings && v.settings.ctaTime ? v.settings.ctaTime + 's pitch' : 'Sem CTA'}</span>
+              </div>
+            </div>
+            <div class="video-actions">
+              <button class="btn-action btn-edit" onclick="openEditor('${v.id}')">Editar</button>
+              <button class="btn-action btn-embed" onclick="openEmbedModalForVideo('${v.id}')">Embed</button>
+              <button class="btn-action btn-delete" onclick="deleteVideo('${v.id}')" title="Excluir">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function renderTopVsls() {
+      const tbody = document.getElementById('topVslTableBody');
+      tbody.innerHTML = '';
+
+      videos.forEach(v => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong>${escapeHtml(v.title)}</strong></td>
+          <td>${(v.plays || 0).toLocaleString()}</td>
+          <td><span class="metric-badge blue">${v.retentionRate || '78%'}</span></td>
+          <td>${v.pitchRate || '64%'}</td>
+          <td>${(v.ctaClicks || 0).toLocaleString()}</td>
+          <td><span class="metric-badge green">14.2%</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    // -------------------------------------------------------------
+    // MODAL DE NOVO VÍDEO & UPLOAD
+    // -------------------------------------------------------------
+    function openNewVideoModal() {
+      document.getElementById('newVideoTitle').value = '';
+      document.getElementById('newVideoUrl').value = '';
+      document.getElementById('newVideoUploadFile').value = '';
+      document.getElementById('uploadProgressBox').style.display = 'none';
+      document.getElementById('uploadProgressBarFill').style.width = '0%';
+      document.getElementById('uploadPercentLabel').textContent = '0%';
+      switchVideoSourceMode('vps');
+      document.getElementById('newVideoModal').classList.add('active');
+    }
+
+    function closeNewVideoModal() {
+      document.getElementById('newVideoModal').classList.remove('active');
+    }
+
+    function switchVideoSourceMode(mode) {
+      newVideoSourceType = mode;
+      if (mode === 'vps') {
+        document.getElementById('btnSourceVps').classList.add('active');
+        document.getElementById('btnSourceR2').classList.remove('active');
+        document.getElementById('sourceVpsGroup').style.display = 'block';
+        document.getElementById('sourceR2Group').style.display = 'none';
+      } else {
+        document.getElementById('btnSourceVps').classList.remove('active');
+        document.getElementById('btnSourceR2').classList.add('active');
+        document.getElementById('sourceVpsGroup').style.display = 'none';
+        document.getElementById('sourceR2Group').style.display = 'block';
+      }
+    }
+
+    async function submitNewVideo() {
+      const title = document.getElementById('newVideoTitle').value.trim() || 'Nova VSL';
+      const btnSubmit = document.getElementById('btnSubmitVideo');
+
+      let finalUrl = '';
+      let sourceType = 'remote';
+      let filePath = null;
+
+      if (newVideoSourceType === 'vps') {
+        const fileInput = document.getElementById('newVideoUploadFile');
+        if (fileInput.files.length === 0) {
+          alert('Por favor, selecione um arquivo de vídeo do seu computador.');
+          return;
+        }
+
+        const file = fileInput.files[0];
+        const formData = new FormData();
+        formData.append('videoFile', file);
+
+        btnSubmit.disabled = true;
+        btnSubmit.textContent = 'Enviando...';
+        document.getElementById('uploadProgressBox').style.display = 'block';
+
+        try {
+          const uploadRes = await new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', API_BASE + '/api/upload');
+            xhr.setRequestHeader('Authorization', `Bearer ${authToken}`);
+
+            xhr.upload.onprogress = function (e) {
+              if (e.lengthComputable) {
+                const percent = Math.round((e.loaded / e.total) * 100);
+                document.getElementById('uploadProgressBarFill').style.width = percent + '%';
+                document.getElementById('uploadPercentLabel').textContent = percent + '%';
+              }
+            };
+
+            xhr.onload = function () {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                resolve(JSON.parse(xhr.responseText));
+              } else {
+                try {
+                  const errData = JSON.parse(xhr.responseText);
+                  reject(new Error(errData.error || 'Erro no upload'));
+                } catch(e) {
+                  reject(new Error('Falha no upload do vídeo'));
+                }
+              }
+            };
+
+            xhr.onerror = () => reject(new Error('Erro de conexão durante o upload'));
+            xhr.send(formData);
+          });
+
+          finalUrl = uploadRes.videoUrl;
+          sourceType = 'local';
+          filePath = uploadRes.filePath;
+        } catch (err) {
+          alert(err.message);
+          btnSubmit.disabled = false;
+          btnSubmit.textContent = 'Salvar e Configurar';
+          return;
+        }
+      } else {
+        finalUrl = document.getElementById('newVideoUrl').value.trim();
+        if (!finalUrl) {
+          alert('Por favor, informe a URL direta do vídeo.');
+          return;
+        }
+      }
+
+      // Salvar na API
+      try {
+        const res = await apiRequest('/api/videos', {
+          method: 'POST',
+          body: JSON.stringify({
+            title,
+            videoUrl: finalUrl,
+            sourceType,
+            filePath,
+            duration: '10:00',
+            settings: {
+              barColor: '#2563eb',
+              borderRadius: '16px',
+              aspectRatio: '16:9',
+              smartAutoplay: true,
+              autoplayText: 'Seu vídeo já começou. Toque para ativar o som',
+              fakeProgress: true,
+              blockSeek: true,
+              ctaEnabled: true,
+              ctaTime: 8,
+              ctaText: 'GARANTIR MINHA VAGA AGORA',
+              ctaUrl: 'https://kiwify.com.br',
+              ctaColor: '#10b981',
+              ctaSubtext: 'Compra 100% Segura • Garantia de 30 Dias',
+              resume: true,
+              pixels: true
+            }
+          })
+        });
+
+        closeNewVideoModal();
+        await loadDashboardData();
+        openEditor(res.id);
+      } catch (err) {
+        alert(err.message);
+      } finally {
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = 'Salvar e Configurar';
+      }
+    }
+
+    async function deleteVideo(id) {
+      if (!confirm('Tem certeza que deseja excluir esta VSL?')) return;
+      try {
+        await apiRequest(`/api/videos/${id}`, { method: 'DELETE' });
+        loadDashboardData();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // EDITOR DE VSL & PREVIEW
+    // -------------------------------------------------------------
+    function openEditor(id) {
+      currentEditingId = id;
+      const v = videos.find(x => x.id === id);
+      if (!v) return;
+
+      document.getElementById('editorVideoTitle').textContent = v.title;
+
+      const s = v.settings || {};
+      document.getElementById('cfgBarColor').value = s.barColor || '#2563eb';
+      document.getElementById('cfgBarColorHex').value = s.barColor || '#2563eb';
+      document.getElementById('cfgBorderRadius').value = s.borderRadius || '16px';
+      document.getElementById('cfgAspectRatio').value = s.aspectRatio || '16:9';
+      document.getElementById('cfgSmartAutoplay').checked = s.smartAutoplay !== false;
+      document.getElementById('cfgAutoplayText').value = s.autoplayText || 'Seu vídeo já começou. Toque para ativar o som';
+      document.getElementById('cfgFakeProgress').checked = s.fakeProgress !== false;
+      document.getElementById('cfgBlockSeek').checked = s.blockSeek !== false;
+      document.getElementById('cfgCtaEnabled').checked = s.ctaEnabled !== false;
+      document.getElementById('cfgCtaTime').value = s.ctaTime !== undefined ? s.ctaTime : 10;
+      document.getElementById('cfgCtaText').value = s.ctaText || 'QUERO GARANTIR MINHA VAGA AGORA';
+      document.getElementById('cfgCtaUrl').value = s.ctaUrl || 'https://kiwify.com.br';
+      document.getElementById('cfgCtaColor').value = s.ctaColor || '#10b981';
+      document.getElementById('cfgCtaColorHex').value = s.ctaColor || '#10b981';
+      document.getElementById('cfgCtaSubtext').value = s.ctaSubtext || 'Compra 100% Segura • Garantia de 30 Dias';
+      document.getElementById('cfgResume').checked = s.resume !== false;
+      document.getElementById('cfgPixels').checked = s.pixels !== false;
+
+      updateTimeFormatDisplay();
+      changeAspectRatio(s.aspectRatio || '16:9');
+      navigateTab('editor');
+      updateLivePreview();
+    }
+
+    function toggleAccordion(headerElem) {
+      headerElem.parentElement.classList.toggle('open');
+    }
+
+    function syncColorInput(val, targetId) {
+      if (/^#[0-9A-F]{6}$/i.test(val)) {
+        document.getElementById(targetId).value = val;
+        updateLivePreview();
+      }
+    }
+
+    function updateTimeFormatDisplay() {
+      const sec = parseInt(document.getElementById('cfgCtaTime').value) || 0;
+      const m = Math.floor(sec / 60).toString().padStart(2, '0');
+      const s = (sec % 60).toString().padStart(2, '0');
+      document.getElementById('ctaFormattedTime').textContent = `${m}:${s}`;
+    }
+
+    function changeAspectRatio(ratio) {
+      const container = document.getElementById('previewContainer');
+      if (ratio === '9:16') {
+        container.style.aspectRatio = '9 / 16';
+        container.style.maxWidth = '360px';
+      } else {
+        container.style.aspectRatio = '16 / 9';
+        container.style.maxWidth = '800px';
+      }
+    }
+
+    function setPreviewDevice(device) {
+      const container = document.getElementById('previewContainer');
+      const btnDesk = document.getElementById('btnDeviceDesktop');
+      const btnMob = document.getElementById('btnDeviceMobile');
+
+      if (device === 'mobile') {
+        btnMob.classList.add('active');
+        btnDesk.classList.remove('active');
+        container.classList.add('mobile');
+      } else {
+        btnDesk.classList.add('active');
+        btnMob.classList.remove('active');
+        container.classList.remove('mobile');
+      }
+    }
+
+    function buildPlayerUrl(videoId, currentSettings) {
+      const v = videos.find(x => x.id === videoId);
+      if (!v) return 'player.html';
+
+      const s = currentSettings;
+      const p = new URLSearchParams();
+      p.set('v', v.video_url || v.videoUrl);
+      p.set('id', v.id);
+      p.set('bar_color', s.barColor);
+      p.set('border_radius', s.borderRadius);
+      p.set('smart_autoplay', s.smartAutoplay ? '1' : '0');
+      p.set('autoplay_text', s.autoplayText);
+      p.set('fake_progress', s.fakeProgress ? '1' : '0');
+      p.set('block_seek', s.blockSeek ? '1' : '0');
+      p.set('resume', s.resume ? '1' : '0');
+      p.set('pixels', s.pixels ? '1' : '0');
+
+      if (s.ctaEnabled) {
+        p.set('cta_time', s.ctaTime);
+        p.set('cta_url', s.ctaUrl);
+        p.set('cta_text', s.ctaText);
+        p.set('cta_color', s.ctaColor);
+        p.set('cta_subtext', s.ctaSubtext);
+      } else {
+        p.set('cta_time', '999999');
+      }
+
+      return 'player.html?' + p.toString();
+    }
+
+    function getCurrentSettingsFromForm() {
+      return {
+        barColor: document.getElementById('cfgBarColor').value,
+        borderRadius: document.getElementById('cfgBorderRadius').value,
+        aspectRatio: document.getElementById('cfgAspectRatio').value,
+        smartAutoplay: document.getElementById('cfgSmartAutoplay').checked,
+        autoplayText: document.getElementById('cfgAutoplayText').value,
+        fakeProgress: document.getElementById('cfgFakeProgress').checked,
+        blockSeek: document.getElementById('cfgBlockSeek').checked,
+        ctaEnabled: document.getElementById('cfgCtaEnabled').checked,
+        ctaTime: parseInt(document.getElementById('cfgCtaTime').value) || 0,
+        ctaText: document.getElementById('cfgCtaText').value,
+        ctaUrl: document.getElementById('cfgCtaUrl').value,
+        ctaColor: document.getElementById('cfgCtaColor').value,
+        ctaSubtext: document.getElementById('cfgCtaSubtext').value,
+        resume: document.getElementById('cfgResume').checked,
+        pixels: document.getElementById('cfgPixels').checked
+      };
+    }
+
+    let previewDebounceTimer;
+    function updateLivePreview() {
+      clearTimeout(previewDebounceTimer);
+      previewDebounceTimer = setTimeout(() => {
+        if (!currentEditingId) return;
+        const currentSettings = getCurrentSettingsFromForm();
+        const url = buildPlayerUrl(currentEditingId, currentSettings);
+        document.getElementById('previewIframe').src = url;
+      }, 300);
+    }
+
+    function reloadPreview() {
+      const iframe = document.getElementById('previewIframe');
+      const src = iframe.src;
+      iframe.src = '';
+      setTimeout(() => { iframe.src = src; }, 50);
+    }
+
+    async function saveCurrentEditingVideo() {
+      if (!currentEditingId) return;
+      const settings = getCurrentSettingsFromForm();
+      try {
+        await apiRequest(`/api/videos/${currentEditingId}`, {
+          method: 'PUT',
+          body: JSON.stringify({ settings })
+        });
+        const v = videos.find(x => x.id === currentEditingId);
+        if (v) v.settings = settings;
+        alert('Configurações salvas no servidor com sucesso!');
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    // -------------------------------------------------------------
+    // MODAL DE CÓDIGO EMBED
+    // -------------------------------------------------------------
+    function openEmbedModalForVideo(videoId) {
+      const v = videos.find(x => x.id === videoId);
+      if (!v) return;
+
+      const playerUrl = buildPlayerUrl(v.id, v.settings);
+      const fullUrl = window.location.origin + '/' + playerUrl;
+      const isVertical = v.settings && v.settings.aspectRatio === '9:16';
+      const aspectPadding = isVertical ? '177.77%' : '56.25%';
+
+      const code = `<!-- CloudVTurb High-Conversion Embed -->\n` +
+        `<div style="position:relative;width:100%;padding-top:${aspectPadding};overflow:hidden;border-radius:${v.settings ? v.settings.borderRadius || '12px' : '12px'};">\n` +
+        `  <iframe src="${fullUrl}" \n` +
+        `    style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" \n` +
+        `    allow="autoplay; fullscreen" \n` +
+        `    allowfullscreen>\n` +
+        `  </iframe>\n` +
+        `</div>`;
+
+      document.getElementById('embedCodeTextarea').value = code;
+      document.getElementById('copyBtnLabel').textContent = 'Copiar Código';
+      document.getElementById('embedModal').classList.add('active');
+    }
+
+    function closeEmbedModal() {
+      document.getElementById('embedModal').classList.remove('active');
+    }
+
+    function copyEmbedCode() {
+      const textarea = document.getElementById('embedCodeTextarea');
+      textarea.select();
+      navigator.clipboard.writeText(textarea.value).then(() => {
+        document.getElementById('copyBtnLabel').textContent = 'Copiado!';
+        setTimeout(() => {
+          document.getElementById('copyBtnLabel').textContent = 'Copiar Código';
+        }, 2000);
+      });
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    // Início
+    window.addEventListener('DOMContentLoaded', () => {
+      checkAuthSession();
+    });
+  </script>
+</body>
+</html>

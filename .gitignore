@@ -1,0 +1,30 @@
+# Chaves SSH e Credenciais
+*.key
+*.pem
+id_*
+.env
+.env.*
+
+# Node e Dependências
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Banco de Dados Local
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+data/
+
+# Uploads de Vídeos locais pesados
+videos/
+*.mp4
+*.m3u8
+*.ts
+
+# Sistema e Logs
+.DS_Store
+Thumbs.db
+*.log
