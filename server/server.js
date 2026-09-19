@@ -232,9 +232,20 @@ db.exec(`
     FOREIGN KEY(owner_id) REFERENCES users(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS allowed_domains (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    domain TEXT NOT NULL,
+    traffic_count INTEGER DEFAULT 0,
+    last_session_at DATETIME,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
   CREATE INDEX IF NOT EXISTS idx_verification_email_type ON verification_codes(email, type);
   CREATE INDEX IF NOT EXISTS idx_team_invites_owner ON team_invites(owner_id);
   CREATE INDEX IF NOT EXISTS idx_team_invites_token ON team_invites(token);
+  CREATE INDEX IF NOT EXISTS idx_allowed_domains_user ON allowed_domains(user_id);
   CREATE INDEX IF NOT EXISTS idx_analytics_vid_event ON analytics_events(video_id, event_type);
   CREATE INDEX IF NOT EXISTS idx_analytics_vid_created ON analytics_events(video_id, created_at);
   CREATE INDEX IF NOT EXISTS idx_analytics_vid_visitor ON analytics_events(video_id, visitor_id);
@@ -462,6 +473,10 @@ app.use('/', vturbAnalyticsRouter);
 app.use('/api/v1', vturbAnalyticsRouter);
 
 app.use('/avatars', express.static(AVATARS_DIR));
+app.use('/avatars', express.static(path.join(PUBLIC_DIR, 'avatars')));
+app.use('/avatars', (req, res) => {
+  res.status(404).send('Avatar não encontrado');
+});
 app.use(express.static(PUBLIC_DIR));
 
 function getUsedStorageBytes() {
@@ -1529,7 +1544,10 @@ app.post('/api/admin/settings', authMiddleware, ownerMiddleware, (req, res) => {
 });
 
 const avatarStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, AVATARS_DIR),
+  destination: (req, file, cb) => {
+    if (!fs.existsSync(AVATARS_DIR)) fs.mkdirSync(AVATARS_DIR, { recursive: true });
+    cb(null, AVATARS_DIR);
+  },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase() || '.png';
     cb(null, `avatar_${req.user.id}_${Date.now()}${ext}`);
@@ -1596,6 +1614,11 @@ app.post('/api/user/avatar', authMiddleware, (req, res) => {
 
     res.json({ success: true, avatarUrl });
   });
+});
+
+app.delete('/api/user/avatar', authMiddleware, (req, res) => {
+  db.prepare('UPDATE users SET avatar_url = NULL WHERE id = ?').run(req.user.id);
+  res.json({ success: true });
 });
 
 app.post('/api/user/password/request-code', authMiddleware, async (req, res) => {
@@ -2044,6 +2067,137 @@ app.post('/api/invites/accept', async (req, res) => {
     user: payload,
     message: 'Convite aceito com sucesso!'
   });
+});
+
+app.get('/api/security/domains', authMiddleware, (req, res) => {
+  const accountOwnerId = req.user.owner_id || req.user.id;
+  const domains = db.prepare(`
+    SELECT id, domain, traffic_count, last_session_at, created_at
+    FROM allowed_domains
+    WHERE user_id = ?
+    ORDER BY id DESC
+  `).all(accountOwnerId);
+  res.json({ domains });
+});
+
+app.post('/api/security/domains', authMiddleware, (req, res) => {
+  const accountOwnerId = req.user.owner_id || req.user.id;
+  if (req.user.owner_id && req.user.role !== 'admin' && req.user.role !== 'owner') {
+    return res.status(403).json({ error: 'Apenas administradores podem gerenciar domínios de segurança.' });
+  }
+  const { domains } = req.body || {};
+  if (!domains || !Array.isArray(domains) || !domains.length) {
+    return res.status(400).json({ error: 'Informe ao menos um domínio.' });
+  }
+
+  const cleanList = [];
+  for (const d of domains) {
+    let raw = String(d || '').trim().toLowerCase();
+    raw = raw.replace(/^https?:\/\//i, '').replace(/\/.*$/, '').trim();
+    if (!raw) continue;
+    const isValid = /^(\*\.)?([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/i.test(raw) || /^localhost(:[0-9]+)?$/i.test(raw);
+    if (!isValid) {
+      return res.status(400).json({ error: `Domínio inválido: "${raw}". Use o formato example.com ou *.example.com.` });
+    }
+    cleanList.push(raw);
+  }
+
+  if (!cleanList.length) {
+    return res.status(400).json({ error: 'Informe ao menos um domínio válido.' });
+  }
+
+  const insertStmt = db.prepare('INSERT INTO allowed_domains (user_id, domain) VALUES (?, ?)');
+  let added = 0;
+  for (const domain of cleanList) {
+    const exists = db.prepare('SELECT id FROM allowed_domains WHERE user_id = ? AND domain = ?').get(accountOwnerId, domain);
+    if (!exists) {
+      insertStmt.run(accountOwnerId, domain);
+      added++;
+    }
+  }
+
+  res.json({
+    success: true,
+    count: added,
+    message: 'As configurações de domínio foram atualizadas com sucesso'
+  });
+});
+
+app.put('/api/security/domains/:id', authMiddleware, (req, res) => {
+  const accountOwnerId = req.user.owner_id || req.user.id;
+  if (req.user.owner_id && req.user.role !== 'admin' && req.user.role !== 'owner') {
+    return res.status(403).json({ error: 'Apenas administradores podem gerenciar domínios.' });
+  }
+  const id = parseInt(req.params.id, 10);
+  let { domain } = req.body || {};
+  domain = String(domain || '').trim().toLowerCase().replace(/^https?:\/\//i, '').replace(/\/.*$/, '').trim();
+  const isValid = /^(\*\.)?([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/i.test(domain) || /^localhost(:[0-9]+)?$/i.test(domain);
+  if (!isValid) {
+    return res.status(400).json({ error: 'Domínio inválido. Use o formato example.com ou *.example.com.' });
+  }
+
+  const existing = db.prepare('SELECT id FROM allowed_domains WHERE id = ? AND user_id = ?').get(id, accountOwnerId);
+  if (!existing) {
+    return res.status(404).json({ error: 'Domínio não encontrado.' });
+  }
+
+  db.prepare('UPDATE allowed_domains SET domain = ? WHERE id = ?').run(domain, id);
+  res.json({ success: true, message: 'Domínio atualizado com sucesso' });
+});
+
+app.delete('/api/security/domains/:id', authMiddleware, (req, res) => {
+  const accountOwnerId = req.user.owner_id || req.user.id;
+  if (req.user.owner_id && req.user.role !== 'admin' && req.user.role !== 'owner') {
+    return res.status(403).json({ error: 'Apenas administradores podem remover domínios.' });
+  }
+  const id = parseInt(req.params.id, 10);
+  db.prepare('DELETE FROM allowed_domains WHERE id = ? AND user_id = ?').run(id, accountOwnerId);
+  res.json({ success: true, message: 'Domínio removido com sucesso' });
+});
+
+app.get('/api/security/check-domain', (req, res) => {
+  const videoId = req.query.video_id;
+  const originDomain = String(req.query.domain || '').trim().toLowerCase().replace(/^https?:\/\//i, '').replace(/\/.*$/, '').trim();
+  if (!videoId) return res.json({ allowed: true });
+  const video = db.prepare('SELECT user_id FROM videos WHERE id = ?').get(videoId);
+  if (!video) return res.json({ allowed: true });
+
+  const user = db.prepare('SELECT id, owner_id FROM users WHERE id = ?').get(video.user_id);
+  const ownerId = (user && user.owner_id) || video.user_id;
+
+  const domains = db.prepare('SELECT id, domain FROM allowed_domains WHERE user_id = ?').all(ownerId);
+  if (!domains.length) {
+    return res.json({ allowed: true });
+  }
+
+  if (!originDomain) {
+    return res.json({ allowed: false, message: 'Execução restrita aos domínios autorizados.' });
+  }
+
+  let matchedDomain = null;
+  for (const d of domains) {
+    const pattern = d.domain.toLowerCase();
+    if (pattern === originDomain) {
+      matchedDomain = d;
+      break;
+    }
+    if (pattern.startsWith('*.')) {
+      const root = pattern.slice(2);
+      if (originDomain === root || originDomain.endsWith('.' + root)) {
+        matchedDomain = d;
+        break;
+      }
+    }
+  }
+
+  if (matchedDomain) {
+    try {
+      db.prepare('UPDATE allowed_domains SET traffic_count = traffic_count + 1, last_session_at = CURRENT_TIMESTAMP WHERE id = ?').run(matchedDomain.id);
+    } catch (e) {}
+    return res.json({ allowed: true });
+  }
+
+  return res.json({ allowed: false, message: 'Domínio não autorizado. Este vídeo só pode ser executado nos domínios permitidos pelo proprietário.' });
 });
 
 app.get('/api/keys', authMiddleware, (req, res) => {

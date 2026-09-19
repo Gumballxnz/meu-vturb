@@ -1031,36 +1031,9 @@
             <p class="doc-subtitle">Histórico de versões, melhorias e correções da API CloudVTurb Analytics.</p>
           </div>
 
-          <h2 id="v1-0-3">Versão 1.0.3 (2025-05-15)</h2>
-          <h3>Melhorias</h3>
-          <p>Melhorada a performance dos seguintes endpoints:</p>
-          <ul>
-            <li><code>/events/total_by_company_day</code></li>
-          </ul>
-          <h3>Detalhamento</h3>
-          <p>Algumas vezes durante a requisição de alguns usuários, os mesmos estavam atingindo o limite de recurso permitido, porém o request em questão não requisitava muitos dias de dados. Isso foi normalizado através de uma otimização no agregador de eventos temporais, reduzindo o consumo de memória e CPU em até 75%.</p>
-
-          <h2 id="v1-0-2">Versão 1.0.2 (2025-05-15)</h2>
-          <h3>Melhorias</h3>
-          <p>Melhorias para lidar com exceções em requests que utilizam mais recursos do que o permitido:</p>
-          <ul>
-            <li>Adicionado controles específicos para lidar com o erro <code>AUTHENTICATION_FAILED</code></li>
-            <li>Adicionado controles específicos para lidar com o erro <code>MEMORY_LIMIT_EXCEEDED</code></li>
-          </ul>
-
-          <h2 id="v1-0-1">Versão 1.0.1 (2025-05-15)</h2>
-          <h3>Correções de Bugs</h3>
-          <p>Corrigido o tratamento de fuso horário no endpoint <code>/sessions/stats_by_field_by_day</code> para garantir relatórios de data consistentes em diferentes fusos horários (como <code>America/Sao_Paulo</code> GMT-3). Isso afeta:</p>
-          <ul>
-            <li>Estatísticas de sessão por dia</li>
-            <li>Taxas de conversão</li>
-            <li>Timestamps de eventos</li>
-            <li>Agregações baseadas em data</li>
-          </ul>
-
           <h2 id="v1-0-0">Versão 1.0.0</h2>
           <h3>Lançamento Oficial da API</h3>
-          <p>Disponibilização pública da API CloudVTurb Analytics com 28 endpoints completos, suporte a cabeçalhos <code>X-Api-Token</code> e <code>X-Api-Version: v1</code> e integração nativa com rastreamento UTM, retenção segundo a segundo e testes A/B.</p>
+          <p>Disponibilização da API CloudVTurb Analytics com endpoints completos, suporte a cabeçalhos <code>X-Api-Token</code> e <code>X-Api-Version: v1</code> e integração nativa com rastreamento UTM, retenção segundo a segundo e testes A/B.</p>
 
           <div class="pager-nav">
             <a class="pager-btn" data-route="/analytics-api/analytics">
