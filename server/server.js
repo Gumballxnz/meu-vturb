@@ -1813,37 +1813,120 @@ app.post('/api/user/organization/require-2fa', authMiddleware, (req, res) => {
 
 app.get('/api/members', authMiddleware, (req, res) => {
   const accountOwnerId = req.user.owner_id || req.user.id;
-  const members = db.prepare(`
-    SELECT id, name, email, role, status, avatar_url, created_at, owner_id
+  const activeMembers = db.prepare(`
+    SELECT id, name, email, role, status, avatar_url, created_at, owner_id, 'active' AS invite_status
     FROM users
     WHERE owner_id = ?
     ORDER BY id ASC
   `).all(accountOwnerId);
-  res.json({ members, accountOwnerId });
+
+  const pendingInvites = db.prepare(`
+    SELECT id, name, email, role, 'pending' AS status, NULL AS avatar_url, created_at, owner_id, expires_at, 'pending' AS invite_status
+    FROM team_invites
+    WHERE owner_id = ? AND accepted_at IS NULL AND expires_at > CURRENT_TIMESTAMP
+    ORDER BY id DESC
+  `).all(accountOwnerId);
+
+  res.json({ members: [...activeMembers, ...pendingInvites], accountOwnerId });
 });
 
-app.post('/api/members', authMiddleware, (req, res) => {
+app.post('/api/members', authMiddleware, async (req, res) => {
   const accountOwnerId = req.user.owner_id || req.user.id;
   if (req.user.owner_id && req.user.role !== 'admin' && req.user.role !== 'owner') {
-    return res.status(403).json({ error: 'Apenas administradores podem adicionar membros.' });
+    return res.status(403).json({ error: 'Apenas administradores podem convidar membros.' });
   }
-  const { name, email, role, password } = req.body || {};
-  if (!name || !email || !password) {
-    return res.status(400).json({ error: 'Nome, e-mail e senha são obrigatórios.' });
-  }
-  const cleanEmail = email.trim().toLowerCase();
-  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(cleanEmail);
-  if (existing) {
-    return res.status(400).json({ error: 'Já existe um usuário com este e-mail.' });
-  }
-  const hash = bcrypt.hashSync(password, 10);
-  const memberRole = role === 'admin' ? 'admin' : 'member';
-  const info = db.prepare(`
-    INSERT INTO users (name, email, password_hash, role, status, onboarding_completed, owner_id)
-    VALUES (?, ?, ?, ?, 'approved', 1, ?)
-  `).run(name.trim().slice(0, 60), cleanEmail, hash, memberRole, accountOwnerId);
+  const { name, email, role, permission } = req.body || {};
+  const memberName = String(name || '').trim();
+  const cleanEmail = String(email || '').trim().toLowerCase();
+  const memberRole = (permission === 'admin' || role === 'admin') ? 'admin' : 'member';
 
-  res.json({ success: true, id: info.lastInsertRowid });
+  if (!memberName || memberName.length < 3) {
+    return res.status(400).json({ error: 'O nome deve conter pelo menos 3 caracteres.' });
+  }
+  if (!cleanEmail || !cleanEmail.includes('@')) {
+    return res.status(400).json({ error: 'Informe um e-mail válido.' });
+  }
+
+  const existingMember = db.prepare('SELECT id FROM users WHERE email = ? AND owner_id = ?').get(cleanEmail, accountOwnerId);
+  if (existingMember) {
+    return res.status(400).json({ error: 'Este usuário já faz parte da sua equipe.' });
+  }
+
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+
+  db.prepare('DELETE FROM team_invites WHERE owner_id = ? AND email = ?').run(accountOwnerId, cleanEmail);
+
+  const info = db.prepare(`
+    INSERT INTO team_invites (owner_id, name, email, role, token, expires_at)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(accountOwnerId, memberName.slice(0, 60), cleanEmail, memberRole, token, expiresAt);
+
+  const protocol = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
+  const host = req.headers['x-forwarded-host'] || req.headers.host || `localhost:${PORT}`;
+  const baseUrl = DASH_DOMAIN ? `https://${DASH_DOMAIN}` : `${protocol}://${host}`;
+  const inviteLink = `${baseUrl}/convite?token=${token}`;
+
+  try {
+    const inviter = db.prepare('SELECT name FROM users WHERE id = ?').get(req.user.id);
+    await sendInviteEmail({
+      to: cleanEmail,
+      name: memberName,
+      inviterName: inviter ? inviter.name : req.user.name,
+      inviteLink,
+      role: memberRole
+    });
+  } catch (emailErr) {
+    console.error('[CloudVTurb Invite Email Error]', emailErr);
+  }
+
+  res.json({ success: true, message: 'Convite enviado com sucesso!', inviteId: info.lastInsertRowid, inviteLink });
+});
+
+app.post('/api/invites/:id/resend', authMiddleware, async (req, res) => {
+  const accountOwnerId = req.user.owner_id || req.user.id;
+  if (req.user.owner_id && req.user.role !== 'admin' && req.user.role !== 'owner') {
+    return res.status(403).json({ error: 'Apenas administradores podem reenviar convites.' });
+  }
+  const inviteId = parseInt(req.params.id, 10);
+  const invite = db.prepare('SELECT * FROM team_invites WHERE id = ? AND owner_id = ?').get(inviteId, accountOwnerId);
+  if (!invite) {
+    return res.status(404).json({ error: 'Convite não encontrado.' });
+  }
+
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  db.prepare('UPDATE team_invites SET token = ?, expires_at = ?, accepted_at = NULL WHERE id = ?').run(token, expiresAt, inviteId);
+
+  const protocol = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
+  const host = req.headers['x-forwarded-host'] || req.headers.host || `localhost:${PORT}`;
+  const baseUrl = DASH_DOMAIN ? `https://${DASH_DOMAIN}` : `${protocol}://${host}`;
+  const inviteLink = `${baseUrl}/convite?token=${token}`;
+
+  try {
+    const inviter = db.prepare('SELECT name FROM users WHERE id = ?').get(req.user.id);
+    await sendInviteEmail({
+      to: invite.email,
+      name: invite.name,
+      inviterName: inviter ? inviter.name : req.user.name,
+      inviteLink,
+      role: invite.role
+    });
+  } catch (emailErr) {
+    console.error('[CloudVTurb Resend Invite Error]', emailErr);
+  }
+
+  res.json({ success: true, message: 'Convite reenviado com sucesso!' });
+});
+
+app.delete('/api/invites/:id', authMiddleware, (req, res) => {
+  const accountOwnerId = req.user.owner_id || req.user.id;
+  if (req.user.owner_id && req.user.role !== 'admin' && req.user.role !== 'owner') {
+    return res.status(403).json({ error: 'Apenas administradores podem cancelar convites.' });
+  }
+  const inviteId = parseInt(req.params.id, 10);
+  db.prepare('DELETE FROM team_invites WHERE id = ? AND owner_id = ?').run(inviteId, accountOwnerId);
+  res.json({ success: true });
 });
 
 app.delete('/api/members/:id', authMiddleware, (req, res) => {
@@ -1864,6 +1947,103 @@ app.delete('/api/members/:id', authMiddleware, (req, res) => {
   }
   db.prepare('DELETE FROM users WHERE id = ?').run(targetId);
   res.json({ success: true });
+});
+
+app.get('/api/invites/verify', (req, res) => {
+  const token = String(req.query.token || '').trim();
+  if (!token) return res.status(400).json({ error: 'Token não fornecido.' });
+
+  const invite = db.prepare(`
+    SELECT ti.*, u.name as inviter_name, u.email as inviter_email
+    FROM team_invites ti
+    JOIN users u ON u.id = ti.owner_id
+    WHERE ti.token = ?
+  `).get(token);
+
+  if (!invite) {
+    return res.status(404).json({ error: 'Convite não encontrado ou inválido.' });
+  }
+  if (invite.accepted_at) {
+    return res.status(400).json({ error: 'Este convite já foi aceito anteriormente.' });
+  }
+  if (new Date(invite.expires_at) < new Date()) {
+    return res.status(400).json({ error: 'Este convite expirou. Solicite um novo convite ao administrador.' });
+  }
+
+  const existingUser = db.prepare('SELECT id, name, email FROM users WHERE email = ?').get(invite.email.toLowerCase());
+
+  res.json({
+    valid: true,
+    invite: {
+      name: invite.name,
+      email: invite.email,
+      role: invite.role,
+      inviterName: invite.inviter_name,
+      expiresAt: invite.expires_at,
+      userExists: !!existingUser
+    }
+  });
+});
+
+app.post('/api/invites/accept', async (req, res) => {
+  const { token, name, password } = req.body || {};
+  if (!token) return res.status(400).json({ error: 'Token não fornecido.' });
+
+  const invite = db.prepare(`
+    SELECT ti.*, u.name as inviter_name
+    FROM team_invites ti
+    JOIN users u ON u.id = ti.owner_id
+    WHERE ti.token = ?
+  `).get(token);
+
+  if (!invite) return res.status(404).json({ error: 'Convite inválido ou não encontrado.' });
+  if (invite.accepted_at) return res.status(400).json({ error: 'Este convite já foi aceito.' });
+  if (new Date(invite.expires_at) < new Date()) {
+    return res.status(400).json({ error: 'Este convite expirou (validade de 24 horas).' });
+  }
+
+  const cleanEmail = invite.email.toLowerCase();
+  let user = db.prepare('SELECT * FROM users WHERE email = ?').get(cleanEmail);
+
+  if (!user) {
+    const memberName = String(name || invite.name).trim();
+    if (!memberName || memberName.length < 3) {
+      return res.status(400).json({ error: 'O nome deve conter pelo menos 3 caracteres.' });
+    }
+    const cleanPassword = String(password || '');
+    if (cleanPassword.length < 6) {
+      return res.status(400).json({ error: 'A senha deve ter no mínimo 6 caracteres.' });
+    }
+    const hash = bcrypt.hashSync(cleanPassword, 10);
+    const info = db.prepare(`
+      INSERT INTO users (name, email, password_hash, role, status, onboarding_completed, owner_id)
+      VALUES (?, ?, ?, ?, 'approved', 1, ?)
+    `).run(memberName.slice(0, 60), cleanEmail, hash, invite.role, invite.owner_id);
+
+    user = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
+  } else {
+    db.prepare('UPDATE users SET owner_id = ?, role = ?, status = \'approved\' WHERE id = ?').run(invite.owner_id, invite.role, user.id);
+    user = db.prepare('SELECT * FROM users WHERE id = ?').get(user.id);
+  }
+
+  db.prepare('UPDATE team_invites SET accepted_at = CURRENT_TIMESTAMP WHERE id = ?').run(invite.id);
+
+  const payload = {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    role: user.role,
+    status: user.status,
+    owner_id: user.owner_id
+  };
+  const authToken = jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+
+  res.json({
+    success: true,
+    token: authToken,
+    user: payload,
+    message: 'Convite aceito com sucesso!'
+  });
 });
 
 app.get('/api/keys', authMiddleware, (req, res) => {
@@ -3056,6 +3236,16 @@ app.get('/videos/:filename', (req, res) => {
 });
 
 app.get('*', (req, res) => {
+  const host = (req.headers.host || '').toLowerCase();
+  if (HELP_DOMAIN && (host === HELP_DOMAIN || host.startsWith('help.'))) {
+    return res.sendFile(path.join(PUBLIC_DIR, 'help.html'));
+  }
+  if (req.path === '/help' || req.path === '/ajuda' || req.path.startsWith('/pt-br/article/') || req.path.startsWith('/help/')) {
+    return res.sendFile(path.join(PUBLIC_DIR, 'help.html'));
+  }
+  if (req.path === '/convite' || req.path.startsWith('/convite/')) {
+    return res.sendFile(path.join(PUBLIC_DIR, 'convite.html'));
+  }
   if (req.path === '/analytics-api' || req.path.startsWith('/analytics-api/')) {
     return res.sendFile(path.join(PUBLIC_DIR, 'analytics-api.html'));
   }
