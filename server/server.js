@@ -109,14 +109,38 @@ db.exec(`
     FOREIGN KEY(video_id) REFERENCES videos(id) ON DELETE CASCADE
   );
 
+  CREATE TABLE IF NOT EXISTS api_keys (
+    id TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    key_prefix TEXT NOT NULL,
+    key_hash TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_used_at DATETIME,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS webhooks (
+    id TEXT PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    url TEXT NOT NULL,
+    events_json TEXT NOT NULL,
+    secret TEXT NOT NULL,
+    is_active INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
   CREATE INDEX IF NOT EXISTS idx_analytics_vid_event ON analytics_events(video_id, event_type);
   CREATE INDEX IF NOT EXISTS idx_analytics_vid_created ON analytics_events(video_id, created_at);
   CREATE INDEX IF NOT EXISTS idx_analytics_vid_visitor ON analytics_events(video_id, visitor_id);
   CREATE INDEX IF NOT EXISTS idx_analytics_session_milestone ON analytics_events(session_id, event_type, milestone);
 `);
 
+const AVATARS_DIR = path.join(PUBLIC_DIR, 'avatars');
+if (!fs.existsSync(AVATARS_DIR)) fs.mkdirSync(AVATARS_DIR, { recursive: true });
 
-const userCols = ['full_name', 'country', 'phone', 'address_street', 'postal_code', 'state_province'];
+const userCols = ['full_name', 'country', 'phone', 'address_street', 'postal_code', 'state_province', 'avatar_url', 'first_name', 'last_name'];
 for (const col of userCols) {
   try { db.exec(`ALTER TABLE users ADD COLUMN ${col} TEXT`); } catch (e) {}
 }
