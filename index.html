@@ -4477,8 +4477,19 @@
       if (p === '/analytics' || p === '/metricas') navigateTo('analytics', false);
       else if (p === '/usuarios') navigateTo('users', false);
       else if (p === '/servidor' || p === '/armazenamento') navigateTo('storage', false);
-      else if (p === '/configuracoes' || p === '/settings' || p.startsWith('/settings/')) navigateTo('settings', false);
-      else if (/^\/players\/([^/]+)\/edit\/?$/.test(p)) {
+      else if (p === '/settings/members' || p === '/configuracoes/members' || p === '/configuracoes/membros') {
+        navigateTo('settings', false);
+        switchSettingsTab('members', false);
+      } else if (p === '/settings/analytics-api' || p === '/configuracoes/analytics-api' || p === '/configuracoes/api') {
+        navigateTo('settings', false);
+        switchSettingsTab('api', false);
+      } else if (p === '/settings/webhooks' || p === '/configuracoes/webhooks') {
+        navigateTo('settings', false);
+        switchSettingsTab('webhooks', false);
+      } else if (p === '/settings/profile' || p === '/settings' || p.startsWith('/settings/') || p === '/configuracoes' || p.startsWith('/configuracoes/')) {
+        navigateTo('settings', false);
+        switchSettingsTab('account', false);
+      } else if (/^\/players\/([^/]+)\/edit\/?$/.test(p)) {
         const m = p.match(/^\/players\/([^/]+)\/edit\/?$/);
         openEditor(m[1], false);
       } else if (p === '/folders/top-videos') {
@@ -4521,7 +4532,7 @@
         analytics: { tab: 'viewAnalytics', nav: 'navAnalytics', title: 'Analytics Real', url: '/analytics' },
         users: { tab: 'viewUsers', nav: 'navUsers', title: 'Gestão de Usuários', url: '/usuarios' },
         storage: { tab: 'viewStorage', nav: 'navStorage', title: 'Armazenamento', url: '/servidor' },
-        settings: { tab: 'viewSettings', nav: 'navSettings', title: 'Configurações', url: '/configuracoes' },
+        settings: { tab: 'viewSettings', nav: 'navSettings', title: 'Configurações', url: '/settings/profile' },
         editor: { tab: 'viewEditor', nav: 'navVideos', title: 'Configurações de Vídeo', url: '/editor' }
       };
 
@@ -4542,7 +4553,7 @@
         renderFoldersGrid();
         renderVideosGrid();
       } else if (tabName === 'settings') {
-        loadUserProfile();
+        switchSettingsTab('account', false);
       }
 
       if (updateUrl && window.location.pathname !== target.url) {
@@ -6385,7 +6396,14 @@
       }
     }
 
-    function switchSettingsTab(tab) {
+    const settingsSubTabRoutes = {
+      account: '/settings/profile',
+      members: '/settings/members',
+      api: '/settings/analytics-api',
+      webhooks: '/settings/webhooks'
+    };
+
+    function switchSettingsTab(tab, updateUrl = true) {
       const tabs = ['account', 'members', 'api', 'webhooks'];
       tabs.forEach(t => {
         const btn = document.getElementById(`btnSettings${t.charAt(0).toUpperCase() + t.slice(1)}`);
@@ -6393,6 +6411,13 @@
         if (btn) btn.classList.toggle('active', t === tab);
         if (pane) pane.style.display = t === tab ? 'block' : 'none';
       });
+
+      if (updateUrl) {
+        const targetUrl = settingsSubTabRoutes[tab] || '/settings/profile';
+        if (window.location.pathname !== targetUrl) {
+          history.pushState({ tab: 'settings', subTab: tab }, '', targetUrl);
+        }
+      }
 
       if (tab === 'account') {
         loadUserProfile();

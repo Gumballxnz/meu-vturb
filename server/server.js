@@ -283,7 +283,7 @@ app.use((req, res, next) => {
   }
 
   const dashRoutes = ['/', '/login', '/cadastro', '/videos', '/metricas', '/usuarios', '/servidor', '/analytics', '/configuracoes', '/settings'];
-  if (dashRoutes.includes(req.path) || req.path.startsWith('/players/')) {
+  if (dashRoutes.includes(req.path) || req.path.startsWith('/players/') || req.path.startsWith('/settings/') || req.path.startsWith('/configuracoes/') || req.path.startsWith('/folders/')) {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
