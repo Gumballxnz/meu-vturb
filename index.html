@@ -5536,6 +5536,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         closeFolderModal();
         closeMoveVideoModal();
         closeChangePasswordModal();
+        close2FAModal();
         closeAddMemberModal();
         closeNewApiKeyModal();
         closeNewWebhookModal();
@@ -8458,6 +8459,9 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
 
       if (tab === 'account') {
         loadUserProfile();
+        loadProfileGoogleStatus();
+        loadProfile2FAStatus();
+        loadOrganization2FASettings();
       } else if (tab === 'members') {
         loadMembers();
       } else if (tab === 'api') {
@@ -8562,9 +8566,19 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
     }
 
     function openChangePasswordModal() {
-      document.getElementById('inputCurrentPassword').value = '';
+      const email = (currentUser && currentUser.email) || '';
+      const targetEl = document.getElementById('changePwdEmailTarget');
+      const targetElStep2 = document.getElementById('changePwdEmailTargetStep2');
+      if (targetEl) targetEl.textContent = email;
+      if (targetElStep2) targetElStep2.textContent = email;
+
+      document.getElementById('changePwdStep1').style.display = 'block';
+      document.getElementById('changePwdStep2').style.display = 'none';
+      document.getElementById('btnSubmitChangePassword').style.display = 'none';
+      document.getElementById('inputPwdCode').value = '';
       document.getElementById('inputNewPassword').value = '';
       document.getElementById('inputConfirmPassword').value = '';
+
       document.getElementById('changePasswordModal').classList.add('active');
     }
 
@@ -8572,12 +8586,33 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       document.getElementById('changePasswordModal').classList.remove('active');
     }
 
+    async function requestPasswordChangeCode(isResend = false) {
+      const btn = isResend ? document.getElementById('btnResendPwdCode') : document.getElementById('btnRequestPwdCode');
+      setButtonLoading(btn, true, isResend ? 'Reenviando...' : 'Enviando código...');
+      try {
+        const res = await api('/api/user/password/request-code', { method: 'POST' });
+        document.getElementById('changePwdStep1').style.display = 'none';
+        document.getElementById('changePwdStep2').style.display = 'block';
+        document.getElementById('btnSubmitChangePassword').style.display = 'inline-flex';
+        const codeInput = document.getElementById('inputPwdCode');
+        if (codeInput) setTimeout(() => codeInput.focus(), 100);
+        showToast(res.message || 'Código de 8 dígitos enviado para seu e-mail!');
+      } catch (err) {
+        showToast(err.message, true);
+      } finally {
+        setButtonLoading(btn, false);
+      }
+    }
+
     async function submitChangePassword() {
       const btn = document.getElementById('btnSubmitChangePassword');
-      const currentPassword = document.getElementById('inputCurrentPassword').value;
+      const code = document.getElementById('inputPwdCode').value.trim().replace(/\D/g, '');
       const newPassword = document.getElementById('inputNewPassword').value;
       const confirmPassword = document.getElementById('inputConfirmPassword').value;
 
+      if (code.length !== 8) {
+        return showToast('Informe o código de verificação de 8 dígitos.', true);
+      }
       if (!newPassword || newPassword.length < 6) {
         return showToast('A nova senha deve ter no mínimo 6 caracteres.', true);
       }
@@ -8589,7 +8624,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       try {
         await api('/api/user/password', {
           method: 'POST',
-          body: JSON.stringify({ currentPassword, newPassword })
+          body: JSON.stringify({ code, newPassword })
         });
         closeChangePasswordModal();
         showToast('Senha alterada com sucesso!');
@@ -8600,16 +8635,268 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       }
     }
 
+    async function loadProfileGoogleStatus() {
+      const statusEl = document.getElementById('profGoogleStatus');
+      const btnEl = document.getElementById('btnToggleGoogleDrive');
+      if (!statusEl || !btnEl) return;
+      try {
+        const res = await api('/api/user/google/status');
+        if (res.connected) {
+          statusEl.textContent = res.email ? `Google Drive Ativo (${res.email})` : 'Google Drive Ativo';
+          statusEl.style.color = '#10b981';
+          btnEl.textContent = 'Desconectar';
+          btnEl.style.color = '#ef4444';
+          btnEl.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+          btnEl.dataset.connected = 'true';
+        } else {
+          statusEl.textContent = 'Não conectado';
+          statusEl.style.color = 'var(--text-dim)';
+          btnEl.textContent = '+ Conectar Google Drive';
+          btnEl.style.color = 'var(--primary)';
+          btnEl.style.borderColor = 'var(--primary)';
+          btnEl.dataset.connected = 'false';
+        }
+      } catch (e) {}
+    }
+
+    async function handleGoogleDriveToggle() {
+      const btnEl = document.getElementById('btnToggleGoogleDrive');
+      const isConnected = btnEl && btnEl.dataset.connected === 'true';
+
+      if (isConnected) {
+        showConfirmDialog({
+          title: 'Desconectar Google Drive',
+          message: 'Deseja realmente desconectar sua conta do Google Drive?',
+          confirmText: 'Desconectar',
+          isDanger: true,
+          onConfirm: async (confirmBtn) => {
+            setButtonLoading(confirmBtn, true, 'Desconectando...');
+            try {
+              await api('/api/user/google/disconnect', { method: 'POST' });
+              closeConfirmModal();
+              showToast('Google Drive desconectado com sucesso.');
+              await loadProfileGoogleStatus();
+            } catch (err) {
+              showToast(err.message, true);
+            } finally {
+              setButtonLoading(confirmBtn, false);
+            }
+          }
+        });
+      } else {
+        const cfg = await getGoogleConfig();
+        if (!cfg || !cfg.enabled) {
+          return showToast('Integração com Google Drive não está ativa ou chaves ausentes no .env.', true);
+        }
+        if (!window.google || !window.google.accounts || !window.google.accounts.oauth2) {
+          return showToast('Bibliotecas do Google ainda carregando. Tente em instantes.', true);
+        }
+        const tokenClient = window.google.accounts.oauth2.initTokenClient({
+          client_id: cfg.clientId,
+          scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.email',
+          callback: async (tokenResponse) => {
+            if (tokenResponse && tokenResponse.access_token) {
+              googleAccessToken = tokenResponse.access_token;
+              try {
+                await api('/api/user/google/connect', {
+                  method: 'POST',
+                  body: JSON.stringify({ accessToken: googleAccessToken })
+                });
+                showToast('Google Drive conectado com sucesso!');
+                await loadProfileGoogleStatus();
+              } catch (err) {
+                showToast('Falha ao registrar conexão com Google Drive: ' + err.message, true);
+              }
+            } else {
+              showToast('Autenticação com Google foi cancelada.', true);
+            }
+          }
+        });
+        tokenClient.requestAccessToken({ prompt: 'consent' });
+      }
+    }
+
+    async function loadProfile2FAStatus() {
+      const badgeEl = document.getElementById('prof2faBadge');
+      const btnEl = document.getElementById('btnToggle2FA');
+      if (!badgeEl || !btnEl) return;
+      try {
+        const res = await api('/api/user/2fa/status');
+        if (res.enabled) {
+          badgeEl.textContent = 'Ativo';
+          badgeEl.className = 'badge-status green';
+          btnEl.textContent = 'Desativar 2FA';
+          btnEl.style.color = '#ef4444';
+          btnEl.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+          btnEl.dataset.enabled = 'true';
+        } else {
+          badgeEl.textContent = 'Inativo';
+          badgeEl.className = 'badge-status';
+          btnEl.textContent = 'Ativar 2FA';
+          btnEl.style.color = '';
+          btnEl.style.borderColor = '';
+          btnEl.dataset.enabled = 'false';
+        }
+      } catch (e) {}
+    }
+
+    async function handle2FAToggle() {
+      const btnEl = document.getElementById('btnToggle2FA');
+      const isEnabled = btnEl && btnEl.dataset.enabled === 'true';
+
+      if (isEnabled) {
+        showConfirmDialog({
+          title: 'Desativar Autenticação de Dois Fatores',
+          message: 'Tem certeza que deseja desativar o 2FA? Sua conta ficará menos protegida.',
+          confirmText: 'Desativar 2FA',
+          isDanger: true,
+          onConfirm: async (confirmBtn) => {
+            setButtonLoading(confirmBtn, true, 'Desativando...');
+            try {
+              await api('/api/user/2fa/disable', { method: 'POST' });
+              closeConfirmModal();
+              showToast('Autenticação de dois fatores desativada.');
+              await loadProfile2FAStatus();
+            } catch (err) {
+              showToast(err.message, true);
+            } finally {
+              setButtonLoading(confirmBtn, false);
+            }
+          }
+        });
+      } else {
+        open2FAModal();
+      }
+    }
+
+    async function open2FAModal() {
+      const modal = document.getElementById('twoFactorModal');
+      const qrImg = document.getElementById('twoFactorQrImg');
+      const secretText = document.getElementById('twoFactorSecretText');
+      const inputCode = document.getElementById('input2FACode');
+      if (inputCode) inputCode.value = '';
+
+      modal.classList.add('active');
+      try {
+        const res = await api('/api/user/2fa/setup', { method: 'POST' });
+        if (qrImg) qrImg.src = res.qrCode;
+        if (secretText) secretText.textContent = res.secret;
+      } catch (err) {
+        showToast('Falha ao iniciar configuração 2FA: ' + err.message, true);
+        close2FAModal();
+      }
+    }
+
+    function close2FAModal() {
+      document.getElementById('twoFactorModal').classList.remove('active');
+    }
+
+    function copy2FASecret() {
+      const text = document.getElementById('twoFactorSecretText').textContent;
+      if (!text) return;
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('Chave secreta copiada para a área de transferência!');
+      }).catch(() => {});
+    }
+
+    async function submitEnable2FA() {
+      const btn = document.getElementById('btnConfirmEnable2FA');
+      const code = document.getElementById('input2FACode').value.trim().replace(/\D/g, '');
+      if (code.length !== 6) {
+        return showToast('Digite o código de 6 dígitos gerado no aplicativo.', true);
+      }
+      setButtonLoading(btn, true, 'Ativando...');
+      try {
+        await api('/api/user/2fa/enable', {
+          method: 'POST',
+          body: JSON.stringify({ code })
+        });
+        close2FAModal();
+        showToast('Autenticação de dois fatores ativada com sucesso!');
+        await loadProfile2FAStatus();
+      } catch (err) {
+        showToast(err.message, true);
+      } finally {
+        setButtonLoading(btn, false);
+      }
+    }
+
+    async function loadOrganization2FASettings() {
+      const sec = document.getElementById('secMember2FA');
+      const badge = document.getElementById('profMember2faBadge');
+      const btn = document.getElementById('btnToggleMember2FA');
+      if (!sec || !badge || !btn) return;
+
+      try {
+        const res = await api('/api/user/organization/settings');
+        if (!res.isOwnerOrAdmin) {
+          sec.style.display = 'none';
+          return;
+        }
+        sec.style.display = 'block';
+        if (res.require_member_2fa) {
+          badge.textContent = 'Exigido';
+          badge.className = 'badge-status green';
+          btn.textContent = 'Desativar Exigência';
+          btn.style.color = '#ef4444';
+          btn.style.borderColor = 'rgba(239, 68, 68, 0.3)';
+          btn.dataset.required = 'true';
+        } else {
+          badge.textContent = 'Opcional';
+          badge.className = 'badge-status yellow';
+          btn.textContent = 'Exigir 2FA';
+          btn.style.color = '';
+          btn.style.borderColor = '';
+          btn.dataset.required = 'false';
+        }
+      } catch (e) {}
+    }
+
+    async function handleMember2FAToggle() {
+      const btn = document.getElementById('btnToggleMember2FA');
+      const isRequired = btn && btn.dataset.required === 'true';
+      const newRequired = !isRequired;
+
+      showConfirmDialog({
+        title: newRequired ? 'Exigir 2FA para Membros' : 'Desativar Exigência de 2FA',
+        message: newRequired
+          ? 'Todos os membros da sua organização serão obrigados a configurar a autenticação de dois fatores antes de acessar a plataforma. Deseja ativar?'
+          : 'Os membros não serão mais obrigados a utilizar 2FA para acessar a conta. Deseja prosseguir?',
+        confirmText: newRequired ? 'Exigir 2FA' : 'Confirmar',
+        isDanger: !newRequired,
+        onConfirm: async (confirmBtn) => {
+          setButtonLoading(confirmBtn, true, 'Salvando...');
+          try {
+            await api('/api/user/organization/require-2fa', {
+              method: 'POST',
+              body: JSON.stringify({ enabled: newRequired })
+            });
+            closeConfirmModal();
+            showToast(newRequired ? '2FA agora é obrigatório para todos os membros.' : 'Exigência de 2FA removida.');
+            await loadOrganization2FASettings();
+          } catch (err) {
+            showToast(err.message, true);
+          } finally {
+            setButtonLoading(confirmBtn, false);
+          }
+        }
+      });
+    }
+
     function terminateAllSessions() {
       showConfirmDialog({
         title: 'Encerrar Sessões Ativas',
-        message: 'Tem certeza que deseja encerrar a sessão em todos os dispositivos conectados?',
+        message: 'Tem certeza que deseja encerrar a sessão em todos os outros dispositivos conectados?',
         confirmText: 'Encerrar Sessões',
         isDanger: true,
         onConfirm: async (btn) => {
           setButtonLoading(btn, true, 'Encerrando...');
           try {
-            await api('/api/user/logout-all', { method: 'POST' });
+            const res = await api('/api/user/logout-all', { method: 'POST' });
+            if (res.token) {
+              token = res.token;
+              localStorage.setItem('cloudvturb_token', token);
+            }
             closeConfirmModal();
             showToast('Todas as outras sessões foram encerradas com sucesso.');
           } catch (err) {
