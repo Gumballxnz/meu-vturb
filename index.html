@@ -7,21 +7,26 @@
   <meta name="description" content="Plataforma SaaS premium para hospedagem e entrega de VSLs de alta conversão.">
   <title>CloudVTurb — Plataforma de Hospedagem VSL</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="alternate icon" href="/favicon.ico">
   <script>
     (function() {
-      var p = window.location.pathname;
-      var t = localStorage.getItem('cloudvturb_token');
-      if (p === '/login' || p === '/cadastro' || !t) {
+      var p = window.location.pathname.replace(/\/$/, '') || '/';
+      if (p === '/login' || p === '/cadastro') {
+        try { localStorage.removeItem('cloudvturb_token'); } catch (e) {}
         document.documentElement.classList.add('auth-pending');
         if (p === '/cadastro') {
           document.documentElement.classList.add('auth-mode-register');
         }
+      } else if (!localStorage.getItem('cloudvturb_token')) {
+        document.documentElement.classList.add('auth-pending');
       }
     })();
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js" async defer></script>
   <style>
     :root {
       --color-primary: #2563EB;
@@ -1245,11 +1250,122 @@
       color: var(--text-main);
     }
 
+    .import-drop-zone {
+      border: 1.5px dashed var(--color-primary);
+      border-radius: 16px;
+      padding: 36px 20px;
+      background: var(--color-surface-muted);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .import-drop-zone.dragover {
+      background: var(--color-primary-soft);
+      border-color: var(--color-primary-hover);
+      transform: scale(1.01);
+    }
+
+    .import-cloud-icon {
+      color: var(--color-primary);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .import-drop-text {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--color-primary);
+      line-height: 1.4;
+      margin-bottom: 24px;
+    }
+
+    .import-browse-link {
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .import-actions-row {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .import-action-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      padding: 10px 18px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+
+    .import-action-btn:hover {
+      border-color: var(--color-primary);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(37, 99, 235, 0.1);
+    }
+
+    .import-btn-icon-circle {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .import-btn-icon-circle.blue {
+      background: #0284c7;
+      color: #ffffff;
+    }
+
+    .import-btn-icon-circle.drive {
+      background: transparent;
+    }
+
+    .import-btn-texts {
+      text-align: left;
+    }
+
+    .import-btn-sub {
+      display: block;
+      font-size: 11.5px;
+      color: var(--color-text-muted);
+      font-weight: 500;
+      line-height: 1.2;
+    }
+
+    .import-btn-main {
+      display: block;
+      font-size: 14px;
+      color: var(--color-text);
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
     .auth-backdrop {
       position: fixed;
-      inset: 0;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
       background: #09090b;
-      z-index: 10000;
+      z-index: 999999;
       display: none;
       align-items: center;
       justify-content: center;
@@ -1258,6 +1374,14 @@
 
     html.auth-pending .auth-backdrop {
       display: flex !important;
+    }
+
+    html.auth-pending .sidebar,
+    html.auth-pending .main,
+    html.auth-pending .sidebar-backdrop,
+    html.auth-pending .header,
+    html.auth-pending .app-header {
+      display: none !important;
     }
 
     html.auth-mode-register #authLoginForm {
@@ -2113,7 +2237,7 @@
                 <label class="form-label">Ícone</label>
                 <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;">
                   <button type="button" class="icon-choice-btn active" id="btnIconVolumeMuted" onclick="selectAudioIcon('volume-muted')" title="Áudio silenciado">
-                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" stroke="currentColor" stroke-width="1.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15" stroke-width="2.2" stroke-linecap="round"></line><line x1="17" y1="9" x2="23" y2="15" stroke-width="2.2" stroke-linecap="round"></line></svg>
+                    <svg viewBox="0 0 28 28" width="18" height="18" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6L6 10H2V18H6L11 22V6Z" fill="currentColor" stroke="currentColor" stroke-width="1.5"/><path d="M15.5 10.5C16.8 11.6 17.5 12.8 17.5 14C17.5 15.2 16.8 16.4 15.5 17.5" stroke="currentColor" stroke-width="2.2"/><path d="M19 7.5C21 9.5 22 11.7 22 14C22 16.3 21 18.5 19 20.5" stroke="currentColor" stroke-width="2.2"/><path d="M22.5 4.5C25.2 7.2 26.5 10.5 26.5 14C26.5 17.5 25.2 20.8 22.5 23.5" stroke="currentColor" stroke-width="2.2"/><line x1="2" y1="2" x2="26" y2="26" stroke="currentColor" stroke-width="2.8"/></svg>
                     <span>Mudo</span>
                   </button>
                   <button type="button" class="icon-choice-btn" id="btnIconSpeakerHigh" onclick="selectAudioIcon('speaker-high')" title="Alto-falante com ondas">
@@ -2332,44 +2456,90 @@
   </div>
 
   <div class="modal-overlay" id="newVideoModal">
-    <div class="modal-box">
+    <div class="modal-box" style="max-width: 620px;">
       <div class="modal-header-clean">
-        <div class="modal-title-clean">Adicionar Nova VSL</div>
+        <div class="modal-title-clean">Importar vídeos</div>
         <button class="btn-icon" onclick="closeNewVideoModal()">&times;</button>
       </div>
       <div class="modal-body-clean">
-        <div class="form-row">
-          <label class="form-label">Título da VSL</label>
-          <input type="text" id="newVidTitle" class="form-input-text" placeholder="Ex: VSL Principal - Alta Conversão">
+        <div class="import-drop-zone" id="importDropZone">
+          <input type="file" id="newVidFile" accept="video/mp4,video/webm,video/quicktime,video/x-matroska" style="display: none;">
+          <div class="import-cloud-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>
+              <polyline points="12 11 12 16"></polyline>
+              <polyline points="9 13 12 10 15 13"></polyline>
+            </svg>
+          </div>
+          <div class="import-drop-text">
+            Solte seus vídeos aqui, cole,<br>
+            <span class="import-browse-link" id="btnBrowseVideo">navegue</span> ou importe de
+          </div>
+          <div class="import-actions-row">
+            <button type="button" class="import-action-btn" id="btnImportLocal">
+              <div class="import-btn-icon-circle blue">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M20 6h-8l-2-2H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 12H4V8h16v10z"/>
+                </svg>
+              </div>
+              <div class="import-btn-texts">
+                <span class="import-btn-sub">Importar do</span>
+                <strong class="import-btn-main">Meu dispositivo</strong>
+              </div>
+            </button>
+
+            <button type="button" class="import-action-btn" id="btnImportDrive" onclick="openGoogleDrivePicker()">
+              <div class="import-btn-icon-circle drive">
+                <svg width="28" height="28" viewBox="0 0 87.3 78" xmlns="http://www.w3.org/2000/svg">
+                  <path d="m6.6 66.85 3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3l13.75-23.8h-27.5c0 1.55.4 3.1 1.2 4.5z" fill="#0066da"/>
+                  <path d="m43.65 25-13.75-23.8c-1.35.8-2.5 1.9-3.3 3.3l-25.4 44a9.06 9.06 0 0 0 -1.2 4.5h27.5z" fill="#00ac47"/>
+                  <path d="m73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5h-27.502l5.852 11.5z" fill="#ea4335"/>
+                  <path d="m43.65 25 13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2h-18.5c-1.6 0-3.15.45-4.5 1.2z" fill="#00832d"/>
+                  <path d="m59.8 53h-32.3l-13.75 23.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#2684fc"/>
+                  <path d="m73.4 26.5-12.7-22c-.8-1.4-1.95-2.5-3.3-3.3l-13.75 23.8 16.15 28h27.45c0-1.55-.4-3.1-1.2-4.5z" fill="#ffba00"/>
+                </svg>
+              </div>
+              <div class="import-btn-texts">
+                <span class="import-btn-sub">Importar do</span>
+                <strong class="import-btn-main">Google Drive</strong>
+              </div>
+            </button>
+          </div>
         </div>
 
-        <div class="form-row">
-          <label class="form-label">Origem do Vídeo</label>
-          <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-            <button class="btn-clean-secondary" id="btnTypeUpload" onclick="setSourceTab('upload')" style="flex: 1; background: var(--primary-light); color: var(--primary); border-color: var(--primary-border);">Upload no Servidor</button>
-            <button class="btn-clean-secondary" id="btnTypeRemote" onclick="setSourceTab('remote')" style="flex: 1;">Cloudflare R2 / URL</button>
+        <div id="importDetailsSection" style="margin-top: 18px;">
+          <div class="form-row" style="margin-bottom: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <label class="form-label" style="margin-bottom: 0;">Título da VSL</label>
+              <a href="javascript:void(0)" id="toggleRemoteUrlBtn" onclick="toggleRemoteUrlSection()" style="font-size: 12px; color: var(--primary); text-decoration: none; font-weight: 600;">+ Adicionar por Link (Cloudflare R2 / URL)</a>
+            </div>
+            <input type="text" id="newVidTitle" class="form-input-text" placeholder="Ex: Minha VSL de Alta Conversão">
           </div>
 
-          <div id="newVidUploadSection">
-            <input type="file" id="newVidFile" class="form-input-text" accept="video/mp4,video/webm">
-            <span style="font-size: 11.5px; color: var(--text-dim); margin-top: 6px; display: block;">Formatos suportados: MP4 e WebM. Streaming instantâneo HTTP 206.</span>
-            <div id="uploadStatusProgress" style="display: none; margin-top: 12px;">
-              <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
-                <span>Enviando vídeo...</span>
-                <span id="uploadPercentLabel">0%</span>
-              </div>
-              <div class="progress-bar-bg"><div class="progress-bar-fill-violet" id="uploadProgressBar" style="width: 0%;"></div></div>
+          <div id="newVidRemoteSection" style="display: none; margin-bottom: 12px;">
+            <div class="form-row">
+              <label class="form-label">Link direto do vídeo (MP4 ou HLS m3u8)</label>
+              <input type="url" id="newVidUrl" class="form-input-text" placeholder="https://pub-r2.dominio.com/video.mp4">
             </div>
           </div>
 
-          <div id="newVidRemoteSection" style="display: none;">
-            <input type="url" id="newVidUrl" class="form-input-text" placeholder="https://pub-r2.dominio.com/video.mp4">
-            <span style="font-size: 11.5px; color: var(--text-dim); margin-top: 6px; display: block;">Suporte direto a links .mp4 ou .m3u8 (HLS).</span>
-          <div class="form-row" style="margin-top: 14px;">
+          <div class="form-row" style="margin-bottom: 14px;">
             <label class="form-label">Pasta de Destino (Opcional)</label>
             <select id="newVidFolderSelect" class="form-select-dark">
               <option value="root">Raiz da Biblioteca</option>
             </select>
+          </div>
+
+          <div id="selectedFileInfo" style="display: none; padding: 10px 14px; background: var(--color-primary-soft); border: 1px solid var(--color-primary-border); border-radius: 8px; font-size: 12.5px; color: var(--color-primary); margin-bottom: 12px;">
+            <strong id="selectedFileName">arquivo.mp4</strong> (<span id="selectedFileSize">0 MB</span>)
+          </div>
+
+          <div id="uploadStatusProgress" style="display: none; margin-top: 12px;">
+            <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px;">
+              <span id="uploadStatusText" style="font-weight: 600; color: var(--primary);">Enviando vídeo...</span>
+              <span id="uploadPercentLabel" style="font-weight: 700; color: var(--text-main);">0%</span>
+            </div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill-violet" id="uploadProgressBar" style="width: 0%;"></div></div>
           </div>
         </div>
       </div>
@@ -2686,10 +2856,17 @@
     }
 
     async function initSession() {
-      const isAuthRoute = window.location.pathname === '/login' || window.location.pathname === '/cadastro';
-      if (isAuthRoute || !token) {
+      const p = window.location.pathname.replace(/\/$/, '') || '/';
+      const isAuthRoute = p === '/login' || p === '/cadastro';
+
+      if (isAuthRoute) {
+        token = '';
+        try { localStorage.removeItem('cloudvturb_token'); } catch (e) {}
         document.documentElement.classList.add('auth-pending');
-        showAuth(window.location.pathname === '/cadastro' ? 'register' : 'login');
+        showAuth(p === '/cadastro' ? 'register' : 'login');
+      } else if (!token) {
+        document.documentElement.classList.add('auth-pending');
+        showAuth('login');
       }
 
       try {
@@ -2975,10 +3152,9 @@
             await new Promise(r => setTimeout(r, 250));
             token = '';
             currentUser = null;
-            localStorage.removeItem('cloudvturb_token');
+            try { localStorage.removeItem('cloudvturb_token'); } catch (e) {}
             closeConfirmModal();
-            document.documentElement.classList.add('auth-pending');
-            showAuth('login');
+            window.location.href = '/login';
           } finally {
             setButtonLoading(btn, false);
           }
@@ -4240,17 +4416,48 @@
       });
     }
 
+    let googleConfigCache = null;
+    let googleAccessToken = null;
+
+    async function getGoogleConfig() {
+      if (googleConfigCache) return googleConfigCache;
+      try {
+        const res = await api('/api/google/config');
+        googleConfigCache = res;
+        return googleConfigCache;
+      } catch (e) {
+        return { enabled: false };
+      }
+    }
+
+    function toggleRemoteUrlSection() {
+      const sec = document.getElementById('newVidRemoteSection');
+      const link = document.getElementById('toggleRemoteUrlBtn');
+      if (sec.style.display === 'none') {
+        sec.style.display = 'block';
+        if (link) link.textContent = '- Ocultar Link Direto';
+      } else {
+        sec.style.display = 'none';
+        if (link) link.textContent = '+ Adicionar por Link (Cloudflare R2 / URL)';
+      }
+    }
+
     function openNewVideoModal() {
       document.getElementById('newVidTitle').value = '';
       document.getElementById('newVidFile').value = '';
       document.getElementById('newVidUrl').value = '';
+      const infoBox = document.getElementById('selectedFileInfo');
+      if (infoBox) infoBox.style.display = 'none';
+      const remoteSec = document.getElementById('newVidRemoteSection');
+      if (remoteSec) remoteSec.style.display = 'none';
+      const link = document.getElementById('toggleRemoteUrlBtn');
+      if (link) link.textContent = '+ Adicionar por Link (Cloudflare R2 / URL)';
       document.getElementById('uploadStatusProgress').style.display = 'none';
       populateFolderSelects();
       const folderSelect = document.getElementById('newVidFolderSelect');
       if (folderSelect && currentFolderId !== 'root') {
         folderSelect.value = currentFolderId;
       }
-      setSourceTab('upload');
       document.getElementById('newVideoModal').classList.add('active');
     }
 
@@ -4258,31 +4465,190 @@
       document.getElementById('newVideoModal').classList.remove('active');
     }
 
-    function setSourceTab(tab) {
-      selectedSourceType = tab;
-      const btnUpload = document.getElementById('btnTypeUpload');
-      const btnRemote = document.getElementById('btnTypeRemote');
-      const secUpload = document.getElementById('newVidUploadSection');
-      const secRemote = document.getElementById('newVidRemoteSection');
+    function setupImportDropZoneEvents() {
+      const dropZone = document.getElementById('importDropZone');
+      const fileInput = document.getElementById('newVidFile');
+      const btnBrowse = document.getElementById('btnBrowseVideo');
+      const btnImportLocal = document.getElementById('btnImportLocal');
 
-      if (tab === 'upload') {
-        btnUpload.style.background = 'var(--primary-light)';
-        btnUpload.style.color = 'var(--primary)';
-        btnUpload.style.borderColor = 'var(--primary-border)';
-        btnRemote.style.background = 'transparent';
-        btnRemote.style.color = 'var(--text-muted)';
-        btnRemote.style.borderColor = 'var(--border-subtle)';
-        secUpload.style.display = 'block';
-        secRemote.style.display = 'none';
-      } else {
-        btnRemote.style.background = 'var(--primary-light)';
-        btnRemote.style.color = 'var(--primary)';
-        btnRemote.style.borderColor = 'var(--primary-border)';
-        btnUpload.style.background = 'transparent';
-        btnUpload.style.color = 'var(--text-muted)';
-        btnUpload.style.borderColor = 'var(--border-subtle)';
-        secUpload.style.display = 'none';
-        secRemote.style.display = 'block';
+      if (!dropZone || !fileInput) return;
+
+      const triggerBrowse = (e) => {
+        if (e && e.target && e.target.closest && e.target.closest('#btnImportDrive')) return;
+        fileInput.click();
+      };
+
+      if (btnBrowse) btnBrowse.addEventListener('click', triggerBrowse);
+      if (btnImportLocal) btnImportLocal.addEventListener('click', triggerBrowse);
+
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+      });
+
+      dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+      });
+
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+          fileInput.files = e.dataTransfer.files;
+          handleLocalFileSelected(fileInput.files[0]);
+        }
+      });
+
+      fileInput.addEventListener('change', () => {
+        if (fileInput.files && fileInput.files.length > 0) {
+          handleLocalFileSelected(fileInput.files[0]);
+        }
+      });
+
+      window.addEventListener('paste', (e) => {
+        const modal = document.getElementById('newVideoModal');
+        if (!modal || !modal.classList.contains('active')) return;
+        const clipboardItems = (e.clipboardData || (e.originalEvent && e.originalEvent.clipboardData))?.items;
+        if (!clipboardItems) return;
+        for (let item of clipboardItems) {
+          if (item.kind === 'file' && item.type.startsWith('video/')) {
+            const blob = item.getAsFile();
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(blob);
+            fileInput.files = dataTransfer.files;
+            handleLocalFileSelected(blob);
+            break;
+          }
+        }
+      });
+    }
+
+    function handleLocalFileSelected(file) {
+      if (!file) return;
+      const titleInput = document.getElementById('newVidTitle');
+      if (titleInput && !titleInput.value.trim()) {
+        titleInput.value = file.name.replace(/\.[^/.]+$/, '');
+      }
+      const infoBox = document.getElementById('selectedFileInfo');
+      const nameLabel = document.getElementById('selectedFileName');
+      const sizeLabel = document.getElementById('selectedFileSize');
+      if (infoBox && nameLabel && sizeLabel) {
+        nameLabel.textContent = file.name;
+        sizeLabel.textContent = (file.size / (1024 * 1024)).toFixed(1) + ' MB';
+        infoBox.style.display = 'block';
+      }
+      showToast(`Arquivo "${file.name}" selecionado! Clique em Salvar e Abrir Editor.`);
+    }
+
+    function openGoogleDrivePicker() {
+      getGoogleConfig().then(cfg => {
+        if (!cfg || !cfg.enabled) {
+          showToast('Integração com Google Drive não está ativa ou chaves ausentes no .env.', true);
+          return;
+        }
+
+        if (!window.gapi || !window.google || !window.google.accounts || !window.google.accounts.oauth2) {
+          showToast('Carregando bibliotecas do Google...', false);
+          setTimeout(openGoogleDrivePicker, 700);
+          return;
+        }
+
+        window.gapi.load('picker', () => {
+          const tokenClient = window.google.accounts.oauth2.initTokenClient({
+            client_id: cfg.clientId,
+            scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly',
+            callback: (tokenResponse) => {
+              if (tokenResponse && tokenResponse.access_token) {
+                googleAccessToken = tokenResponse.access_token;
+                createGooglePicker(cfg, googleAccessToken);
+              } else if (tokenResponse && tokenResponse.error) {
+                showToast('Autenticação com Google foi cancelada.', true);
+              }
+            }
+          });
+          tokenClient.requestAccessToken({ prompt: '' });
+        });
+      }).catch(err => {
+        showToast('Erro ao inicializar Google Drive: ' + err.message, true);
+      });
+    }
+
+    function createGooglePicker(cfg, token) {
+      try {
+        const view = new google.picker.DocsView(google.picker.ViewId.DOCS_VIDEOS);
+        view.setMimeTypes('video/mp4,video/webm,video/quicktime,video/x-matroska,video/avi');
+
+        const picker = new google.picker.PickerBuilder()
+          .enableFeature(google.picker.Feature.NAV_HIDDEN)
+          .setAppId(cfg.appId)
+          .setOAuthToken(token)
+          .addView(view)
+          .addView(new google.picker.DocsUploadView())
+          .setDeveloperKey(cfg.apiKey)
+          .setCallback(onGooglePickerCallback)
+          .setLocale('pt-BR')
+          .setTitle('Selecione o vídeo do Google Drive')
+          .build();
+
+        picker.setVisible(true);
+      } catch (err) {
+        showToast('Falha ao abrir Google Picker: ' + err.message, true);
+      }
+    }
+
+    async function onGooglePickerCallback(data) {
+      if (data[google.picker.Response.ACTION] === google.picker.Action.PICKED) {
+        const doc = data[google.picker.Response.DOCUMENTS][0];
+        const fileId = doc[google.picker.Document.ID];
+        const fileName = doc[google.picker.Document.NAME];
+        const titleInput = document.getElementById('newVidTitle');
+        const customTitle = (titleInput && titleInput.value.trim()) || fileName;
+        const folderSelect = document.getElementById('newVidFolderSelect');
+        const targetFolderId = folderSelect && folderSelect.value !== 'root' ? folderSelect.value : null;
+
+        await importVideoFromGoogleDrive(fileId, googleAccessToken, customTitle, targetFolderId);
+      }
+    }
+
+    async function importVideoFromGoogleDrive(fileId, accessToken, title, folderId) {
+      const progressDiv = document.getElementById('uploadStatusProgress');
+      const percentLabel = document.getElementById('uploadPercentLabel');
+      const progressBar = document.getElementById('uploadProgressBar');
+      const statusText = document.getElementById('uploadStatusText');
+
+      progressDiv.style.display = 'block';
+      if (statusText) statusText.textContent = 'Baixando vídeo do Google Drive...';
+      if (percentLabel) percentLabel.textContent = 'Processando...';
+      if (progressBar) progressBar.style.width = '60%';
+
+      try {
+        const res = await api('/api/upload/google-drive', {
+          method: 'POST',
+          body: JSON.stringify({
+            fileId,
+            accessToken,
+            title,
+            folderId
+          })
+        });
+
+        if (progressBar) progressBar.style.width = '100%';
+        if (percentLabel) percentLabel.textContent = '100%';
+        showToast('Vídeo do Google Drive importado com sucesso!');
+        closeNewVideoModal();
+        await loadAllDashboardData();
+        navigateTo('videos');
+        if (res.id) {
+          openEditor(res.id);
+        }
+      } catch (err) {
+        showToast(err.message || 'Erro na importação do Google Drive.', true);
+      } finally {
+        setTimeout(() => {
+          progressDiv.style.display = 'none';
+          if (progressBar) progressBar.style.width = '0%';
+        }, 1000);
       }
     }
 
@@ -4292,24 +4658,28 @@
       const folderSelect = document.getElementById('newVidFolderSelect');
       const targetFolderId = folderSelect && folderSelect.value !== 'root' ? folderSelect.value : null;
 
+      const fileInput = document.getElementById('newVidFile');
+      const remoteUrl = document.getElementById('newVidUrl').value.trim();
+
       let videoUrl = '';
       let sourceType = 'remote';
       let filePath = null;
       let fileSize = 0;
 
-      if (selectedSourceType === 'upload') {
-        const fileInput = document.getElementById('newVidFile');
-        if (fileInput.files.length === 0) {
-          showToast('Selecione um arquivo MP4 ou WebM.', true);
-          return;
-        }
-
+      if (fileInput && fileInput.files && fileInput.files.length > 0) {
+        sourceType = 'local';
         const file = fileInput.files[0];
         const formData = new FormData();
         formData.append('videoFile', file);
 
         setButtonLoading(btn, true, 'Enviando e Otimizando...');
-        document.getElementById('uploadStatusProgress').style.display = 'block';
+        const statusText = document.getElementById('uploadStatusText');
+        const progressDiv = document.getElementById('uploadStatusProgress');
+        const progressBar = document.getElementById('uploadProgressBar');
+        const percentLabel = document.getElementById('uploadPercentLabel');
+
+        if (statusText) statusText.textContent = 'Enviando vídeo...';
+        if (progressDiv) progressDiv.style.display = 'block';
 
         try {
           const uploadRes = await new Promise((resolve, reject) => {
@@ -4320,8 +4690,8 @@
             xhr.upload.onprogress = (e) => {
               if (e.lengthComputable) {
                 const pct = Math.round((e.loaded / e.total) * 100);
-                document.getElementById('uploadProgressBar').style.width = pct + '%';
-                document.getElementById('uploadPercentLabel').textContent = pct + '%';
+                if (progressBar) progressBar.style.width = pct + '%';
+                if (percentLabel) percentLabel.textContent = pct + '%';
               }
             };
 
@@ -4343,7 +4713,6 @@
           });
 
           videoUrl = uploadRes.videoUrl;
-          sourceType = 'local';
           filePath = uploadRes.filePath;
           fileSize = uploadRes.fileSize || 0;
         } catch (err) {
@@ -4351,13 +4720,13 @@
           setButtonLoading(btn, false);
           return;
         }
-      } else {
-        videoUrl = document.getElementById('newVidUrl').value.trim();
-        if (!videoUrl) {
-          showToast('Informe o link do vídeo.', true);
-          return;
-        }
+      } else if (remoteUrl) {
+        videoUrl = remoteUrl;
+        sourceType = 'remote';
         setButtonLoading(btn, true, 'Cadastrando...');
+      } else {
+        showToast('Selecione um arquivo de vídeo ou informe uma URL.', true);
+        return;
       }
 
       try {
@@ -4383,7 +4752,7 @@
               ctaTime: 8,
               ctaText: 'QUERO GARANTIR MINHA VAGA AGORA',
               ctaUrl: 'https://seusite.com/checkout',
-              ctaColor: '#10b981',
+              ctaColor: '#16A34A',
               ctaSubtext: 'Compra 100% Segura • Acesso Imediato',
               resume: true,
               pixels: true
@@ -4489,9 +4858,13 @@
     }
 
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', initSession);
+      document.addEventListener('DOMContentLoaded', () => {
+        initSession();
+        setupImportDropZoneEvents();
+      });
     } else {
       initSession();
+      setupImportDropZoneEvents();
     }
   </script>
 </body>

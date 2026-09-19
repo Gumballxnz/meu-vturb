@@ -8,6 +8,8 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const Database = require('better-sqlite3');
+const { Readable } = require('stream');
+const { finished } = require('stream/promises');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -239,6 +241,9 @@ app.use((req, res, next) => {
 
   const dashRoutes = ['/', '/login', '/cadastro', '/videos', '/metricas', '/usuarios', '/servidor', '/analytics'];
   if (dashRoutes.includes(req.path)) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     return res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
   }
 
@@ -1206,6 +1211,144 @@ app.post('/api/upload', authMiddleware, checkStorageQuotaPre, (req, res) => {
       videoUrl: videoUrl
     });
   });
+});
+
+app.get('/api/google/config', authMiddleware, (req, res) => {
+  const clientId = process.env.GOOGLE_CLIENT_ID || '';
+  const apiKey = process.env.GOOGLE_API_KEY || '';
+  const appId = clientId ? clientId.split('-')[0] : '';
+  res.json({
+    enabled: Boolean(clientId && apiKey),
+    clientId,
+    apiKey,
+    appId
+  });
+});
+
+app.post('/api/upload/google-drive', authMiddleware, checkStorageQuotaPre, async (req, res) => {
+  const { fileId, accessToken, title, folderId } = req.body || {};
+  if (!fileId || !accessToken) {
+    return res.status(400).json({ error: 'Parâmetros fileId e accessToken são obrigatórios.' });
+  }
+
+  const isOwner = req.user.role === 'owner';
+  const userUsed = getUserStorageBytes(req.user.id);
+
+  try {
+    const metaRes = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?fields=id,name,size,mimeType`, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+
+    if (!metaRes.ok) {
+      const errText = await metaRes.text();
+      return res.status(metaRes.status).json({ error: 'Erro ao consultar arquivo no Google Drive: ' + errText });
+    }
+
+    const meta = await metaRes.json();
+    const declaredSize = parseInt(meta.size || '0', 10);
+
+    if (!isOwner && declaredSize > 0 && (userUsed + declaredSize > MEMBER_STORAGE_LIMIT_BYTES)) {
+      return res.status(400).json({ error: 'Cota individual de 3 GB atingida. Remova vídeos para liberar espaço.' });
+    }
+
+    const currentUsed = getUsedStorageBytes();
+    if (declaredSize > 0 && (currentUsed + declaredSize > SERVER_STORAGE_LIMIT_BYTES)) {
+      return res.status(400).json({ error: 'Capacidade do servidor esgotada.' });
+    }
+
+    const ext = meta.name && path.extname(meta.name) ? path.extname(meta.name) : '.mp4';
+    const filename = `${Date.now()}-${crypto.randomBytes(6).toString('hex')}${ext}`;
+    const targetPath = path.join(VIDEOS_DIR, filename);
+
+    const streamRes = await fetch(`https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?alt=media`, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+
+    if (!streamRes.ok) {
+      return res.status(streamRes.status).json({ error: 'Falha ao baixar conteúdo do Google Drive.' });
+    }
+
+    const fileStream = fs.createWriteStream(targetPath);
+    await finished(Readable.fromWeb(streamRes.body).pipe(fileStream));
+
+    const finalStat = fs.statSync(targetPath);
+
+    if (!isOwner && (userUsed + finalStat.size > MEMBER_STORAGE_LIMIT_BYTES)) {
+      try { fs.unlinkSync(targetPath); } catch (e) {}
+      return res.status(400).json({ error: 'Cota individual de 3 GB excedida para este vídeo.' });
+    }
+
+    const fastPath = targetPath + '.fast.mp4';
+    try {
+      execSync(`nice -n 19 ffmpeg -y -i "${targetPath}" -c copy -movflags +faststart "${fastPath}"`, { timeout: 30000 });
+      if (fs.existsSync(fastPath)) {
+        fs.unlinkSync(targetPath);
+        fs.renameSync(fastPath, targetPath);
+      }
+    } catch (ffmpegErr) {
+      console.log('FastStart log:', ffmpegErr.message);
+    }
+
+    const host = req.get('host') || '';
+    const isProd = host.includes(BASE_DOMAIN);
+    const videoDomain = isProd ? `https://${PLAYER_DOMAIN}` : `${req.protocol}://${host}`;
+    const videoUrl = `${videoDomain}/videos/${filename}`;
+
+    const cleanTitle = (title || meta.name || 'Vídeo do Google Drive').replace(/\.[^/.]+$/, '').trim().slice(0, 150);
+    const vidId = 'vsl_' + Date.now();
+
+    let cleanFolderId = null;
+    if (folderId && folderId !== 'root') {
+      const folder = db.prepare('SELECT id, user_id FROM folders WHERE id = ?').get(folderId);
+      if (folder && (req.user.role === 'owner' || folder.user_id === req.user.id)) {
+        cleanFolderId = folder.id;
+      }
+    }
+
+    const defaultSettings = {
+      barColor: '#2563EB',
+      borderRadius: '16px',
+      aspectRatio: '16:9',
+      smartAutoplay: true,
+      autoplayText: 'Seu vídeo ja iniciou\\nClique para escutar',
+      fakeProgress: true,
+      blockSeek: true,
+      ctaEnabled: true,
+      ctaTime: 8,
+      ctaText: 'QUERO GARANTIR MINHA VAGA AGORA',
+      ctaUrl: 'https://seusite.com/checkout',
+      ctaColor: '#16A34A',
+      ctaSubtext: 'Compra 100% Segura • Acesso Imediato',
+      resume: true,
+      pixels: true
+    };
+
+    db.prepare(`
+      INSERT INTO videos (id, user_id, folder_id, title, source_type, file_path, file_size, video_url, duration, settings_json)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      vidId,
+      req.user.id,
+      cleanFolderId,
+      cleanTitle,
+      'local',
+      targetPath,
+      finalStat.size,
+      videoUrl,
+      '10:00',
+      JSON.stringify(defaultSettings)
+    );
+
+    res.json({
+      success: true,
+      id: vidId,
+      title: cleanTitle,
+      videoUrl,
+      fileSize: finalStat.size
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao importar do Google Drive: ' + err.message });
+  }
 });
 
 app.get('/videos/:filename', (req, res) => {
