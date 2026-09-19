@@ -197,6 +197,11 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json({ limit: '2mb' }));
 
+app.get(['/favicon.ico', '/favicon.svg'], (req, res) => {
+  res.type('image/svg+xml');
+  res.sendFile(path.join(PUBLIC_DIR, 'favicon.svg'));
+});
+
 app.use((req, res, next) => {
   const host = (req.headers.host || '').toLowerCase();
 

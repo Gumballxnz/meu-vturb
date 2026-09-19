@@ -598,6 +598,9 @@
       const playPauseIndicator = document.getElementById('playPauseIndicator');
       const playPauseIcon = document.getElementById('playPauseIcon');
 
+      let hasUserUnmuted = false;
+      let playRegistered = false;
+
       function applyAudioNoticeSettings(cfg) {
         if (!smartOverlay || !pulseBadge || !pulseIcon || !overlayText) return;
 
@@ -792,9 +795,6 @@
           startPlayback();
         }
       }
-
-      let hasUserUnmuted = false;
-      let playRegistered = false;
 
       function registerPlay() {
         if (playRegistered) return;

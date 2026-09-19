@@ -7,6 +7,18 @@
   <meta name="description" content="Plataforma SaaS premium para hospedagem e entrega de VSLs de alta conversão.">
   <title>CloudVTurb — Plataforma de Hospedagem VSL</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <script>
+    (function() {
+      var p = window.location.pathname;
+      var t = localStorage.getItem('cloudvturb_token');
+      if (p === '/login' || p === '/cadastro' || !t) {
+        document.documentElement.classList.add('auth-pending');
+        if (p === '/cadastro') {
+          document.documentElement.classList.add('auth-mode-register');
+        }
+      }
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -1237,11 +1249,23 @@
       position: fixed;
       inset: 0;
       background: #09090b;
-      z-index: 1000;
+      z-index: 10000;
       display: none;
       align-items: center;
       justify-content: center;
       padding: 20px;
+    }
+
+    html.auth-pending .auth-backdrop {
+      display: flex !important;
+    }
+
+    html.auth-mode-register #authLoginForm {
+      display: none !important;
+    }
+
+    html.auth-mode-register #authRegisterForm {
+      display: block !important;
     }
 
     .auth-card {
@@ -2664,6 +2688,7 @@
     async function initSession() {
       const isAuthRoute = window.location.pathname === '/login' || window.location.pathname === '/cadastro';
       if (isAuthRoute || !token) {
+        document.documentElement.classList.add('auth-pending');
         showAuth(window.location.pathname === '/cadastro' ? 'register' : 'login');
       }
 
@@ -2688,6 +2713,7 @@
       try {
         const me = await api('/api/auth/me');
         currentUser = me.user;
+        document.documentElement.classList.remove('auth-pending', 'auth-mode-register');
         setupUserHeader();
         await loadAllDashboardData();
         if (currentUser && currentUser.onboarding_completed === false) {
@@ -2698,6 +2724,7 @@
       } catch (err) {
         token = '';
         localStorage.removeItem('cloudvturb_token');
+        document.documentElement.classList.add('auth-pending');
         showAuth('login');
       }
     }
@@ -2838,11 +2865,13 @@
       const alert = document.getElementById('authAlert');
       alert.style.display = 'none';
       if (mode === 'register') {
+        document.documentElement.classList.add('auth-mode-register');
         document.getElementById('authLoginForm').style.display = 'none';
         document.getElementById('authRegisterForm').style.display = 'block';
         document.getElementById('authCardTitle').textContent = 'Criar Nova Conta';
         document.getElementById('authCardSubtitle').textContent = 'Cadastre-se para hospedar suas VSLs';
       } else {
+        document.documentElement.classList.remove('auth-mode-register');
         document.getElementById('authRegisterForm').style.display = 'none';
         document.getElementById('authLoginForm').style.display = 'block';
         document.getElementById('authCardTitle').textContent = 'Entrar na Plataforma';
@@ -2867,6 +2896,7 @@
         token = res.token;
         localStorage.setItem('cloudvturb_token', token);
         currentUser = res.user;
+        document.documentElement.classList.remove('auth-pending', 'auth-mode-register');
         document.getElementById('authBackdrop').style.display = 'none';
         setupUserHeader();
         await loadAllDashboardData();
@@ -2911,6 +2941,7 @@
           token = res.token;
           localStorage.setItem('cloudvturb_token', token);
           currentUser = res.user;
+          document.documentElement.classList.remove('auth-pending', 'auth-mode-register');
           document.getElementById('authBackdrop').style.display = 'none';
           setupUserHeader();
           await loadAllDashboardData();
@@ -2946,6 +2977,7 @@
             currentUser = null;
             localStorage.removeItem('cloudvturb_token');
             closeConfirmModal();
+            document.documentElement.classList.add('auth-pending');
             showAuth('login');
           } finally {
             setButtonLoading(btn, false);
@@ -4456,9 +4488,11 @@
       return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initSession);
+    } else {
       initSession();
-    });
+    }
   </script>
 </body>
 </html>

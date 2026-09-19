@@ -111,13 +111,24 @@
       position: relative;
       display: flex;
       align-items: center;
+      justify-content: center;
       transition: all 0.3s ease;
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
       z-index: 2;
+      box-sizing: border-box;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+    }
+    .pulse-text-top, .pulse-text-bottom {
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: -0.01em;
+      text-align: center;
+      white-space: normal;
+      transition: color 0.3s ease;
+      user-select: none;
     }
     .pulse-icon-box {
-      border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -125,99 +136,138 @@
       transition: all 0.3s ease;
     }
     .pulse-icon-box svg {
+      display: block;
       transition: all 0.2s ease;
     }
-    .pulse-text-block {
-      display: flex;
+    .pulse-badge-wrapper.style-square .pulse-badge {
       flex-direction: column;
-      font-weight: 700;
-      line-height: 1.35;
-      letter-spacing: -0.01em;
-      white-space: pre-line;
-      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
-      transition: color 0.3s ease;
+      align-items: center;
+      justify-content: space-between;
+      aspect-ratio: 1 / 1;
+      width: min(220px, 80vw);
+      height: min(220px, 80vw);
+      padding: 24px 16px;
+      gap: 12px;
+      border-radius: 8px;
     }
-    .pulse-badge-wrapper.style-capsule .pulse-badge {
-      flex-direction: row;
+    .pulse-badge-wrapper.style-square .pulse-text-top {
+      order: 1;
+      font-size: 16px;
+    }
+    .pulse-badge-wrapper.style-square .pulse-icon-box {
+      order: 2;
+      background: transparent !important;
+      box-shadow: none !important;
+      width: auto;
+      height: auto;
+      min-width: unset;
+      margin: auto 0;
+    }
+    .pulse-badge-wrapper.style-square .pulse-icon-box svg {
+      width: 62px;
+      height: 62px;
+    }
+    .pulse-badge-wrapper.style-square .pulse-text-bottom {
+      order: 3;
+      font-size: 15.5px;
     }
     .pulse-badge-wrapper.style-card .pulse-badge {
       flex-direction: column;
-      text-align: center;
-    }
-    .pulse-badge-wrapper.style-card .pulse-text-block {
-      text-align: center;
-    }
-    .pulse-badge-wrapper.style-square .pulse-badge {
-      flex-direction: row;
-    }
-    .pulse-badge-wrapper.style-circle .pulse-badge {
-      flex-direction: column;
-      text-align: center;
-    }
-    .pulse-badge-wrapper.style-circle .pulse-text-block {
-      text-align: center;
-      font-size: 11px;
-    }
-    .pulse-badge-wrapper.size-compact .pulse-badge {
-      padding: 7px 14px 7px 8px;
-      gap: 10px;
-    }
-    .pulse-badge-wrapper.size-compact.style-card .pulse-badge {
-      padding: 12px 16px;
-      gap: 8px;
-    }
-    .pulse-badge-wrapper.size-compact .pulse-icon-box {
-      width: 34px;
-      height: 34px;
-      min-width: 34px;
-    }
-    .pulse-badge-wrapper.size-compact .pulse-icon-box svg {
-      width: 17px;
-      height: 17px;
-    }
-    .pulse-badge-wrapper.size-compact .pulse-text-block {
-      font-size: 12px;
-    }
-    .pulse-badge-wrapper.size-medium .pulse-badge {
-      padding: 10px 22px 10px 12px;
-      gap: 14px;
-    }
-    .pulse-badge-wrapper.size-medium.style-card .pulse-badge {
-      padding: 18px 24px;
+      align-items: center;
+      justify-content: space-between;
+      border-radius: 12px;
+      padding: 22px 20px;
       gap: 12px;
+      width: min(250px, 85vw);
+      min-height: 190px;
     }
-    .pulse-badge-wrapper.size-medium .pulse-icon-box {
+    .pulse-badge-wrapper.style-card .pulse-text-top { order: 1; font-size: 16px; }
+    .pulse-badge-wrapper.style-card .pulse-icon-box {
+      order: 2;
+      background: transparent !important;
+      box-shadow: none !important;
+      width: auto;
+      height: auto;
+      min-width: unset;
+      margin: auto 0;
+    }
+    .pulse-badge-wrapper.style-card .pulse-icon-box svg { width: 56px; height: 56px; }
+    .pulse-badge-wrapper.style-card .pulse-text-bottom { order: 3; font-size: 15px; }
+    .pulse-badge-wrapper.style-capsule .pulse-badge {
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+      border-radius: 9999px;
+      padding: 10px 22px 10px 14px;
+      gap: 14px;
+      width: auto;
+      height: auto;
+      aspect-ratio: auto;
+    }
+    .pulse-badge-wrapper.style-capsule .pulse-icon-box {
+      order: 1;
       width: 44px;
       height: 44px;
       min-width: 44px;
+      border-radius: 50%;
     }
-    .pulse-badge-wrapper.size-medium .pulse-icon-box svg {
+    .pulse-badge-wrapper.style-capsule .pulse-icon-box svg {
       width: 22px;
       height: 22px;
     }
-    .pulse-badge-wrapper.size-medium .pulse-text-block {
+    .pulse-badge-wrapper.style-capsule .pulse-text-top {
+      order: 2;
       font-size: 13.5px;
+      text-align: left;
     }
-    .pulse-badge-wrapper.size-large .pulse-badge {
-      padding: 14px 28px 14px 16px;
+    .pulse-badge-wrapper.style-capsule .pulse-text-bottom {
+      order: 3;
+      font-size: 12px;
+      text-align: left;
+      opacity: 0.95;
+    }
+    .pulse-badge-wrapper.style-circle .pulse-badge {
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      aspect-ratio: 1 / 1;
+      width: min(200px, 78vw);
+      height: min(200px, 78vw);
+      padding: 18px;
+      gap: 8px;
+    }
+    .pulse-badge-wrapper.style-circle .pulse-text-top { order: 1; font-size: 13px; }
+    .pulse-badge-wrapper.style-circle .pulse-icon-box { order: 2; }
+    .pulse-badge-wrapper.style-circle .pulse-icon-box svg { width: 48px; height: 48px; }
+    .pulse-badge-wrapper.style-circle .pulse-text-bottom { order: 3; font-size: 12px; }
+    .pulse-badge-wrapper.size-compact.style-square .pulse-badge {
+      width: min(175px, 72vw);
+      height: min(175px, 72vw);
+      padding: 16px 12px;
+      gap: 8px;
+    }
+    .pulse-badge-wrapper.size-compact.style-square .pulse-text-top { font-size: 13px; }
+    .pulse-badge-wrapper.size-compact.style-square .pulse-icon-box svg { width: 46px; height: 46px; }
+    .pulse-badge-wrapper.size-compact.style-square .pulse-text-bottom { font-size: 12.5px; }
+    .pulse-badge-wrapper.size-medium.style-square .pulse-badge {
+      width: min(220px, 80vw);
+      height: min(220px, 80vw);
+      padding: 24px 16px;
+      gap: 12px;
+    }
+    .pulse-badge-wrapper.size-medium.style-square .pulse-text-top { font-size: 16px; }
+    .pulse-badge-wrapper.size-medium.style-square .pulse-icon-box svg { width: 62px; height: 62px; }
+    .pulse-badge-wrapper.size-medium.style-square .pulse-text-bottom { font-size: 15.5px; }
+    .pulse-badge-wrapper.size-large.style-square .pulse-badge {
+      width: min(265px, 88vw);
+      height: min(265px, 88vw);
+      padding: 28px 18px;
       gap: 16px;
     }
-    .pulse-badge-wrapper.size-large.style-card .pulse-badge {
-      padding: 24px 32px;
-      gap: 14px;
-    }
-    .pulse-badge-wrapper.size-large .pulse-icon-box {
-      width: 54px;
-      height: 54px;
-      min-width: 54px;
-    }
-    .pulse-badge-wrapper.size-large .pulse-icon-box svg {
-      width: 28px;
-      height: 28px;
-    }
-    .pulse-badge-wrapper.size-large .pulse-text-block {
-      font-size: 16px;
-    }
+    .pulse-badge-wrapper.size-large.style-square .pulse-text-top { font-size: 18px; }
+    .pulse-badge-wrapper.size-large.style-square .pulse-icon-box svg { width: 78px; height: 78px; }
+    .pulse-badge-wrapper.size-large.style-square .pulse-text-bottom { font-size: 17.5px; }
     .pulse-badge-wrapper.anim-pulse .pulse-badge-halo {
       animation: vturb-halo-pulse 2.2s infinite ease-in-out;
     }
@@ -455,14 +505,17 @@
       <div class="pulse-badge-wrapper style-square size-medium anim-none" id="pulseBadgeWrapper">
         <div class="pulse-badge-halo" id="pulseHalo" style="display: none;"></div>
         <div class="pulse-badge" id="pulseBadge">
+          <div class="pulse-text-top" id="overlayTextTop">Seu video ja iniciou</div>
           <div class="pulse-icon-box" id="pulseIcon">
-            <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
-              <line x1="23" y1="9" x2="17" y2="15" stroke-width="2.2" stroke-linecap="round"></line>
-              <line x1="17" y1="9" x2="23" y2="15" stroke-width="2.2" stroke-linecap="round"></line>
+            <svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 6L6 10H2V18H6L11 22V6Z" fill="currentColor" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M15.5 10.5C16.8 11.6 17.5 12.8 17.5 14C17.5 15.2 16.8 16.4 15.5 17.5" stroke="currentColor" stroke-width="2.2"/>
+              <path d="M19 7.5C21 9.5 22 11.7 22 14C22 16.3 21 18.5 19 20.5" stroke="currentColor" stroke-width="2.2"/>
+              <path d="M22.5 4.5C25.2 7.2 26.5 10.5 26.5 14C26.5 17.5 25.2 20.8 22.5 23.5" stroke="currentColor" stroke-width="2.2"/>
+              <line x1="2" y1="2" x2="26" y2="26" stroke="currentColor" stroke-width="2.8"/>
             </svg>
           </div>
-          <div class="pulse-text-block" id="overlayText">Seu vídeo ja iniciou&#10;Clique para escutar</div>
+          <div class="pulse-text-bottom" id="overlayTextBottom">Clique para escutar</div>
         </div>
       </div>
     </div>
@@ -597,6 +650,9 @@
       const ctaSubtext = document.getElementById('ctaSubtext');
       const playPauseIndicator = document.getElementById('playPauseIndicator');
       const playPauseIcon = document.getElementById('playPauseIcon');
+
+      let hasUserUnmuted = false;
+      let playRegistered = false;
 
       function applyAudioNoticeSettings(cfg) {
         if (!smartOverlay || !pulseBadge || !pulseIcon || !overlayText) return;
@@ -792,9 +848,6 @@
           startPlayback();
         }
       }
-
-      let hasUserUnmuted = false;
-      let playRegistered = false;
 
       function registerPlay() {
         if (playRegistered) return;
