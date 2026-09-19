@@ -2426,6 +2426,151 @@
       margin: 8px 0 16px;
     }
 
+    .security-callout-info {
+      background: rgba(37, 99, 235, 0.08);
+      border: 1px solid rgba(37, 99, 235, 0.2);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 13px;
+      line-height: 1.45;
+      color: var(--text-main);
+      margin-bottom: 18px;
+    }
+    .security-callout-info svg {
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .domain-input-group {
+      display: flex;
+      align-items: stretch;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      background: var(--bg-card);
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .domain-input-group:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px var(--primary-glow);
+    }
+    .domain-input-prefix {
+      background: rgba(255, 255, 255, 0.04);
+      padding: 9px 12px;
+      font-size: 13px;
+      color: var(--text-muted);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      user-select: none;
+    }
+    .domain-input-field {
+      flex: 1;
+      min-width: 0;
+      border: none;
+      background: transparent;
+      padding: 9px 12px;
+      font-size: 13.5px;
+      color: var(--text-main);
+      outline: none;
+    }
+    .btn-remove-domain-row {
+      background: transparent;
+      border: none;
+      color: var(--text-dim);
+      font-size: 18px;
+      padding: 0 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s ease;
+    }
+    .btn-remove-domain-row:hover {
+      color: #ef4444;
+    }
+    .btn-add-another-domain {
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      color: var(--text-main);
+      font-size: 12.5px;
+      font-weight: 500;
+      padding: 7px 14px;
+      cursor: pointer;
+      display: inline-block;
+      transition: all 0.15s ease;
+    }
+    .btn-add-another-domain:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-hover);
+    }
+    .security-toast-alert {
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-30px);
+      background: #18181b;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: var(--radius-sm);
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      z-index: 99999999;
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.25s ease, opacity 0.25s ease;
+    }
+    .security-toast-alert.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .security-toast-icon {
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #10b981;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .security-toast-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .security-toast-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+    .security-toast-sub {
+      font-size: 12px;
+      color: #a1a1aa;
+    }
+    .domain-traffic-pill {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+    .sort-icon-btn {
+      display: inline-flex;
+      align-items: center;
+      color: var(--text-dim);
+      margin-left: 4px;
+      cursor: pointer;
+    }
+
     .auth-backdrop {
       position: fixed;
       top: 0;
@@ -3201,6 +3346,10 @@
         <div class="nav-item" id="navStorage" onclick="navigateTo('storage')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>
           Armazenamento
+        </div>
+        <div class="nav-item" id="navSecurity" onclick="navigateTo('security')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          Segurança
         </div>
         <div class="nav-item" id="navSettings" onclick="navigateTo('settings')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
@@ -4039,6 +4188,56 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="tab-view" id="viewSecurity">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <h1 style="font-size: 20px; font-weight: 700; color: var(--text-main); margin: 0;">Segurança</h1>
+          </div>
+          <button type="button" class="btn-primary-action" onclick="openAddDomainModal()">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            Adicionar Domínio
+          </button>
+        </div>
+
+        <div class="card-panel" style="padding: 0; overflow: hidden;">
+          <div class="table-responsive" style="margin: 0;">
+            <table class="dark-table" style="margin-bottom: 0;">
+              <thead>
+                <tr>
+                  <th style="width: 40px; text-align: center;">
+                    <input type="checkbox" id="selectAllSecurityDomains" onchange="toggleSelectAllSecurityDomains(this)" style="accent-color: var(--primary); cursor: pointer; width: 15px; height: 15px;">
+                  </th>
+                  <th style="cursor: pointer;" onclick="sortSecurityDomains('domain')">
+                    Domínio <span class="sort-icon-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></svg></span>
+                  </th>
+                  <th style="cursor: pointer; width: 140px;" onclick="sortSecurityDomains('traffic')">
+                    Tráfego <span class="sort-icon-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></svg></span>
+                  </th>
+                  <th style="cursor: pointer; width: 180px;" onclick="sortSecurityDomains('session')">
+                    Última sessão <span class="sort-icon-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></svg></span>
+                  </th>
+                  <th style="text-align: right; width: 100px;">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="securityDomainsTableBody"></tbody>
+            </table>
+          </div>
+
+          <div id="securityDomainsEmptyState" style="padding: 60px 20px; text-align: center;">
+            <div style="width: 64px; height: 64px; margin: 0 auto 14px; color: var(--text-dim); display: flex; align-items: center; justify-content: center;">
+              <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline>
+                <path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path>
+              </svg>
+            </div>
+            <div style="font-size: 13.5px; color: var(--text-dim); font-weight: 500;">Não há dados</div>
           </div>
         </div>
       </section>

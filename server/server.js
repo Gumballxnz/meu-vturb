@@ -1644,17 +1644,20 @@ app.post('/api/user/password/request-code', authMiddleware, async (req, res) => 
   const code = generate8DigitCode();
   const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
 
+  try {
+    await sendVerificationEmail({ to: user.email, code, type: 'change_password', name: user.name });
+  } catch (err) {
+    console.error('[CloudVTurb Password Code] Erro ao enviar e-mail:', err.message);
+    return res.status(502).json({ error: err.message || 'Erro ao enviar e-mail de verificação.' });
+  }
+
+  db.prepare(`DELETE FROM verification_codes WHERE email = ? AND type = 'change_password'`).run(user.email);
   db.prepare(`
     INSERT INTO verification_codes (email, code, type, payload, expires_at)
     VALUES (?, ?, 'change_password', ?, ?)
   `).run(user.email, code, JSON.stringify({ userId: user.id }), expiresAt);
 
-  try {
-    await sendVerificationEmail({ to: user.email, code, type: 'change_password', name: user.name });
-    res.json({ success: true, message: `Código de verificação enviado para ${user.email}.` });
-  } catch (err) {
-    res.status(500).json({ error: err.message || 'Erro ao enviar e-mail via Resend.' });
-  }
+  res.json({ success: true, message: `Código de verificação enviado para ${user.email}.` });
 });
 
 app.post('/api/user/password', authMiddleware, (req, res) => {
