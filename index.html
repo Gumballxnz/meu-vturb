@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#09090b">
+  <meta name="theme-color" content="#F8FAFC">
   <meta name="description" content="Plataforma SaaS premium para hospedagem e entrega de VSLs de alta conversão.">
   <title>CloudVTurb — Plataforma de Hospedagem VSL</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
@@ -12,25 +12,40 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg-base: #09090b;
-      --bg-surface: #121215;
-      --bg-card: #18181b;
-      --bg-card-hover: #202025;
-      --border-subtle: #27272a;
-      --border-hover: #3f3f46;
-      --text-main: #f4f4f5;
-      --text-muted: #a1a1aa;
-      --text-dim: #71717a;
-      --primary: #7c3aed;
-      --primary-hover: #6d28d9;
-      --primary-light: rgba(124, 58, 237, 0.15);
-      --primary-glow: rgba(124, 58, 237, 0.35);
-      --success: #10b981;
-      --success-light: rgba(16, 185, 129, 0.15);
-      --warning: #f59e0b;
-      --warning-light: rgba(245, 158, 11, 0.15);
-      --danger: #ef4444;
-      --danger-light: rgba(239, 68, 68, 0.15);
+      --color-primary: #2563EB;
+      --color-primary-hover: #1D4ED8;
+      --color-primary-soft: #EFF6FF;
+      --color-primary-border: #BFDBFE;
+      --color-page: #F8FAFC;
+      --color-surface: #FFFFFF;
+      --color-surface-muted: #F1F5F9;
+      --color-border: #E2E8F0;
+      --color-text: #0F172A;
+      --color-text-muted: #64748B;
+      --color-success: #16A34A;
+      --color-warning: #D97706;
+      --color-danger: #DC2626;
+      --color-video-bg: #000000;
+
+      --bg-base: var(--color-page);
+      --bg-surface: var(--color-surface);
+      --bg-card: var(--color-surface);
+      --bg-card-hover: var(--color-surface-muted);
+      --border-subtle: var(--color-border);
+      --border-hover: #CBD5E1;
+      --text-main: var(--color-text);
+      --text-muted: var(--color-text-muted);
+      --text-dim: #94A3B8;
+      --primary: var(--color-primary);
+      --primary-hover: var(--color-primary-hover);
+      --primary-light: var(--color-primary-soft);
+      --primary-glow: rgba(37, 99, 235, 0.15);
+      --success: var(--color-success);
+      --success-light: rgba(22, 163, 74, 0.12);
+      --warning: var(--color-warning);
+      --warning-light: rgba(217, 119, 6, 0.12);
+      --danger: var(--color-danger);
+      --danger-light: rgba(220, 38, 38, 0.12);
       --radius-sm: 8px;
       --radius-md: 12px;
       --radius-lg: 16px;
@@ -83,21 +98,22 @@
     .brand-logo {
       width: 34px;
       height: 34px;
-      border-radius: 9px;
-      background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+      border-radius: 8px;
+      background: var(--color-primary);
       display: flex;
       align-items: center;
       justify-content: center;
       color: white;
-      box-shadow: 0 4px 14px var(--primary-glow);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
 
     .brand-name {
       font-size: 17px;
       font-weight: 800;
       letter-spacing: -0.3px;
+      color: var(--color-text);
     }
-    .brand-name span { color: #a78bfa; }
+    .brand-name span { color: var(--color-primary); }
 
     .sidebar-nav {
       padding: 20px 12px;
@@ -133,14 +149,14 @@
     }
 
     .nav-item:hover {
-      color: var(--text-main);
-      background-color: rgba(255, 255, 255, 0.04);
+      color: var(--color-text);
+      background-color: var(--color-surface-muted);
     }
 
     .nav-item.active {
-      color: #fff;
-      background: linear-gradient(90deg, rgba(124, 58, 237, 0.22) 0%, rgba(124, 58, 237, 0.06) 100%);
-      border-left: 3px solid var(--primary);
+      color: var(--color-primary);
+      background: var(--color-primary-soft);
+      border-left: 3px solid var(--color-primary);
     }
 
     .nav-item svg {
@@ -152,7 +168,7 @@
     .sidebar-footer {
       padding: 16px;
       border-top: 1px solid var(--border-subtle);
-      background: rgba(18, 18, 21, 0.7);
+      background: var(--bg-surface);
     }
 
     .storage-mini-card {
@@ -174,14 +190,14 @@
     .progress-bar-bg {
       width: 100%;
       height: 6px;
-      background: #27272a;
+      background: var(--border-subtle);
       border-radius: 9999px;
       overflow: hidden;
     }
 
     .progress-bar-fill-violet {
       height: 100%;
-      background: linear-gradient(90deg, #8b5cf6, #7c3aed);
+      background: var(--primary);
       border-radius: 9999px;
       transition: width 0.3s ease;
     }
@@ -196,7 +212,7 @@
 
     .topbar {
       height: var(--header-height);
-      background: rgba(9, 9, 11, 0.85);
+      background: rgba(255, 255, 255, 0.9);
       backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border-subtle);
       position: sticky;
@@ -238,7 +254,7 @@
     }
 
     .btn-primary-action {
-      background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+      background: var(--color-primary);
       color: white;
       border: none;
       padding: 8px 16px;
@@ -249,13 +265,12 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      box-shadow: 0 4px 14px var(--primary-glow);
-      transition: all 0.15s ease;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+      transition: background-color 0.15s ease;
     }
 
     .btn-primary-action:hover {
-      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-      transform: translateY(-1px);
+      background: var(--color-primary-hover);
     }
 
     .btn-spinner {
@@ -443,7 +458,7 @@
       width: 30px;
       height: 30px;
       border-radius: 50%;
-      background: linear-gradient(135deg, #8b5cf6, #6366f1);
+      background: var(--primary);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -460,7 +475,7 @@
       padding: 2px 6px;
       border-radius: 4px;
       background: var(--primary-light);
-      color: #a78bfa;
+      color: var(--primary);
     }
 
     .btn-icon {
@@ -541,7 +556,7 @@
       height: 32px;
       border-radius: 8px;
       background: var(--primary-light);
-      color: #a78bfa;
+      color: var(--primary);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -728,12 +743,12 @@
       width: 46px;
       height: 46px;
       border-radius: 50%;
-      background: rgba(124, 58, 237, 0.9);
+      background: var(--primary);
       color: white;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 4px 16px rgba(124, 58, 237, 0.6);
+      box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);
       transform: scale(0.9);
       transition: transform 0.2s ease;
     }
@@ -806,13 +821,13 @@
     }
 
     .btn-action-card.primary {
-      color: #a78bfa;
-      border-color: rgba(124, 58, 237, 0.4);
+      color: var(--primary);
+      border-color: var(--primary-border);
       background: var(--primary-light);
     }
 
     .btn-action-card.primary:hover {
-      background: rgba(124, 58, 237, 0.25);
+      background: #DBEAFE;
     }
 
     .btn-action-danger {
@@ -863,8 +878,39 @@
 
     .editor-subtab-btn.active {
       background: var(--bg-surface);
-      color: var(--text-main);
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+      color: var(--color-primary);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      font-weight: 700;
+    }
+
+    .icon-choice-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 10px 4px;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-sm);
+      color: var(--color-text-muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    .icon-choice-btn:hover {
+      border-color: var(--color-primary-border);
+      color: var(--color-text);
+      background: var(--color-surface-muted);
+    }
+
+    .icon-choice-btn.active {
+      border-color: var(--color-primary);
+      background: var(--color-primary-soft);
+      color: var(--color-primary);
+      font-weight: 600;
     }
 
     .editor-section-card {
@@ -986,7 +1032,7 @@
       align-items: center;
       justify-content: center;
       min-height: 480px;
-      background: radial-gradient(circle at center, rgba(124, 58, 237, 0.05) 0%, transparent 70%);
+      background: var(--bg-card-hover);
     }
 
     .preview-iframe-wrapper {
@@ -1004,7 +1050,7 @@
       max-width: 320px;
       aspect-ratio: 9 / 16;
       border-radius: 20px;
-      box-shadow: 0 0 0 8px #27272a, 0 20px 40px rgba(0,0,0,0.8);
+      box-shadow: 0 0 0 8px var(--border-subtle), 0 20px 40px rgba(0, 0, 0, 0.15);
     }
 
     .preview-iframe-wrapper iframe {
@@ -1044,7 +1090,7 @@
     .retention-col-bar {
       width: 100%;
       max-width: 36px;
-      background: linear-gradient(180deg, #8b5cf6 0%, #6d28d9 100%);
+      background: var(--primary);
       border-radius: 6px 6px 0 0;
       transition: height 0.5s ease;
       min-height: 4px;
@@ -1058,7 +1104,7 @@
       transform: translateX(-50%);
       font-size: 11px;
       font-weight: 700;
-      color: #a78bfa;
+      color: var(--primary);
       white-space: nowrap;
     }
 
@@ -1287,7 +1333,7 @@
       color: var(--text-main);
     }
     .library-tab-btn.active {
-      color: #a78bfa;
+      color: var(--primary);
       border-bottom-color: var(--primary);
     }
     .library-tab-badge {
@@ -1295,12 +1341,12 @@
       font-weight: 700;
       padding: 2px 7px;
       border-radius: 9999px;
-      background: rgba(255, 255, 255, 0.08);
+      background: var(--bg-card-hover);
       color: var(--text-muted);
     }
     .library-tab-btn.active .library-tab-badge {
       background: var(--primary-light);
-      color: #a78bfa;
+      color: var(--primary);
     }
     .breadcrumb-bar {
       display: flex;
@@ -1360,7 +1406,7 @@
       height: 36px;
       border-radius: 8px;
       background: var(--primary-light);
-      color: #a78bfa;
+      color: var(--primary);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1414,7 +1460,7 @@
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-lg);
       padding: 36px;
-      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
       margin: auto 0;
     }
     .onboarding-stepper {
@@ -1433,7 +1479,7 @@
       color: var(--text-dim);
     }
     .onboarding-step.active {
-      color: #a78bfa;
+      color: var(--primary);
     }
     .onboarding-step.completed {
       color: var(--success);
@@ -1452,7 +1498,7 @@
     .onboarding-step.active .step-circle {
       background: var(--primary-light);
       border-color: var(--primary);
-      color: #a78bfa;
+      color: var(--primary);
     }
     .onboarding-step.completed .step-circle {
       background: var(--success-light);
@@ -1514,7 +1560,7 @@
             <circle cx="34" cy="14" r="3" fill="#10b981"/>
           </svg>
         </div>
-        <div class="brand-name"><span id="sidebarAppName">Cloud</span>VTurb</div>
+        <div class="brand-name" id="sidebarAppName">CloudVTurb</div>
       </a>
       <button class="btn-icon btn-mobile-toggle" onclick="toggleSidebar(false)">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
@@ -1910,8 +1956,8 @@
           <div id="storageTopologyCard" style="display: none; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 20px; font-size: 13px; line-height: 1.7;">
             <strong style="color: var(--text-main); font-size: 14px; display: block; margin-bottom: 6px;">Topologia de Entrega (Administrador):</strong>
             • <strong>Streaming Direto:</strong> HTTP 206 Partial Content com otimização FastStart.<br>
-            • <strong>Subdomínio Player:</strong> <code id="lblTopologyPlayer" style="color:#a78bfa;">player.seudominio.com</code><br>
-            • <strong>Painel Administrativo:</strong> <code id="lblTopologyDash" style="color:#a78bfa;">dash.seudominio.com</code><br>
+            • <strong>Subdomínio Player:</strong> <code id="lblTopologyPlayer" style="color:var(--primary);">player.seudominio.com</code><br>
+            • <strong>Painel Administrativo:</strong> <code id="lblTopologyDash" style="color:var(--primary);">dash.seudominio.com</code><br>
           </div>
         </div>
       </section>
@@ -1946,6 +1992,7 @@
           <div class="editor-controls-col">
             <div class="editor-tabs-nav">
               <button class="editor-subtab-btn active" id="subtabBtnPlayer" onclick="switchEditorTab('player')">Player</button>
+              <button class="editor-subtab-btn" id="subtabBtnAudio" onclick="switchEditorTab('audio')">Ativação de áudio</button>
               <button class="editor-subtab-btn" id="subtabBtnCta" onclick="switchEditorTab('cta')">CTA</button>
               <button class="editor-subtab-btn" id="subtabBtnTracking" onclick="switchEditorTab('tracking')">Rastreamento</button>
               <button class="editor-subtab-btn" id="subtabBtnEmbed" onclick="switchEditorTab('embed')">Embed</button>
@@ -1960,8 +2007,8 @@
               <div class="form-row">
                 <label class="form-label">Cor da Barra de Progresso</label>
                 <div style="display: flex; gap: 10px; align-items: center;">
-                  <input type="color" id="edBarColor" value="#7c3aed" oninput="syncColor('edBarColor', 'edBarColorHex')" style="width: 44px; height: 38px; border: 1px solid var(--border-subtle); background: var(--bg-card); border-radius: 6px; cursor: pointer;">
-                  <input type="text" id="edBarColorHex" value="#7c3aed" class="form-input-text" style="width: 120px;" oninput="syncColor('edBarColorHex', 'edBarColor')">
+                  <input type="color" id="edBarColor" value="#2563EB" oninput="syncColor('edBarColor', 'edBarColorHex')" style="width: 44px; height: 38px; border: 1px solid var(--border-subtle); background: var(--bg-card); border-radius: 6px; cursor: pointer;">
+                  <input type="text" id="edBarColorHex" value="#2563EB" class="form-input-text" style="width: 120px;" oninput="syncColor('edBarColorHex', 'edBarColor')">
                 </div>
               </div>
 
@@ -1982,21 +2029,155 @@
                   <option value="9:16">Vertical / Reels / TikTok (9:16)</option>
                 </select>
               </div>
+            </div>
 
-              <div class="toggle-row-clean" style="margin-top: 14px;">
+            <div id="subtabAudioPane" class="editor-section-card" style="display: none;">
+              <div class="toggle-row-clean">
                 <div>
-                  <div class="toggle-info-title">Smart Autoplay Dinâmico</div>
-                  <div class="toggle-info-desc">Inicia no mudo com tarja pulsante para contornar bloqueios</div>
+                  <div class="toggle-info-title">Ativar Aviso de Som</div>
+                  <div class="toggle-info-desc">Exibe aviso interativo sobre o vídeo para ativar o som</div>
                 </div>
                 <label class="switch-clean">
-                  <input type="checkbox" id="edSmartAutoplay" checked onchange="liveUpdateSettings()">
+                  <input type="checkbox" id="edAudioNoticeEnabled" checked onchange="liveUpdateSettings()">
                   <span class="slider-clean"></span>
                 </label>
               </div>
 
-              <div class="form-row" style="margin-top: 12px;">
-                <label class="form-label">Texto da Tarja Pulsante</label>
-                <input type="text" id="edAutoplayText" class="form-input-text" value="Seu vídeo já começou. Toque para ativar o som" oninput="liveUpdateSettings()">
+              <div class="form-row" style="margin-top: 14px;">
+                <label class="form-label">Texto do Aviso</label>
+                <textarea id="edAudioNoticeText" class="form-input-text" rows="2" style="resize: vertical; line-height: 1.4; padding: 8px 12px; font-family: inherit;" oninput="liveUpdateSettings()">Seu vídeo ja iniciou&#10;Clique para escutar</textarea>
+              </div>
+
+              <div class="form-row">
+                <label class="form-label">Estilo do Botão</label>
+                <select id="edAudioNoticeStyle" class="form-select-dark" onchange="liveUpdateSettings()">
+                  <option value="square" selected>Quadrado Arredondado (Padrão)</option>
+                  <option value="card">Cartão</option>
+                  <option value="capsule">Cápsula (Pill)</option>
+                  <option value="circle">Círculo</option>
+                </select>
+              </div>
+
+              <div class="form-row">
+                <label class="form-label">Tamanho</label>
+                <select id="edAudioNoticeSize" class="form-select-dark" onchange="liveUpdateSettings()">
+                  <option value="compact">Compacto</option>
+                  <option value="medium" selected>Médio</option>
+                  <option value="large">Grande</option>
+                </select>
+              </div>
+
+              <div class="form-row">
+                <label class="form-label">Posição no Player</label>
+                <select id="edAudioNoticePosition" class="form-select-dark" onchange="liveUpdateSettings()">
+                  <option value="center" selected>Centro</option>
+                  <option value="bottom">Inferior Central</option>
+                  <option value="top">Superior Central</option>
+                </select>
+              </div>
+
+              <div class="form-row">
+                <label class="form-label">Animação</label>
+                <select id="edAudioNoticeAnimation" class="form-select-dark" onchange="liveUpdateSettings()">
+                  <option value="none" selected>Sem animação</option>
+                  <option value="pulse">Pulsar discreto</option>
+                  <option value="glow">Brilho discreto</option>
+                </select>
+              </div>
+
+              <div class="form-row">
+                <label class="form-label">Ícone</label>
+                <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px;">
+                  <button type="button" class="icon-choice-btn active" id="btnIconVolumeMuted" onclick="selectAudioIcon('volume-muted')" title="Áudio silenciado">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" stroke="currentColor" stroke-width="1.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15" stroke-width="2.2" stroke-linecap="round"></line><line x1="17" y1="9" x2="23" y2="15" stroke-width="2.2" stroke-linecap="round"></line></svg>
+                    <span>Mudo</span>
+                  </button>
+                  <button type="button" class="icon-choice-btn" id="btnIconSpeakerHigh" onclick="selectAudioIcon('speaker-high')" title="Alto-falante com ondas">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" stroke="currentColor" stroke-width="1.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07" fill="none" stroke-width="2.2"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14" fill="none" stroke-width="2.2"></path></svg>
+                    <span>Ondas</span>
+                  </button>
+                  <button type="button" class="icon-choice-btn" id="btnIconVolume2" onclick="selectAudioIcon('volume-2')" title="Volume suave">
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" stroke="currentColor" stroke-width="1.5"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07" fill="none" stroke-width="2.2"></path></svg>
+                    <span>2 Ondas</span>
+                  </button>
+                  <button type="button" class="icon-choice-btn" id="btnIconSoundWave" onclick="selectAudioIcon('sound-wave')" title="Onda sonora">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none"><line x1="12" y1="3" x2="12" y2="21" stroke-width="2.4" stroke-linecap="round"></line><line x1="7" y1="7" x2="7" y2="17" stroke-width="2.4" stroke-linecap="round"></line><line x1="2" y1="11" x2="2" y2="13" stroke-width="2.4" stroke-linecap="round"></line><line x1="17" y1="7" x2="17" y2="17" stroke-width="2.4" stroke-linecap="round"></line><line x1="22" y1="11" x2="22" y2="13" stroke-width="2.4" stroke-linecap="round"></line></svg>
+                    <span>Equalizador</span>
+                  </button>
+                  <button type="button" class="icon-choice-btn" id="btnIconBell" onclick="selectAudioIcon('bell')" title="Sino de atenção">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" stroke-width="2"></path><path d="M13.73 21a2 2 0 0 1-3.46 0" stroke-width="2"></path></svg>
+                    <span>Aviso</span>
+                  </button>
+                </div>
+                <input type="hidden" id="edAudioNoticeIcon" value="volume-muted">
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                <div class="form-row">
+                  <label class="form-label">Cor de Fundo</label>
+                  <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="color" id="edAudioNoticeBgColor" value="#2563EB" oninput="syncColor('edAudioNoticeBgColor', 'edAudioNoticeBgColorHex')" style="width: 40px; height: 36px; border: 1px solid var(--border-subtle); background: var(--bg-card); border-radius: 6px; cursor: pointer;">
+                    <input type="text" id="edAudioNoticeBgColorHex" value="#2563EB" class="form-input-text" style="width: 100px;" oninput="syncColor('edAudioNoticeBgColorHex', 'edAudioNoticeBgColor')">
+                  </div>
+                </div>
+                <div class="form-row">
+                  <label class="form-label">Cor do Texto</label>
+                  <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="color" id="edAudioNoticeTextColor" value="#FFFFFF" oninput="syncColor('edAudioNoticeTextColor', 'edAudioNoticeTextColorHex')" style="width: 40px; height: 36px; border: 1px solid var(--border-subtle); background: var(--bg-card); border-radius: 6px; cursor: pointer;">
+                    <input type="text" id="edAudioNoticeTextColorHex" value="#FFFFFF" class="form-input-text" style="width: 100px;" oninput="syncColor('edAudioNoticeTextColorHex', 'edAudioNoticeTextColor')">
+                  </div>
+                </div>
+                <div class="form-row">
+                  <label class="form-label">Fundo do Ícone</label>
+                  <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="color" id="edAudioNoticeIconBgColor" value="#2563EB" oninput="syncColor('edAudioNoticeIconBgColor', 'edAudioNoticeIconBgColorHex')" style="width: 40px; height: 36px; border: 1px solid var(--border-subtle); background: var(--bg-card); border-radius: 6px; cursor: pointer;">
+                    <input type="text" id="edAudioNoticeIconBgColorHex" value="#2563EB" class="form-input-text" style="width: 100px;" oninput="syncColor('edAudioNoticeIconBgColorHex', 'edAudioNoticeIconBgColor')">
+                  </div>
+                </div>
+                <div class="form-row">
+                  <label class="form-label">Cor do Ícone</label>
+                  <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="color" id="edAudioNoticeIconColor" value="#FFFFFF" oninput="syncColor('edAudioNoticeIconColor', 'edAudioNoticeIconColorHex')" style="width: 40px; height: 36px; border: 1px solid var(--border-subtle); background: var(--bg-card); border-radius: 6px; cursor: pointer;">
+                    <input type="text" id="edAudioNoticeIconColorHex" value="#FFFFFF" class="form-input-text" style="width: 100px;" oninput="syncColor('edAudioNoticeIconColorHex', 'edAudioNoticeIconColor')">
+                  </div>
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 6px;">
+                <div class="form-row">
+                  <label class="form-label">Cor da Borda</label>
+                  <div style="display: flex; gap: 8px; align-items: center;">
+                    <input type="color" id="edAudioNoticeBorderColor" value="#1D4ED8" oninput="syncColor('edAudioNoticeBorderColor', 'edAudioNoticeBorderColorHex')" style="width: 40px; height: 36px; border: 1px solid var(--border-subtle); background: var(--bg-card); border-radius: 6px; cursor: pointer;">
+                    <input type="text" id="edAudioNoticeBorderColorHex" value="#1D4ED8" class="form-input-text" style="width: 100px;" oninput="syncColor('edAudioNoticeBorderColorHex', 'edAudioNoticeBorderColor')">
+                  </div>
+                </div>
+                <div class="form-row">
+                  <label class="form-label">Espessura da Borda</label>
+                  <select id="edAudioNoticeBorderWidth" class="form-select-dark" onchange="liveUpdateSettings()">
+                    <option value="0px" selected>Sem borda (0px)</option>
+                    <option value="1px">Fina (1px)</option>
+                    <option value="2px">Média (2px)</option>
+                    <option value="3px">Forte (3px)</option>
+                  </select>
+                </div>
+                <div class="form-row">
+                  <label class="form-label">Raio de Borda</label>
+                  <select id="edAudioNoticeBorderRadius" class="form-select-dark" onchange="liveUpdateSettings()">
+                    <option value="8px" selected>Discreto (8px)</option>
+                    <option value="12px">Intermediário (12px)</option>
+                    <option value="16px">Moderno (16px)</option>
+                    <option value="9999px">Cápsula (Pill)</option>
+                    <option value="0px">Reto (0px)</option>
+                  </select>
+                </div>
+                <div class="form-row">
+                  <label class="form-label">Intensidade de Sombra / Brilho</label>
+                  <select id="edAudioNoticeGlow" class="form-select-dark" onchange="liveUpdateSettings()">
+                    <option value="none">Nenhuma</option>
+                    <option value="subtle" selected>Sutil</option>
+                    <option value="intense">Intensa</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -2016,7 +2197,7 @@
                 <label class="form-label">Segundo de Exibição (Pitch Delay)</label>
                 <div style="display: flex; gap: 10px; align-items: center;">
                   <input type="number" id="edCtaTime" class="form-input-text" value="10" min="0" oninput="updatePitchFormattedLabel(); liveUpdateSettings();">
-                  <span id="edCtaFormattedTime" style="font-size: 13.5px; font-weight: 700; color: #a78bfa; white-space: nowrap;">00:10</span>
+                  <span id="edCtaFormattedTime" style="font-size: 13.5px; font-weight: 700; color: var(--primary); white-space: nowrap;">00:10</span>
                 </div>
               </div>
 
@@ -2116,7 +2297,7 @@
             </div>
             <div class="preview-stage-area">
               <div class="preview-iframe-wrapper" id="previewWrapper">
-                <iframe id="editorPreviewFrame" allow="autoplay; fullscreen" allowfullscreen></iframe>
+                <iframe id="editorPreviewFrame" allow="autoplay; fullscreen"></iframe>
               </div>
             </div>
           </div>
@@ -2141,7 +2322,7 @@
         <div class="form-row">
           <label class="form-label">Origem do Vídeo</label>
           <div style="display: flex; gap: 8px; margin-bottom: 12px;">
-            <button class="btn-clean-secondary" id="btnTypeUpload" onclick="setSourceTab('upload')" style="flex: 1; background: var(--primary-light); color: #a78bfa; border-color: rgba(124, 58, 237, 0.5);">Upload no Servidor</button>
+            <button class="btn-clean-secondary" id="btnTypeUpload" onclick="setSourceTab('upload')" style="flex: 1; background: var(--primary-light); color: var(--primary); border-color: var(--primary-border);">Upload no Servidor</button>
             <button class="btn-clean-secondary" id="btnTypeRemote" onclick="setSourceTab('remote')" style="flex: 1;">Cloudflare R2 / URL</button>
           </div>
 
@@ -2251,7 +2432,7 @@
         </div>
 
         <div style="display: flex; gap: 8px; margin-bottom: 16px;">
-          <button type="button" class="btn-clean-secondary" id="onbBtnTypeUpload" onclick="setOnbSourceTab('upload')" style="flex: 1; background: var(--primary-light); color: #a78bfa; border-color: rgba(124, 58, 237, 0.5);">Upload do Computador</button>
+          <button type="button" class="btn-clean-secondary" id="onbBtnTypeUpload" onclick="setOnbSourceTab('upload')" style="flex: 1; background: var(--primary-light); color: var(--primary); border-color: var(--primary-border);">Upload do Computador</button>
           <button type="button" class="btn-clean-secondary" id="onbBtnTypeRemote" onclick="setOnbSourceTab('remote')" style="flex: 1;">Link Cloudflare R2 / URL Externa</button>
         </div>
 
@@ -2405,7 +2586,7 @@
         </div>
         <button type="submit" class="btn-primary-action" style="width: 100%; justify-content: center; padding: 11px; margin-top: 8px;">Entrar no Dashboard</button>
         <p style="text-align: center; font-size: 12.5px; color: var(--text-dim); margin-top: 16px;">
-          Não tem uma conta? <a href="#" onclick="toggleAuthMode('register'); return false;" style="color: #a78bfa; text-decoration: none; font-weight: 600;">Criar Cadastro</a>
+          Não tem uma conta? <a href="#" onclick="toggleAuthMode('register'); return false;" style="color: var(--primary); text-decoration: none; font-weight: 600;">Criar Cadastro</a>
         </p>
       </form>
 
@@ -2424,7 +2605,7 @@
         </div>
         <button type="submit" class="btn-primary-action" style="width: 100%; justify-content: center; padding: 11px; margin-top: 8px;">Criar Minha Conta</button>
         <p style="text-align: center; font-size: 12.5px; color: var(--text-dim); margin-top: 16px;">
-          Já possui conta? <a href="#" onclick="toggleAuthMode('login'); return false;" style="color: #a78bfa; text-decoration: none; font-weight: 600;">Fazer Login</a>
+          Já possui conta? <a href="#" onclick="toggleAuthMode('login'); return false;" style="color: var(--primary); text-decoration: none; font-weight: 600;">Fazer Login</a>
         </p>
       </form>
     </div>
@@ -2467,7 +2648,7 @@
     function showToast(text, isError = false) {
       const toast = document.getElementById('appToast');
       document.getElementById('toastText').textContent = text;
-      toast.style.borderColor = isError ? 'rgba(239, 68, 68, 0.4)' : 'rgba(124, 58, 237, 0.4)';
+      toast.style.borderColor = isError ? 'var(--danger)' : 'var(--primary)';
       toast.classList.add('show');
       setTimeout(() => toast.classList.remove('show'), 3200);
     }
@@ -3205,7 +3386,7 @@
         topVideos.forEach((v, index) => {
           const tr = document.createElement('tr');
           tr.innerHTML = `
-            <td><strong style="color:#a78bfa;">#${index + 1}</strong></td>
+            <td><strong style="color:var(--primary);">#${index + 1}</strong></td>
             <td><strong>${escapeHtml(v.title)}</strong></td>
             <td>${v.duration || '10:00'}</td>
             <td>${(v.plays || 0).toLocaleString()}</td>
@@ -3318,8 +3499,8 @@
 
       if (type === 'upload') {
         btnUpload.style.background = 'var(--primary-light)';
-        btnUpload.style.color = '#a78bfa';
-        btnUpload.style.borderColor = 'rgba(124, 58, 237, 0.5)';
+        btnUpload.style.color = 'var(--primary)';
+        btnUpload.style.borderColor = 'var(--primary-border)';
         btnRemote.style.background = 'transparent';
         btnRemote.style.color = 'var(--text-muted)';
         btnRemote.style.borderColor = 'var(--border-subtle)';
@@ -3327,8 +3508,8 @@
         secRemote.style.display = 'none';
       } else {
         btnRemote.style.background = 'var(--primary-light)';
-        btnRemote.style.color = '#a78bfa';
-        btnRemote.style.borderColor = 'rgba(124, 58, 237, 0.5)';
+        btnRemote.style.color = 'var(--primary)';
+        btnRemote.style.borderColor = 'var(--primary-border)';
         btnUpload.style.background = 'transparent';
         btnUpload.style.color = 'var(--text-muted)';
         btnUpload.style.borderColor = 'var(--border-subtle)';
@@ -3457,11 +3638,11 @@
               duration: '10:00',
               folderId: null,
               settings: {
-                barColor: '#7c3aed',
+                barColor: '#2563EB',
                 borderRadius: '16px',
                 aspectRatio: '16:9',
                 smartAutoplay: true,
-                autoplayText: 'Seu vídeo já começou. Toque para ativar o som',
+                autoplayText: 'Seu vídeo ja iniciou\\nClique para escutar',
                 fakeProgress: true,
                 blockSeek: true,
                 ctaEnabled: true,
@@ -3500,7 +3681,7 @@
       if (filtered.length === 0) {
         container.innerHTML = `
           <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; background: var(--bg-surface); border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
-            <div style="width: 48px; height: 48px; margin: 0 auto 14px; border-radius: 12px; background: var(--primary-light); color: #a78bfa; display: flex; align-items: center; justify-content: center;">
+            <div style="width: 48px; height: 48px; margin: 0 auto 14px; border-radius: 12px; background: var(--primary-light); color: var(--primary); display: flex; align-items: center; justify-content: center;">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
             </div>
             <h4 style="font-size: 16px; font-weight: 700; margin-bottom: 6px;">Nenhuma VSL encontrada</h4>
@@ -3677,19 +3858,41 @@
       document.getElementById('edTitle').value = v.title || '';
       const s = v.settings || {};
 
-      document.getElementById('edBarColor').value = s.barColor || '#7c3aed';
-      document.getElementById('edBarColorHex').value = s.barColor || '#7c3aed';
+      document.getElementById('edBarColor').value = s.barColor || '#2563EB';
+      document.getElementById('edBarColorHex').value = s.barColor || '#2563EB';
       document.getElementById('edBorderRadius').value = s.borderRadius || '16px';
       document.getElementById('edAspectRatio').value = s.aspectRatio || '16:9';
-      document.getElementById('edSmartAutoplay').checked = s.smartAutoplay !== false;
-      document.getElementById('edAutoplayText').value = s.autoplayText || 'Seu vídeo já começou. Toque para ativar o som';
+
+      const noticeEnabled = s.audioNoticeEnabled !== undefined ? s.audioNoticeEnabled !== false : (s.smartAutoplay !== false);
+      document.getElementById('edAudioNoticeEnabled').checked = noticeEnabled;
+      document.getElementById('edAudioNoticeText').value = s.audioNoticeText || s.autoplayText || 'Seu vídeo ja iniciou\nClique para escutar';
+      document.getElementById('edAudioNoticeStyle').value = s.audioNoticeStyle || 'square';
+      document.getElementById('edAudioNoticeSize').value = s.audioNoticeSize || 'medium';
+      document.getElementById('edAudioNoticePosition').value = s.audioNoticePosition || 'center';
+      document.getElementById('edAudioNoticeAnimation').value = s.audioNoticeAnimation || 'none';
+      const iconKey = s.audioNoticeIcon || 'volume-muted';
+      selectAudioIcon(iconKey);
+
+      document.getElementById('edAudioNoticeBgColor').value = s.audioNoticeBgColor || '#2563EB';
+      document.getElementById('edAudioNoticeBgColorHex').value = s.audioNoticeBgColor || '#2563EB';
+      document.getElementById('edAudioNoticeTextColor').value = s.audioNoticeTextColor || '#FFFFFF';
+      document.getElementById('edAudioNoticeTextColorHex').value = s.audioNoticeTextColor || '#FFFFFF';
+      document.getElementById('edAudioNoticeIconBgColor').value = s.audioNoticeIconBgColor || '#2563EB';
+      document.getElementById('edAudioNoticeIconBgColorHex').value = s.audioNoticeIconBgColor || '#2563EB';
+      document.getElementById('edAudioNoticeIconColor').value = s.audioNoticeIconColor || '#FFFFFF';
+      document.getElementById('edAudioNoticeIconColorHex').value = s.audioNoticeIconColor || '#FFFFFF';
+      document.getElementById('edAudioNoticeBorderColor').value = s.audioNoticeBorderColor || '#1D4ED8';
+      document.getElementById('edAudioNoticeBorderColorHex').value = s.audioNoticeBorderColor || '#1D4ED8';
+      document.getElementById('edAudioNoticeBorderWidth').value = s.audioNoticeBorderWidth || '0px';
+      document.getElementById('edAudioNoticeBorderRadius').value = s.audioNoticeBorderRadius || '8px';
+      document.getElementById('edAudioNoticeGlow').value = s.audioNoticeGlow || 'subtle';
 
       document.getElementById('edCtaEnabled').checked = s.ctaEnabled !== false;
       document.getElementById('edCtaTime').value = s.ctaTime !== undefined ? s.ctaTime : 10;
-      document.getElementById('edCtaText').value = s.ctaText || 'QUERO GARANTIR MINHA VAGA AGORA';
+      document.getElementById('edCtaText').value = s.ctaText || 'QUERO GARANTIR MINHA VAGA';
       document.getElementById('edCtaUrl').value = s.ctaUrl || 'https://seusite.com/checkout';
-      document.getElementById('edCtaColor').value = s.ctaColor || '#10b981';
-      document.getElementById('edCtaColorHex').value = s.ctaColor || '#10b981';
+      document.getElementById('edCtaColor').value = s.ctaColor || '#2563EB';
+      document.getElementById('edCtaColorHex').value = s.ctaColor || '#2563EB';
       document.getElementById('edCtaSubtext').value = s.ctaSubtext || 'Compra 100% Segura • Acesso Imediato';
 
       document.getElementById('edFakeProgress').checked = s.fakeProgress !== false;
@@ -3707,13 +3910,35 @@
     }
 
     function switchEditorTab(tab) {
-      const tabs = ['player', 'cta', 'tracking', 'embed'];
+      const tabs = ['player', 'audio', 'cta', 'tracking', 'embed'];
       tabs.forEach(t => {
         const pane = document.getElementById(`subtab${capitalize(t)}Pane`);
         const btn = document.getElementById(`subtabBtn${capitalize(t)}`);
         if (pane) pane.style.display = t === tab ? 'block' : 'none';
         if (btn) btn.classList.toggle('active', t === tab);
       });
+      if (tab === 'audio') {
+        const iframe = document.getElementById('editorPreviewFrame');
+        if (iframe && iframe.contentWindow) {
+          iframe.contentWindow.postMessage({ type: 'SHOW_AUDIO_OVERLAY' }, '*');
+        }
+      }
+    }
+
+    function selectAudioIcon(iconKey) {
+      document.getElementById('edAudioNoticeIcon').value = iconKey;
+      const map = {
+        'volume-muted': 'btnIconVolumeMuted',
+        'speaker-high': 'btnIconSpeakerHigh',
+        'volume-2': 'btnIconVolume2',
+        'sound-wave': 'btnIconSoundWave',
+        'bell': 'btnIconBell'
+      };
+      Object.keys(map).forEach(k => {
+        const btn = document.getElementById(map[k]);
+        if (btn) btn.classList.toggle('active', k === iconKey);
+      });
+      liveUpdateSettings();
     }
 
     function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -3766,8 +3991,23 @@
         barColor: document.getElementById('edBarColor').value,
         borderRadius: document.getElementById('edBorderRadius').value,
         aspectRatio: document.getElementById('edAspectRatio').value,
-        smartAutoplay: document.getElementById('edSmartAutoplay').checked,
-        autoplayText: document.getElementById('edAutoplayText').value,
+        smartAutoplay: document.getElementById('edAudioNoticeEnabled').checked,
+        autoplayText: document.getElementById('edAudioNoticeText').value,
+        audioNoticeEnabled: document.getElementById('edAudioNoticeEnabled').checked,
+        audioNoticeText: document.getElementById('edAudioNoticeText').value,
+        audioNoticeStyle: document.getElementById('edAudioNoticeStyle').value,
+        audioNoticeSize: document.getElementById('edAudioNoticeSize').value,
+        audioNoticePosition: document.getElementById('edAudioNoticePosition').value,
+        audioNoticeAnimation: document.getElementById('edAudioNoticeAnimation').value,
+        audioNoticeIcon: document.getElementById('edAudioNoticeIcon').value,
+        audioNoticeBgColor: document.getElementById('edAudioNoticeBgColor').value,
+        audioNoticeTextColor: document.getElementById('edAudioNoticeTextColor').value,
+        audioNoticeIconBgColor: document.getElementById('edAudioNoticeIconBgColor').value,
+        audioNoticeIconColor: document.getElementById('edAudioNoticeIconColor').value,
+        audioNoticeBorderColor: document.getElementById('edAudioNoticeBorderColor').value,
+        audioNoticeBorderWidth: document.getElementById('edAudioNoticeBorderWidth').value,
+        audioNoticeBorderRadius: document.getElementById('edAudioNoticeBorderRadius').value,
+        audioNoticeGlow: document.getElementById('edAudioNoticeGlow').value,
         fakeProgress: document.getElementById('edFakeProgress').checked,
         blockSeek: document.getElementById('edBlockSeek').checked,
         ctaEnabled: document.getElementById('edCtaEnabled').checked,
@@ -3783,20 +4023,60 @@
 
     let previewTimer;
     function liveUpdateSettings() {
+      const s = getEditorSettings();
+      const iframe = document.getElementById('editorPreviewFrame');
+
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({
+          type: 'UPDATE_AUDIO_NOTICE',
+          payload: {
+            enabled: s.audioNoticeEnabled,
+            text: s.audioNoticeText,
+            style: s.audioNoticeStyle,
+            size: s.audioNoticeSize,
+            position: s.audioNoticePosition,
+            animation: s.audioNoticeAnimation,
+            icon: s.audioNoticeIcon,
+            bgColor: s.audioNoticeBgColor,
+            textColor: s.audioNoticeTextColor,
+            iconBgColor: s.audioNoticeIconBgColor,
+            iconColor: s.audioNoticeIconColor,
+            borderColor: s.audioNoticeBorderColor,
+            borderWidth: s.audioNoticeBorderWidth,
+            borderRadius: s.audioNoticeBorderRadius,
+            glow: s.audioNoticeGlow
+          }
+        }, '*');
+      }
+
       clearTimeout(previewTimer);
       previewTimer = setTimeout(() => {
         if (!currentEditingVideoId) return;
         const v = videos.find(x => x.id === currentEditingVideoId);
         if (!v) return;
 
-        const s = getEditorSettings();
         const p = new URLSearchParams();
         p.set('id', v.id);
         p.set('v', v.video_url);
         p.set('bar_color', s.barColor);
         p.set('border_radius', s.borderRadius);
-        p.set('smart_autoplay', s.smartAutoplay ? '1' : '0');
-        p.set('autoplay_text', s.autoplayText);
+        p.set('smart_autoplay', s.audioNoticeEnabled ? '1' : '0');
+        p.set('autoplay_text', s.audioNoticeText);
+        p.set('an_enabled', s.audioNoticeEnabled ? '1' : '0');
+        p.set('an_text', s.audioNoticeText);
+        p.set('an_style', s.audioNoticeStyle);
+        p.set('an_size', s.audioNoticeSize);
+        p.set('an_pos', s.audioNoticePosition);
+        p.set('an_anim', s.audioNoticeAnimation);
+        p.set('an_icon', s.audioNoticeIcon);
+        p.set('an_bg', s.audioNoticeBgColor);
+        p.set('an_text_color', s.audioNoticeTextColor);
+        p.set('an_icon_bg', s.audioNoticeIconBgColor);
+        p.set('an_icon_color', s.audioNoticeIconColor);
+        p.set('an_border_color', s.audioNoticeBorderColor);
+        p.set('an_border_width', s.audioNoticeBorderWidth);
+        p.set('an_border_radius', s.audioNoticeBorderRadius);
+        p.set('an_glow', s.audioNoticeGlow);
         p.set('fake_progress', s.fakeProgress ? '1' : '0');
         p.set('block_seek', s.blockSeek ? '1' : '0');
         p.set('resume', s.resume ? '1' : '0');
@@ -3812,10 +4092,12 @@
           p.set('cta_time', '999999');
         }
 
-        const iframe = document.getElementById('editorPreviewFrame');
-        iframe.src = '/player?' + p.toString();
+        const newSrc = '/player?' + p.toString();
+        if (!iframe.src || !iframe.src.includes(`id=${v.id}`)) {
+          iframe.src = newSrc;
+        }
         generateEmbedSnippets(v);
-      }, 250);
+      }, 300);
     }
 
     function reloadPreviewIframe() {
@@ -3831,7 +4113,7 @@
       const isVertical = document.getElementById('edAspectRatio').value === '9:16';
       const padding = isVertical ? '177.77%' : '56.25%';
 
-      const code = `<div style="position:relative;width:100%;padding-top:${padding};overflow:hidden;border-radius:${document.getElementById('edBorderRadius').value};">\n  <iframe src="${fullUrl}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allow="autoplay; fullscreen" allowfullscreen></iframe>\n</div>`;
+      const code = `<div style="position:relative;width:100%;padding-top:${padding};overflow:hidden;border-radius:${document.getElementById('edBorderRadius').value};">\n  <iframe src="${fullUrl}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allow="autoplay; fullscreen"></iframe>\n</div>`;
 
       document.getElementById('edEmbedCodeArea').value = code;
       document.getElementById('edDirectPlayerUrl').value = fullUrl;
@@ -3944,8 +4226,8 @@
 
       if (tab === 'upload') {
         btnUpload.style.background = 'var(--primary-light)';
-        btnUpload.style.color = '#a78bfa';
-        btnUpload.style.borderColor = 'rgba(124, 58, 237, 0.5)';
+        btnUpload.style.color = 'var(--primary)';
+        btnUpload.style.borderColor = 'var(--primary-border)';
         btnRemote.style.background = 'transparent';
         btnRemote.style.color = 'var(--text-muted)';
         btnRemote.style.borderColor = 'var(--border-subtle)';
@@ -3953,8 +4235,8 @@
         secRemote.style.display = 'none';
       } else {
         btnRemote.style.background = 'var(--primary-light)';
-        btnRemote.style.color = '#a78bfa';
-        btnRemote.style.borderColor = 'rgba(124, 58, 237, 0.5)';
+        btnRemote.style.color = 'var(--primary)';
+        btnRemote.style.borderColor = 'var(--primary-border)';
         btnUpload.style.background = 'transparent';
         btnUpload.style.color = 'var(--text-muted)';
         btnUpload.style.borderColor = 'var(--border-subtle)';
@@ -4049,11 +4331,11 @@
             duration: '10:00',
             folderId: targetFolderId,
             settings: {
-              barColor: '#7c3aed',
+              barColor: '#2563EB',
               borderRadius: '16px',
               aspectRatio: '16:9',
               smartAutoplay: true,
-              autoplayText: 'Seu vídeo já começou. Toque para ativar o som',
+              autoplayText: 'Seu vídeo ja iniciou\\nClique para escutar',
               fakeProgress: true,
               blockSeek: true,
               ctaEnabled: true,

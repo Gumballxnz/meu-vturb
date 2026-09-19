@@ -23,6 +23,8 @@ if (NODE_ENV === 'production' && isInsecureSecret) {
   process.exit(1);
 }
 
+const JWT_SECRET = process.env.JWT_SECRET || 'cloudvturb_dev_secret_key_2026';
+
 const SERVER_STORAGE_LIMIT_BYTES = 30 * 1024 * 1024 * 1024;
 const MEMBER_STORAGE_LIMIT_BYTES = 3 * 1024 * 1024 * 1024;
 const MAX_STORAGE_BYTES = SERVER_STORAGE_LIMIT_BYTES;
