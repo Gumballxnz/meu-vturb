@@ -3792,10 +3792,11 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
                     </div>
                     <div>
                       <span style="font-size: 11px; color: var(--text-dim); display: block;">Conta conectada</span>
-                      <strong id="profGoogleStatus" style="font-size: 13.5px; color: var(--text-main);">Google Drive Ativo</strong>
+                      <strong id="profGoogleStatus" style="font-size: 13.5px; color: var(--text-main); display: block;">Não conectado</strong>
+                      <span id="profGoogleSubtext" style="font-size: 12px; color: var(--text-muted); display: block;">Conecte sua conta do Google Drive para importar vídeos diretamente.</span>
                     </div>
                   </div>
-                  <button type="button" class="btn-clean-secondary" style="color: #ef4444; border-color: rgba(239, 68, 68, 0.3);" onclick="showToast('Sua conta Google está vinculada ao Google Drive.')">Desconectar</button>
+                  <button type="button" id="btnToggleGoogleDrive" class="btn-clean-secondary" onclick="handleGoogleDriveToggle()">Conectar Google Drive</button>
                 </div>
               </div>
 
@@ -3823,11 +3824,33 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
                       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
                     </div>
                     <div>
-                      <strong style="font-size: 13.5px; color: var(--text-main); display: block;">Autenticação de dois fatores</strong>
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <strong style="font-size: 13.5px; color: var(--text-main);">Autenticação de dois fatores</strong>
+                        <span class="badge-status" id="prof2faBadge">Inativo</span>
+                      </div>
                       <span style="font-size: 12px; color: var(--text-muted);">Adicione uma camada extra de segurança à sua conta usando um aplicativo autenticador.</span>
                     </div>
                   </div>
-                  <button type="button" class="btn-clean-secondary" onclick="showToast('Autenticação de dois fatores já está ativa.')">Ativar 2FA</button>
+                  <button type="button" id="btnToggle2FA" class="btn-clean-secondary" onclick="handle2FAToggle()">Ativar 2FA</button>
+                </div>
+              </div>
+
+              <div id="secMember2FA" style="display: none; margin-bottom: 20px;">
+                <span style="font-size: 12.5px; font-weight: 600; color: var(--text-main); display: block; margin-bottom: 10px;">Segurança da Organização</span>
+                <div class="settings-sec-row">
+                  <div style="display: flex; align-items: center; gap: 14px;">
+                    <div style="width: 38px; height: 38px; border-radius: 8px; background: var(--bg-card); border: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: center; color: var(--text-muted);">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    </div>
+                    <div>
+                      <div style="display: flex; align-items: center; gap: 8px;">
+                        <strong style="font-size: 13.5px; color: var(--text-main);">2FA obrigatório para membros</strong>
+                        <span class="badge-status yellow" id="profMember2faBadge">Opcional</span>
+                      </div>
+                      <span style="font-size: 12px; color: var(--text-muted);">Exigir que todos os membros da sua equipe configurem 2FA antes de acessar o painel.</span>
+                    </div>
+                  </div>
+                  <button type="button" id="btnToggleMember2FA" class="btn-clean-secondary" onclick="handleMember2FAToggle()">Exigir 2FA</button>
                 </div>
               </div>
 
@@ -4894,28 +4917,81 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
   </div>
 
   <div class="modal-overlay" id="changePasswordModal">
-    <div class="modal-box" style="max-width: 440px;">
+    <div class="modal-box" style="max-width: 460px;">
       <div class="modal-header-clean">
         <div class="modal-title-clean">Definir ou alterar senha</div>
         <button class="btn-icon" onclick="closeChangePasswordModal()">&times;</button>
       </div>
       <div class="modal-body-clean" style="padding: 20px 24px;">
-        <div class="form-row">
-          <label class="form-label">Senha atual</label>
-          <input type="password" id="inputCurrentPassword" class="form-input-text" placeholder="Digite sua senha atual">
+        <div id="changePwdStep1">
+          <p style="font-size: 13.5px; color: var(--text-muted); line-height: 1.5; margin-bottom: 20px;">
+            Por motivos de segurança, enviaremos um código de verificação de 8 dígitos para o e-mail da sua conta (<strong id="changePwdEmailTarget" style="color: var(--text-main);"></strong>).
+          </p>
+          <div style="text-align: center; padding: 12px 0;">
+            <button type="button" id="btnRequestPwdCode" class="btn-primary-action" style="width: 100%; justify-content: center; padding: 12px;" onclick="requestPasswordChangeCode(false)">
+              Enviar código de 8 dígitos
+            </button>
+          </div>
         </div>
-        <div class="form-row">
-          <label class="form-label">Nova senha</label>
-          <input type="password" id="inputNewPassword" class="form-input-text" placeholder="Mínimo de 6 caracteres">
-        </div>
-        <div class="form-row" style="margin-bottom: 0;">
-          <label class="form-label">Confirmar nova senha</label>
-          <input type="password" id="inputConfirmPassword" class="form-input-text" placeholder="Repita a nova senha">
+        <div id="changePwdStep2" style="display: none;">
+          <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 16px;">
+            Digite o código de 8 dígitos enviado para <strong id="changePwdEmailTargetStep2" style="color: var(--text-main);"></strong> e defina sua nova senha.
+          </p>
+          <div class="form-row">
+            <label class="form-label">Código de 8 dígitos</label>
+            <input type="text" id="inputPwdCode" class="form-input-text" placeholder="00000000" maxlength="8" style="font-family: monospace; letter-spacing: 4px; font-size: 18px; text-align: center; font-weight: 700;">
+          </div>
+          <div class="form-row">
+            <label class="form-label">Nova senha</label>
+            <input type="password" id="inputNewPassword" class="form-input-text" placeholder="Mínimo de 6 caracteres">
+          </div>
+          <div class="form-row" style="margin-bottom: 14px;">
+            <label class="form-label">Confirmar nova senha</label>
+            <input type="password" id="inputConfirmPassword" class="form-input-text" placeholder="Repita a nova senha">
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12.5px;">
+            <span style="color: var(--text-muted);">Não recebeu o código?</span>
+            <button type="button" id="btnResendPwdCode" class="btn-clean-secondary" style="font-size: 12px; padding: 4px 10px;" onclick="requestPasswordChangeCode(true)">Reenviar código</button>
+          </div>
         </div>
       </div>
       <div class="modal-footer-clean">
         <button class="btn-clean-secondary" onclick="closeChangePasswordModal()">Cancelar</button>
-        <button class="btn-primary-action" id="btnSubmitChangePassword" onclick="submitChangePassword()">Salvar Senha</button>
+        <button class="btn-primary-action" id="btnSubmitChangePassword" style="display: none;" onclick="submitChangePassword()">Salvar Nova Senha</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="twoFactorModal">
+    <div class="modal-box" style="max-width: 480px;">
+      <div class="modal-header-clean">
+        <div class="modal-title-clean">Autenticação de Dois Fatores (2FA)</div>
+        <button class="btn-icon" onclick="close2FAModal()">&times;</button>
+      </div>
+      <div class="modal-body-clean" style="padding: 20px 24px;">
+        <p style="font-size: 13.5px; color: var(--text-muted); line-height: 1.5; margin-bottom: 18px;">
+          Escaneie o QR Code abaixo com seu aplicativo autenticador favorito (Google Authenticator, Authy, etc.):
+        </p>
+        <div style="display: flex; justify-content: center; margin-bottom: 18px;">
+          <div style="padding: 12px; background: #ffffff; border-radius: 12px; border: 1px solid var(--border-subtle); display: inline-block;">
+            <img id="twoFactorQrImg" src="" alt="QR Code 2FA" style="width: 180px; height: 180px; display: block;">
+          </div>
+        </div>
+        <div style="margin-bottom: 20px;">
+          <label class="form-label" style="font-size: 12px;">Ou digite esta chave manualmente:</label>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <code id="twoFactorSecretText" style="flex: 1; padding: 10px 12px; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); font-size: 13px; font-family: monospace; letter-spacing: 1px; color: var(--text-main); word-break: break-all;"></code>
+            <button type="button" class="btn-clean-secondary" style="padding: 10px 14px; font-size: 12.5px;" onclick="copy2FASecret()">Copiar</button>
+          </div>
+        </div>
+        <div class="form-row" style="margin-bottom: 0;">
+          <label class="form-label">Código de 6 dígitos gerado no app</label>
+          <input type="text" id="input2FACode" class="form-input-text" placeholder="000000" maxlength="6" style="font-family: monospace; letter-spacing: 6px; font-size: 20px; text-align: center; font-weight: 700;">
+        </div>
+      </div>
+      <div class="modal-footer-clean">
+        <button class="btn-clean-secondary" onclick="close2FAModal()">Cancelar</button>
+        <button class="btn-primary-action" id="btnConfirmEnable2FA" onclick="submitEnable2FA()">Ativar 2FA</button>
       </div>
     </div>
   </div>
@@ -5199,7 +5275,10 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
             </button>
           </div>
         </div>
-        <button type="submit" class="btn-primary-action" style="width: 100%; justify-content: center; padding: 11px; margin-top: 8px;">Entrar no Dashboard</button>
+        <div style="display: flex; justify-content: flex-end; margin-top: -6px; margin-bottom: 14px;">
+          <a href="#" onclick="toggleAuthMode('forgot'); return false;" style="font-size: 12px; color: var(--primary); text-decoration: none;">Esqueceu sua senha?</a>
+        </div>
+        <button type="submit" class="btn-primary-action" style="width: 100%; justify-content: center; padding: 11px; margin-top: 4px;">Entrar no Dashboard</button>
         <p style="text-align: center; font-size: 12.5px; color: var(--text-muted); margin-top: 16px;">
           Não tem uma conta? <a href="#" onclick="toggleAuthMode('register'); return false;" style="color: var(--primary); text-decoration: none; font-weight: 600;">Criar Cadastro</a>
         </p>
@@ -5233,6 +5312,95 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         <button type="submit" class="btn-primary-action" style="width: 100%; justify-content: center; padding: 11px; margin-top: 8px;">Criar Minha Conta</button>
         <p style="text-align: center; font-size: 12.5px; color: var(--text-muted); margin-top: 16px;">
           Já possui conta? <a href="#" onclick="toggleAuthMode('login'); return false;" style="color: var(--primary); text-decoration: none; font-weight: 600;">Fazer Login</a>
+        </p>
+      </form>
+
+      <form id="authVerifyRegisterForm" onsubmit="handleVerifyRegister(event)" style="display: none;">
+        <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 18px;">
+          Enviamos um código numérico de 8 dígitos para o e-mail informado. Insira-o abaixo para ativar sua conta:
+        </p>
+        <div class="form-row">
+          <label class="form-label">Código de 8 dígitos</label>
+          <input type="text" id="verifyRegisterCode" class="form-input-text" required placeholder="00000000" maxlength="8" style="font-family: monospace; letter-spacing: 4px; font-size: 18px; text-align: center; font-weight: 700;">
+        </div>
+        <button type="submit" class="btn-primary-action" style="width: 100%; justify-content: center; padding: 11px; margin-top: 8px;">Confirmar e Entrar</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; font-size: 12.5px;">
+          <a href="#" onclick="toggleAuthMode('register'); return false;" style="color: var(--text-muted); text-decoration: none;">Voltar</a>
+          <button type="button" id="btnResendRegisterCode" class="btn-clean-secondary" style="font-size: 12px; padding: 4px 10px;" onclick="resendVerificationCode('register')">Reenviar código</button>
+        </div>
+      </form>
+
+      <form id="authForgotForm" onsubmit="handleForgotPassword(event)" style="display: none;">
+        <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 18px;">
+          Digite seu e-mail cadastrado. Enviaremos um código de 8 dígitos para redefinir sua senha.
+        </p>
+        <div class="form-row">
+          <label class="form-label">E-mail cadastrado</label>
+          <input type="email" id="forgotEmail" class="form-input-text" required placeholder="seu@email.com">
+        </div>
+        <button type="submit" class="btn-primary-action" style="width: 100%; justify-content: center; padding: 11px; margin-top: 8px;">Enviar Código de Recuperação</button>
+        <p style="text-align: center; font-size: 12.5px; color: var(--text-muted); margin-top: 16px;">
+          Lembrou sua senha? <a href="#" onclick="toggleAuthMode('login'); return false;" style="color: var(--primary); text-decoration: none; font-weight: 600;">Voltar ao Login</a>
+        </p>
+      </form>
+
+      <form id="authResetPassForm" onsubmit="handleResetPassword(event)" style="display: none;">
+        <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 18px;">
+          Digite o código de 8 dígitos que enviamos ao seu e-mail e escolha uma nova senha:
+        </p>
+        <div class="form-row">
+          <label class="form-label">Código de 8 dígitos</label>
+          <input type="text" id="resetPassCode" class="form-input-text" required placeholder="00000000" maxlength="8" style="font-family: monospace; letter-spacing: 4px; font-size: 18px; text-align: center; font-weight: 700;">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Nova senha</label>
+          <input type="password" id="resetPassNewPassword" class="form-input-text" required placeholder="Mínimo de 6 caracteres">
+        </div>
+        <div class="form-row">
+          <label class="form-label">Confirmar nova senha</label>
+          <input type="password" id="resetPassConfirmPassword" class="form-input-text" required placeholder="Repita a nova senha">
+        </div>
+        <button type="submit" class="btn-primary-action" style="width: 100%; justify-content: center; padding: 11px; margin-top: 8px;">Redefinir Senha e Entrar</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; font-size: 12.5px;">
+          <a href="#" onclick="toggleAuthMode('login'); return false;" style="color: var(--text-muted); text-decoration: none;">Cancelar</a>
+          <button type="button" id="btnResendResetCode" class="btn-clean-secondary" style="font-size: 12px; padding: 4px 10px;" onclick="resendVerificationCode('reset_password')">Reenviar código</button>
+        </div>
+      </form>
+
+      <form id="auth2FAForm" onsubmit="handle2FALogin(event)" style="display: none;">
+        <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 18px;">
+          Abra o seu aplicativo autenticador (Google Authenticator, Authy) e digite o código de 6 dígitos:
+        </p>
+        <div class="form-row">
+          <label class="form-label">Código de 6 dígitos</label>
+          <input type="text" id="login2FACode" class="form-input-text" required placeholder="000000" maxlength="6" style="font-family: monospace; letter-spacing: 6px; font-size: 22px; text-align: center; font-weight: 700;">
+        </div>
+        <button type="submit" class="btn-primary-action" style="width: 100%; justify-content: center; padding: 11px; margin-top: 8px;">Validar e Entrar</button>
+        <p style="text-align: center; font-size: 12.5px; color: var(--text-muted); margin-top: 16px;">
+          <a href="#" onclick="toggleAuthMode('login'); return false;" style="color: var(--text-muted); text-decoration: none;">Voltar ao Login</a>
+        </p>
+      </form>
+
+      <form id="authMemberSetup2FAForm" onsubmit="handleMember2FASetupConfirm(event)" style="display: none;">
+        <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 16px;">
+          O administrador exige autenticação de dois fatores. Escaneie o QR Code abaixo com seu app autenticador:
+        </p>
+        <div style="display: flex; justify-content: center; margin-bottom: 16px;">
+          <div style="padding: 10px; background: #ffffff; border-radius: 10px; border: 1px solid var(--border-subtle); display: inline-block;">
+            <img id="member2FAQrImg" src="" alt="QR Code 2FA" style="width: 160px; height: 160px; display: block;">
+          </div>
+        </div>
+        <div style="margin-bottom: 16px;">
+          <label class="form-label" style="font-size: 11.5px;">Ou insira a chave manual:</label>
+          <code id="member2FASecretText" style="display: block; padding: 8px 10px; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); font-size: 12px; font-family: monospace; text-align: center; word-break: break-all; color: var(--text-main);"></code>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Código gerado no aplicativo</label>
+          <input type="text" id="member2FACode" class="form-input-text" required placeholder="000000" maxlength="6" style="font-family: monospace; letter-spacing: 6px; font-size: 20px; text-align: center; font-weight: 700;">
+        </div>
+        <button type="submit" class="btn-primary-action" style="width: 100%; justify-content: center; padding: 11px; margin-top: 8px;">Ativar 2FA e Continuar</button>
+        <p style="text-align: center; font-size: 12.5px; color: var(--text-muted); margin-top: 16px;">
+          <a href="#" onclick="toggleAuthMode('login'); return false;" style="color: var(--text-muted); text-decoration: none;">Voltar ao Login</a>
         </p>
       </form>
     </div>
