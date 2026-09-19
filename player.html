@@ -595,6 +595,45 @@
         } catch (e) {}
       }
 
+      if (vidId) {
+        let originDomain = '';
+        try {
+          if (window.self !== window.top && document.referrer) {
+            originDomain = new URL(document.referrer).hostname;
+          } else {
+            originDomain = window.location.hostname;
+          }
+        } catch (e) {
+          originDomain = window.location.hostname;
+        }
+
+        try {
+          const chkRes = await fetch(`/api/security/check-domain?video_id=${encodeURIComponent(vidId)}&domain=${encodeURIComponent(originDomain)}`);
+          if (chkRes.ok) {
+            const chkData = await chkRes.json();
+            if (chkData && chkData.allowed === false) {
+              const wrap = document.getElementById('playerWrapper');
+              if (wrap) {
+                wrap.innerHTML = `
+                  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;padding:24px;text-align:center;background:#0f172a;color:#fff;">
+                    <div style="width:52px;height:52px;border-radius:50%;background:rgba(239,68,68,0.15);display:flex;align-items:center;justify-content:center;margin-bottom:16px;">
+                      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                      </svg>
+                    </div>
+                    <h3 style="font-size:16px;font-weight:700;margin-bottom:8px;color:#fff;">Reprodução Não Autorizada</h3>
+                    <p style="font-size:13px;color:#94a3b8;max-width:380px;line-height:1.5;margin:0;">Este vídeo possui proteção de domínio e não tem permissão para ser reproduzido nesta página.</p>
+                  </div>
+                `;
+              }
+              return;
+            }
+          }
+        } catch (e) {}
+      }
+
       if (videoSrc && videoSrc.startsWith('/videos/')) {
         videoSrc = `${window.location.origin}${videoSrc}`;
       }

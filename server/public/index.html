@@ -9987,6 +9987,312 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
     }
 
+    let securityDomainsList = [];
+    let currentSecuritySort = { field: 'id', direction: 'desc' };
+    let addDomainRowCounter = 0;
+
+    async function loadSecurityDomains() {
+      try {
+        const res = await api('/api/security/domains');
+        securityDomainsList = (res && res.domains) || [];
+        renderSecurityDomainsTable();
+      } catch (err) {
+        showToast(err.message || 'Erro ao carregar domínios', true);
+      }
+    }
+
+    function renderSecurityDomainsTable() {
+      const tbody = document.getElementById('securityDomainsTableBody');
+      const emptyState = document.getElementById('securityDomainsEmptyState');
+      const selectAllCb = document.getElementById('selectAllSecurityDomains');
+      if (selectAllCb) selectAllCb.checked = false;
+
+      if (!securityDomainsList || !securityDomainsList.length) {
+        if (tbody) tbody.innerHTML = '';
+        if (emptyState) emptyState.style.display = 'block';
+        return;
+      }
+
+      if (emptyState) emptyState.style.display = 'none';
+
+      const sorted = [...securityDomainsList].sort((a, b) => {
+        let valA = a[currentSecuritySort.field];
+        let valB = b[currentSecuritySort.field];
+        if (currentSecuritySort.field === 'traffic') {
+          valA = a.traffic_count || 0;
+          valB = b.traffic_count || 0;
+        } else if (currentSecuritySort.field === 'session') {
+          valA = a.last_session_at ? new Date(a.last_session_at).getTime() : 0;
+          valB = b.last_session_at ? new Date(b.last_session_at).getTime() : 0;
+        } else if (currentSecuritySort.field === 'domain') {
+          valA = (a.domain || '').toLowerCase();
+          valB = (b.domain || '').toLowerCase();
+        }
+        if (valA < valB) return currentSecuritySort.direction === 'asc' ? -1 : 1;
+        if (valA > valB) return currentSecuritySort.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+
+      tbody.innerHTML = sorted.map(d => {
+        const trafficHtml = d.traffic_count > 0
+          ? `<span class="domain-traffic-pill" style="color: var(--text-main); font-weight: 600;">${d.traffic_count} plays</span>`
+          : `<span class="domain-traffic-pill">Sem tráfego</span>`;
+
+        let sessionHtml = '<span style="color: var(--text-dim);">--</span>';
+        if (d.last_session_at) {
+          const dt = new Date(d.last_session_at);
+          const formatted = `${String(dt.getDate()).padStart(2, '0')}/${String(dt.getMonth() + 1).padStart(2, '0')}/${dt.getFullYear()} ${String(dt.getHours()).padStart(2, '0')}:${String(dt.getMinutes()).padStart(2, '0')}`;
+          sessionHtml = `<span style="color: var(--text-muted); font-size: 13px;">${formatted}</span>`;
+        }
+
+        return `
+          <tr data-domain-id="${d.id}">
+            <td style="text-align: center;">
+              <input type="checkbox" class="security-domain-cb" value="${d.id}" style="accent-color: var(--primary); cursor: pointer; width: 15px; height: 15px;">
+            </td>
+            <td>
+              <span style="font-size: 13.5px; font-weight: 500; color: var(--text-main);">${escapeHtml(d.domain)}</span>
+            </td>
+            <td>${trafficHtml}</td>
+            <td>${sessionHtml}</td>
+            <td style="text-align: right;">
+              <div style="display: inline-flex; align-items: center; gap: 6px;">
+                <button type="button" class="btn-icon-subtle" title="Editar domínio" onclick="openEditDomainModal(${d.id}, '${escapeHtml(d.domain)}')">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                </button>
+                <button type="button" class="btn-icon-subtle danger" title="Remover domínio" onclick="openDeleteDomainModal(${d.id})">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function sortSecurityDomains(field) {
+      if (currentSecuritySort.field === field) {
+        currentSecuritySort.direction = currentSecuritySort.direction === 'asc' ? 'desc' : 'asc';
+      } else {
+        currentSecuritySort.field = field;
+        currentSecuritySort.direction = 'asc';
+      }
+      renderSecurityDomainsTable();
+    }
+
+    function toggleSelectAllSecurityDomains(masterCb) {
+      const cbs = document.querySelectorAll('.security-domain-cb');
+      cbs.forEach(cb => cb.checked = masterCb.checked);
+    }
+
+    function openAddDomainModal() {
+      const container = document.getElementById('addDomainRowsContainer');
+      if (container) {
+        container.innerHTML = '';
+        addDomainRowCounter = 0;
+        addDomainInputRow();
+      }
+      const m = document.getElementById('addDomainModal');
+      if (m) m.classList.add('active');
+    }
+
+    function closeAddDomainModal() {
+      const m = document.getElementById('addDomainModal');
+      if (m) m.classList.remove('active');
+    }
+
+    function addDomainInputRow() {
+      addDomainRowCounter++;
+      const rowId = `domainRow_${addDomainRowCounter}`;
+      const container = document.getElementById('addDomainRowsContainer');
+      if (!container) return;
+
+      const div = document.createElement('div');
+      div.className = 'domain-input-group-row';
+      div.id = rowId;
+      div.innerHTML = `
+        <div class="domain-error-msg" id="err_${rowId}" style="display: none; color: #ef4444; font-size: 12px; font-weight: 500; margin-bottom: 4px;">Informe um domínio!</div>
+        <div class="domain-input-group">
+          <span class="domain-input-prefix">http(s)://</span>
+          <input type="text" class="domain-input-field" placeholder="example.com ou *.example.com" oninput="clearDomainRowError('${rowId}')">
+          <button type="button" class="btn-remove-domain-row" onclick="removeDomainInputRow('${rowId}')" title="Remover campo">&times;</button>
+        </div>
+      `;
+      container.appendChild(div);
+      const input = div.querySelector('input');
+      if (input) input.focus();
+    }
+
+    function removeDomainInputRow(rowId) {
+      const container = document.getElementById('addDomainRowsContainer');
+      if (!container) return;
+      const row = document.getElementById(rowId);
+      if (row) row.remove();
+      if (container.children.length === 0) {
+        addDomainInputRow();
+      }
+    }
+
+    function clearDomainRowError(rowId) {
+      const errEl = document.getElementById(`err_${rowId}`);
+      if (errEl) errEl.style.display = 'none';
+    }
+
+    async function submitAddDomains() {
+      const container = document.getElementById('addDomainRowsContainer');
+      if (!container) return;
+
+      const rows = container.querySelectorAll('.domain-input-group-row');
+      const domainsToAdd = [];
+      let hasError = false;
+
+      rows.forEach(r => {
+        const input = r.querySelector('.domain-input-field');
+        const errEl = r.querySelector('.domain-error-msg');
+        const val = input ? input.value.trim() : '';
+
+        if (!val) {
+          if (errEl) {
+            errEl.textContent = 'Informe um domínio!';
+            errEl.style.display = 'block';
+          }
+          hasError = true;
+          return;
+        }
+
+        const cleanVal = val.replace(/^https?:\/\//i, '').replace(/\/.*$/, '').trim();
+        const isValid = /^(\*\.)?([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/i.test(cleanVal) || /^localhost(:[0-9]+)?$/i.test(cleanVal);
+        if (!isValid) {
+          if (errEl) {
+            errEl.textContent = 'Domínio inválido! Use example.com ou *.example.com';
+            errEl.style.display = 'block';
+          }
+          hasError = true;
+          return;
+        }
+
+        if (errEl) errEl.style.display = 'none';
+        domainsToAdd.push(cleanVal);
+      });
+
+      if (hasError) return;
+
+      if (!domainsToAdd.length) {
+        showToast('Informe ao menos um domínio', true);
+        return;
+      }
+
+      const btn = document.getElementById('btnSubmitAddDomains');
+      setButtonLoading(btn, true, 'Adicionando...');
+      try {
+        await api('/api/security/domains', {
+          method: 'POST',
+          body: JSON.stringify({ domains: domainsToAdd })
+        });
+        closeAddDomainModal();
+        showSecurityToast();
+        await loadSecurityDomains();
+      } catch (err) {
+        showToast(err.message || 'Erro ao adicionar domínios', true);
+      } finally {
+        setButtonLoading(btn, false);
+      }
+    }
+
+    function openEditDomainModal(id, domain) {
+      document.getElementById('editDomainId').value = id;
+      const input = document.getElementById('editDomainInput');
+      input.value = domain;
+      document.getElementById('editDomainError').style.display = 'none';
+      const m = document.getElementById('editDomainModal');
+      if (m) m.classList.add('active');
+      setTimeout(() => input.focus(), 50);
+    }
+
+    function closeEditDomainModal() {
+      const m = document.getElementById('editDomainModal');
+      if (m) m.classList.remove('active');
+    }
+
+    async function submitEditDomain() {
+      const id = document.getElementById('editDomainId').value;
+      const input = document.getElementById('editDomainInput');
+      const errEl = document.getElementById('editDomainError');
+      const val = input.value.trim();
+
+      if (!val) {
+        errEl.textContent = 'Informe um domínio!';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      const cleanVal = val.replace(/^https?:\/\//i, '').replace(/\/.*$/, '').trim();
+      const isValid = /^(\*\.)?([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/i.test(cleanVal) || /^localhost(:[0-9]+)?$/i.test(cleanVal);
+      if (!isValid) {
+        errEl.textContent = 'Domínio inválido! Use example.com ou *.example.com';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      const btn = document.getElementById('btnSubmitEditDomain');
+      setButtonLoading(btn, true, 'Salvando...');
+      try {
+        await api(`/api/security/domains/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify({ domain: cleanVal })
+        });
+        closeEditDomainModal();
+        showSecurityToast();
+        await loadSecurityDomains();
+      } catch (err) {
+        showToast(err.message || 'Erro ao editar domínio', true);
+      } finally {
+        setButtonLoading(btn, false);
+      }
+    }
+
+    function openDeleteDomainModal(id) {
+      document.getElementById('deleteDomainId').value = id;
+      const m = document.getElementById('deleteDomainModal');
+      if (m) m.classList.add('active');
+    }
+
+    function closeDeleteDomainModal() {
+      const m = document.getElementById('deleteDomainModal');
+      if (m) m.classList.remove('active');
+    }
+
+    async function confirmDeleteDomain() {
+      const id = document.getElementById('deleteDomainId').value;
+      const btn = document.getElementById('btnConfirmDeleteDomain');
+      setButtonLoading(btn, true, 'Removendo...');
+      try {
+        await api(`/api/security/domains/${id}`, {
+          method: 'DELETE'
+        });
+        closeDeleteDomainModal();
+        showSecurityToast();
+        await loadSecurityDomains();
+      } catch (err) {
+        showToast(err.message || 'Erro ao remover domínio', true);
+      } finally {
+        setButtonLoading(btn, false);
+      }
+    }
+
+    function showSecurityToast() {
+      const toast = document.getElementById('securityToastAlert');
+      if (!toast) return;
+      toast.style.display = 'flex';
+      void toast.offsetWidth;
+      toast.classList.add('show');
+      clearTimeout(window.__securityToastTimer);
+      window.__securityToastTimer = setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => { toast.style.display = 'none'; }, 300);
+      }, 4000);
+    }
+
     function setupVerificationCodeInputs() {
       ['regVerifyCode', 'resetPassCode'].forEach(id => {
         const el = document.getElementById(id);
