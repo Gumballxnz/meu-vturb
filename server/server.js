@@ -3,7 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
-const { execSync, spawn } = require('child_process');
+const { execSync, execFileSync, spawn } = require('child_process');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
@@ -341,8 +341,18 @@ function processVideoHLS(vidId) {
   const inputPath = v.file_path;
   const smartautoplayPath = path.join(videoDir, 'smartautoplay-0s.mp4');
   const masterPlaylistPath = path.join(videoDir, 'main.m3u8');
-  const video0PlaylistPath = path.join(videoDir, 'video_0.m3u8');
-  const segmentPattern = path.join(videoDir, 'segment_%03d.ts');
+
+  let hasAudio = false;
+  try {
+    const probe = execFileSync('ffprobe', [
+      '-v', 'error',
+      '-select_streams', 'a:0',
+      '-show_entries', 'stream=codec_type',
+      '-of', 'default=noprint_wrappers=1:nokey=1',
+      inputPath
+    ]);
+    hasAudio = probe.toString().trim() === 'audio';
+  } catch (e) {}
 
   const apArgs = [
     '-y',
@@ -365,30 +375,45 @@ function processVideoHLS(vidId) {
         try { db.prepare('UPDATE videos SET smartautoplay_url = ? WHERE id = ?').run(smartUrl, vidId); } catch (e) {}
       }
 
+      const filterComplex = '[0:v]split=3[v1][v2][v3]; [v1]scale=w=\'min(1280,iw)\':h=-2[v1out]; [v2]scale=w=\'min(854,iw)\':h=-2[v2out]; [v3]scale=w=\'min(640,iw)\':h=-2[v3out]';
       const hlsArgs = [
         '-y',
         '-i', inputPath,
-        '-c:v', 'libx264',
-        '-preset', 'veryfast',
-        '-crf', '23',
-        '-c:a', 'aac',
-        '-b:a', '128k',
-        '-ac', '2',
-        '-hls_time', '3',
-        '-hls_list_size', '0',
-        '-hls_playlist_type', 'vod',
-        '-hls_segment_filename', segmentPattern,
-        video0PlaylistPath
+        '-filter_complex', filterComplex,
+        '-map', '[v1out]', '-c:v:0', 'libx264', '-preset', 'veryfast', '-crf', '22',
+        '-map', '[v2out]', '-c:v:1', 'libx264', '-preset', 'veryfast', '-crf', '24',
+        '-map', '[v3out]', '-c:v:2', 'libx264', '-preset', 'veryfast', '-crf', '26'
       ];
+
+      if (hasAudio) {
+        hlsArgs.push(
+          '-map', '0:a', '-c:a:0', 'aac', '-b:a:0', '128k',
+          '-map', '0:a', '-c:a:1', 'aac', '-b:a:1', '96k',
+          '-map', '0:a', '-c:a:2', 'aac', '-b:a:2', '64k',
+          '-var_stream_map', 'v:0,a:0 v:1,a:1 v:2,a:2'
+        );
+      } else {
+        hlsArgs.push(
+          '-var_stream_map', 'v:0 v:1 v:2'
+        );
+      }
+
+      hlsArgs.push(
+        '-f', 'hls',
+        '-hls_time', '3',
+        '-hls_playlist_type', 'vod',
+        '-hls_flags', 'independent_segments',
+        '-master_pl_name', 'main.m3u8',
+        '-hls_segment_filename', path.join(videoDir, 'segment_%v_%03d.ts'),
+        path.join(videoDir, 'video_%v.m3u8')
+      );
 
       try {
         const hlsProc = spawn('ffmpeg', hlsArgs);
         hlsProc.on('close', (hlsCode) => {
-          if (hlsCode === 0 && fs.existsSync(video0PlaylistPath)) {
-            const masterContent = '#EXTM3U\n#EXT-X-VERSION:3\n#EXT-X-STREAM-INF:BANDWIDTH=2500000,RESOLUTION=1280x720\nvideo_0.m3u8\n';
+          if (hlsCode === 0 && fs.existsSync(masterPlaylistPath)) {
+            const manifestUrl = `/videos/${vidId}/main.m3u8`;
             try {
-              fs.writeFileSync(masterPlaylistPath, masterContent);
-              const manifestUrl = `/videos/${vidId}/main.m3u8`;
               db.prepare('UPDATE videos SET hls_ready = 1, hls_manifest = ? WHERE id = ?').run(manifestUrl, vidId);
             } catch (e) {}
           }

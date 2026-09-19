@@ -923,6 +923,9 @@
       const shouldUseTeaser = smartAutoplay && smartAutoplaySrc && !hasUserUnmuted;
 
       if (shouldUseTeaser) {
+        if (hlsSrc) {
+          fetch(hlsSrc, { mode: 'cors' }).catch(function () {});
+        }
         video.src = smartAutoplaySrc;
         video.loop = true;
         video.muted = true;

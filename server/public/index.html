@@ -4478,7 +4478,10 @@
       else if (p === '/usuarios') navigateTo('users', false);
       else if (p === '/servidor' || p === '/armazenamento') navigateTo('storage', false);
       else if (p === '/configuracoes' || p === '/settings' || p.startsWith('/settings/')) navigateTo('settings', false);
-      else if (p === '/folders/top-videos') {
+      else if (/^\/players\/([^/]+)\/edit\/?$/.test(p)) {
+        const m = p.match(/^\/players\/([^/]+)\/edit\/?$/);
+        openEditor(m[1], false);
+      } else if (p === '/folders/top-videos') {
         navigateTo('videos', false);
         switchLibrarySubtab('top', false);
       } else if (p === '/folders/trash') {
@@ -4503,6 +4506,15 @@
       document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
       toggleSidebar(false);
 
+      if (tabName !== 'editor') {
+        document.body.classList.remove('is-editor-mode');
+        const sbMain = document.getElementById('sidebarMain');
+        const sbEd = document.getElementById('sidebarEditor');
+        if (sbMain) sbMain.style.display = 'flex';
+        if (sbEd) sbEd.style.display = 'none';
+        closeEditorDrawer();
+      }
+
       const navMap = {
         overview: { tab: 'viewOverview', nav: 'navOverview', title: 'Visão Geral', url: '/' },
         videos: { tab: 'viewVideos', nav: 'navVideos', title: 'Biblioteca de Vídeos', url: '/folders' },
@@ -4510,7 +4522,7 @@
         users: { tab: 'viewUsers', nav: 'navUsers', title: 'Gestão de Usuários', url: '/usuarios' },
         storage: { tab: 'viewStorage', nav: 'navStorage', title: 'Armazenamento', url: '/servidor' },
         settings: { tab: 'viewSettings', nav: 'navSettings', title: 'Configurações', url: '/configuracoes' },
-        editor: { tab: 'viewEditor', nav: 'navVideos', title: 'Editor de VSL', url: '/editor' }
+        editor: { tab: 'viewEditor', nav: 'navVideos', title: 'Configurações de Vídeo', url: '/editor' }
       };
 
       const target = navMap[tabName] || navMap.overview;
@@ -5351,12 +5363,58 @@
       });
     }
 
-    function openEditor(id) {
+    const vturbDrawerTitles = {
+      estilo: 'Estilo',
+      progresso: 'Progresso Inteligente',
+      autoplay: 'Smart Autoplay™',
+      turbo: 'Turbo',
+      headlines: 'Headlines',
+      filtro: 'Filtro de Tráfego',
+      cta: 'Botões de ação',
+      thumb: 'ThumbSniper™',
+      resume: 'Continuar assistindo',
+      ganchos: 'Mini-Ganchos™',
+      pixels: 'Pixels',
+      legendas: 'Legendas',
+      playback: 'Opções de Reprodução'
+    };
+
+    async function openEditor(id, updateUrl = true) {
       currentEditingVideoId = id;
-      const v = videos.find(x => x.id === id);
+      let v = videos.find(x => x.id === id);
+      if (!v) {
+        try {
+          const res = await api(`/api/videos/${id}`);
+          v = res.video;
+          if (v && !videos.some(x => x.id === v.id)) videos.push(v);
+        } catch (e) {
+          navigateTo('videos');
+          return;
+        }
+      }
       if (!v) return;
 
-      document.getElementById('edTitle').value = v.title || '';
+      document.body.classList.add('is-editor-mode');
+      const sbMain = document.getElementById('sidebarMain');
+      const sbEd = document.getElementById('sidebarEditor');
+      if (sbMain) sbMain.style.display = 'none';
+      if (sbEd) sbEd.style.display = 'flex';
+
+      document.querySelectorAll('.tab-view').forEach(el => el.classList.remove('active'));
+      const edView = document.getElementById('viewEditor');
+      if (edView) edView.classList.add('active');
+
+      const titleEl = document.getElementById('vturbEditorTitle');
+      if (titleEl) titleEl.textContent = v.title || 'Sem título';
+      const inputTitle = document.getElementById('edTitle');
+      if (inputTitle) inputTitle.value = v.title || '';
+
+      const durSec = Math.floor(v.duration || 0);
+      const durM = Math.floor(durSec / 60).toString().padStart(2, '0');
+      const durS = (durSec % 60).toString().padStart(2, '0');
+      const durEl = document.getElementById('vturbEditorDuration');
+      if (durEl) durEl.textContent = `${durM}:${durS}`;
+
       const s = v.settings || {};
 
       document.getElementById('edBarColor').value = s.barColor || '#2563EB';
@@ -5401,29 +5459,116 @@
       document.getElementById('edResume').checked = s.resume !== false;
       document.getElementById('edPixels').checked = s.pixels !== false;
 
+      if (document.getElementById('edTurboEnabled')) document.getElementById('edTurboEnabled').checked = !!s.turbo;
+      if (document.getElementById('edHeadlineEnabled')) document.getElementById('edHeadlineEnabled').checked = !!s.headlines;
+      if (document.getElementById('edHeadlineText')) document.getElementById('edHeadlineText').value = s.headlineText || '';
+      if (document.getElementById('edTrafficFilterEnabled')) document.getElementById('edTrafficFilterEnabled').checked = !!s.trafficFilter;
+      if (document.getElementById('edThumbSniperEnabled')) document.getElementById('edThumbSniperEnabled').checked = !!s.thumbSniper;
+      if (document.getElementById('edMiniHooksEnabled')) document.getElementById('edMiniHooksEnabled').checked = !!s.miniGanchos;
+      if (document.getElementById('edCaptionsEnabled')) document.getElementById('edCaptionsEnabled').checked = !!s.subtitles;
+      if (document.getElementById('edPlaybackRate')) document.getElementById('edPlaybackRate').value = s.playbackRate || '1.0';
+      if (document.getElementById('edVideoLoop')) document.getElementById('edVideoLoop').checked = !!s.loop;
+
       updatePitchFormattedLabel();
       onAspectRatioChange(s.aspectRatio || '16:9');
       generateEmbedSnippets(v);
+      syncSidebarBadges(s);
 
-      navigateTo('editor');
-      switchEditorTab('player');
+      openEditorDrawer('estilo');
+
+      if (updateUrl && window.location.pathname !== `/players/${id}/edit`) {
+        history.pushState({ tab: 'editor', videoId: id }, '', `/players/${id}/edit`);
+      }
+
       liveUpdateSettings();
     }
 
-    function switchEditorTab(tab) {
-      const tabs = ['player', 'audio', 'cta', 'tracking', 'embed'];
-      tabs.forEach(t => {
-        const pane = document.getElementById(`subtab${capitalize(t)}Pane`);
-        const btn = document.getElementById(`subtabBtn${capitalize(t)}`);
-        if (pane) pane.style.display = t === tab ? 'block' : 'none';
-        if (btn) btn.classList.toggle('active', t === tab);
-      });
-      if (tab === 'audio') {
+    function exitEditor() {
+      document.body.classList.remove('is-editor-mode');
+      const sbMain = document.getElementById('sidebarMain');
+      const sbEd = document.getElementById('sidebarEditor');
+      if (sbMain) sbMain.style.display = 'flex';
+      if (sbEd) sbEd.style.display = 'none';
+      closeEditorDrawer();
+      currentEditingVideoId = null;
+      navigateTo('videos', true);
+    }
+
+    function openEditorDrawer(panelKey) {
+      document.querySelectorAll('.vturb-editor-item').forEach(el => el.classList.remove('active'));
+      const activeItem = document.getElementById(`vturbItem${capitalize(panelKey)}`);
+      if (activeItem) activeItem.classList.add('active');
+
+      const drawer = document.getElementById('vturbSettingsDrawer');
+      if (drawer) drawer.classList.add('open');
+
+      const titleEl = document.getElementById('drawerTitle');
+      if (titleEl && vturbDrawerTitles[panelKey]) titleEl.textContent = vturbDrawerTitles[panelKey];
+
+      document.querySelectorAll('.drawer-panel-section').forEach(p => p.style.display = 'none');
+      const targetPanel = document.getElementById(`drawerPanel${capitalize(panelKey)}`);
+      if (targetPanel) targetPanel.style.display = 'block';
+
+      if (panelKey === 'autoplay') {
         const iframe = document.getElementById('editorPreviewFrame');
         if (iframe && iframe.contentWindow) {
           iframe.contentWindow.postMessage({ type: 'SHOW_AUDIO_OVERLAY' }, '*');
         }
       }
+    }
+
+    function closeEditorDrawer() {
+      const drawer = document.getElementById('vturbSettingsDrawer');
+      if (drawer) drawer.classList.remove('open');
+      document.querySelectorAll('.vturb-editor-item').forEach(el => el.classList.remove('active'));
+    }
+
+    function promptRenameVideo() {
+      if (!currentEditingVideoId) return;
+      const v = videos.find(x => x.id === currentEditingVideoId);
+      if (!v) return;
+      const newTitle = prompt('Novo título para esta VSL:', v.title || '');
+      if (newTitle !== null && newTitle.trim()) {
+        const val = newTitle.trim();
+        v.title = val;
+        const tEl = document.getElementById('vturbEditorTitle');
+        if (tEl) tEl.textContent = val;
+        const inp = document.getElementById('edTitle');
+        if (inp) inp.value = val;
+        saveCurrentVideoSettings();
+      }
+    }
+
+    function openLoadSettingsModal() {
+      showToast('Importação de pré-definições ativada.');
+    }
+
+    function syncSidebarBadges(s) {
+      if (!s) s = getEditorSettings();
+      const setBadge = (id, isOn) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (isOn) {
+          el.textContent = 'On';
+          el.classList.remove('off');
+        } else {
+          el.textContent = 'Off';
+          el.classList.add('off');
+        }
+      };
+
+      setBadge('badgeProgresso', s.fakeProgress !== false);
+      const noticeOn = s.audioNoticeEnabled !== undefined ? s.audioNoticeEnabled !== false : (s.smartAutoplay !== false);
+      setBadge('badgeAutoplay', noticeOn);
+      setBadge('badgeTurbo', !!s.turbo);
+      setBadge('badgeHeadlines', !!s.headlines);
+      setBadge('badgeFiltro', !!s.trafficFilter);
+      setBadge('badgeCta', s.ctaEnabled !== false);
+      setBadge('badgeThumb', !!s.thumbSniper);
+      setBadge('badgeResume', s.resume !== false);
+      setBadge('badgeGanchos', !!s.miniGanchos);
+      setBadge('badgePixels', s.pixels !== false);
+      setBadge('badgeLegendas', !!s.subtitles);
     }
 
     function selectAudioIcon(iconKey) {
@@ -5472,18 +5617,21 @@
     }
 
     function setPreviewFormat(mode) {
-      const wrapper = document.getElementById('previewWrapper');
-      const btnDesk = document.getElementById('btnPreviewDesktop');
-      const btnMob = document.getElementById('btnPreviewMobile');
+      const deskCanvas = document.getElementById('vturbDesktopCanvas');
+      const mobCanvas = document.getElementById('vturbMobileCanvas');
+      const btnDesk = document.getElementById('btnDeviceDesktop');
+      const btnMob = document.getElementById('btnDeviceMobile');
 
       if (mode === 'mobile') {
-        wrapper.classList.add('mobile');
-        btnMob.style.background = 'var(--bg-card)';
-        btnDesk.style.background = 'transparent';
+        if (deskCanvas) deskCanvas.style.display = 'none';
+        if (mobCanvas) mobCanvas.style.display = 'flex';
+        if (btnDesk) btnDesk.classList.remove('active');
+        if (btnMob) btnMob.classList.add('active');
       } else {
-        wrapper.classList.remove('mobile');
-        btnDesk.style.background = 'var(--bg-card)';
-        btnMob.style.background = 'transparent';
+        if (deskCanvas) deskCanvas.style.display = 'block';
+        if (mobCanvas) mobCanvas.style.display = 'none';
+        if (btnDesk) btnDesk.classList.add('active');
+        if (btnMob) btnMob.classList.remove('active');
       }
     }
 
@@ -5518,37 +5666,53 @@
         ctaColor: document.getElementById('edCtaColor').value,
         ctaSubtext: document.getElementById('edCtaSubtext').value,
         resume: document.getElementById('edResume').checked,
-        pixels: document.getElementById('edPixels').checked
+        pixels: document.getElementById('edPixels').checked,
+        turbo: document.getElementById('edTurboEnabled') ? document.getElementById('edTurboEnabled').checked : false,
+        headlines: document.getElementById('edHeadlineEnabled') ? document.getElementById('edHeadlineEnabled').checked : false,
+        headlineText: document.getElementById('edHeadlineText') ? document.getElementById('edHeadlineText').value : '',
+        trafficFilter: document.getElementById('edTrafficFilterEnabled') ? document.getElementById('edTrafficFilterEnabled').checked : false,
+        thumbSniper: document.getElementById('edThumbSniperEnabled') ? document.getElementById('edThumbSniperEnabled').checked : false,
+        miniGanchos: document.getElementById('edMiniHooksEnabled') ? document.getElementById('edMiniHooksEnabled').checked : false,
+        subtitles: document.getElementById('edCaptionsEnabled') ? document.getElementById('edCaptionsEnabled').checked : false,
+        playbackRate: document.getElementById('edPlaybackRate') ? document.getElementById('edPlaybackRate').value : '1.0',
+        loop: document.getElementById('edVideoLoop') ? document.getElementById('edVideoLoop').checked : false
       };
     }
 
     let previewTimer;
     function liveUpdateSettings() {
       const s = getEditorSettings();
-      const iframe = document.getElementById('editorPreviewFrame');
+      syncSidebarBadges(s);
 
-      if (iframe && iframe.contentWindow) {
-        iframe.contentWindow.postMessage({
-          type: 'UPDATE_AUDIO_NOTICE',
-          payload: {
-            enabled: s.audioNoticeEnabled,
-            text: s.audioNoticeText,
-            style: s.audioNoticeStyle,
-            size: s.audioNoticeSize,
-            position: s.audioNoticePosition,
-            animation: s.audioNoticeAnimation,
-            icon: s.audioNoticeIcon,
-            bgColor: s.audioNoticeBgColor,
-            textColor: s.audioNoticeTextColor,
-            iconBgColor: s.audioNoticeIconBgColor,
-            iconColor: s.audioNoticeIconColor,
-            borderColor: s.audioNoticeBorderColor,
-            borderWidth: s.audioNoticeBorderWidth,
-            borderRadius: s.audioNoticeBorderRadius,
-            glow: s.audioNoticeGlow
-          }
-        }, '*');
-      }
+      const iframes = [
+        document.getElementById('editorPreviewFrame'),
+        document.getElementById('editorPreviewFrameMobile')
+      ].filter(Boolean);
+
+      iframes.forEach(iframe => {
+        if (iframe && iframe.contentWindow) {
+          iframe.contentWindow.postMessage({
+            type: 'UPDATE_AUDIO_NOTICE',
+            payload: {
+              enabled: s.audioNoticeEnabled,
+              text: s.audioNoticeText,
+              style: s.audioNoticeStyle,
+              size: s.audioNoticeSize,
+              position: s.audioNoticePosition,
+              animation: s.audioNoticeAnimation,
+              icon: s.audioNoticeIcon,
+              bgColor: s.audioNoticeBgColor,
+              textColor: s.audioNoticeTextColor,
+              iconBgColor: s.audioNoticeIconBgColor,
+              iconColor: s.audioNoticeIconColor,
+              borderColor: s.audioNoticeBorderColor,
+              borderWidth: s.audioNoticeBorderWidth,
+              borderRadius: s.audioNoticeBorderRadius,
+              glow: s.audioNoticeGlow
+            }
+          }, '*');
+        }
+      });
 
       clearTimeout(previewTimer);
       previewTimer = setTimeout(() => {
@@ -5594,57 +5758,111 @@
         }
 
         const newSrc = '/player?' + p.toString();
-        if (!iframe.src || !iframe.src.includes(`id=${v.id}`)) {
-          iframe.src = newSrc;
-        }
+        iframes.forEach(iframe => {
+          if (!iframe.src || !iframe.src.includes(`id=${v.id}`)) {
+            iframe.src = newSrc;
+          }
+        });
         generateEmbedSnippets(v);
       }, 300);
     }
 
     function reloadPreviewIframe() {
-      const iframe = document.getElementById('editorPreviewFrame');
-      const src = iframe.src;
-      iframe.src = '';
-      setTimeout(() => { iframe.src = src; }, 50);
-    }
-
-    function generateEmbedSnippets(v) {
-      const playerHost = appConfig.playerDomain || window.location.origin;
-      const fullUrl = `${playerHost}/player?id=${encodeURIComponent(v.id)}`;
-      const isVertical = document.getElementById('edAspectRatio').value === '9:16';
-      const padding = isVertical ? '177.77%' : '56.25%';
-
-      const code = `<div style="position:relative;width:100%;padding-top:${padding};overflow:hidden;border-radius:${document.getElementById('edBorderRadius').value};">\n  <iframe src="${fullUrl}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allow="autoplay; fullscreen"></iframe>\n</div>`;
-
-      document.getElementById('edEmbedCodeArea').value = code;
-      document.getElementById('edDirectPlayerUrl').value = fullUrl;
-    }
-
-    function copyEmbedFromEditor() {
-      const btn = event ? event.currentTarget : null;
-      const code = document.getElementById('edEmbedCodeArea').value;
-      if (btn) setButtonLoading(btn, true, 'Copiando...');
-      navigator.clipboard.writeText(code).then(() => {
-        if (btn) {
-          btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg> <span>Copiado!</span>`;
-          setTimeout(() => {
-            if (btn.dataset.origHtml) {
-              btn.innerHTML = btn.dataset.origHtml;
-              delete btn.dataset.origHtml;
-              btn.disabled = false;
-            }
-          }, 1800);
-        }
-        showToast('Código embed copiado para a área de transferência!');
-      }).catch(() => {
-        if (btn) setButtonLoading(btn, false);
-        showToast('Não foi possível copiar o código.', true);
+      const iframes = [
+        document.getElementById('editorPreviewFrame'),
+        document.getElementById('editorPreviewFrameMobile')
+      ].filter(Boolean);
+      iframes.forEach(iframe => {
+        const src = iframe.src;
+        iframe.src = '';
+        setTimeout(() => { iframe.src = src; }, 50);
       });
     }
 
+    function generateEmbedSnippets(v) {
+      updateEmbedCodeDisplay();
+    }
+
     function openDirectPlayerLink() {
-      const url = document.getElementById('edDirectPlayerUrl').value;
-      if (url) window.open(url, '_blank');
+      if (!currentEditingVideoId) return;
+      const v = videos.find(x => x.id === currentEditingVideoId);
+      if (!v) return;
+      const playerHost = appConfig.playerDomain || window.location.origin;
+      window.open(`${playerHost}/player?id=${encodeURIComponent(v.id)}`, '_blank');
+    }
+
+    let currentEmbedSnippetTab = 'js';
+
+    function openEmbedModal() {
+      if (!currentEditingVideoId) return;
+      const v = videos.find(x => x.id === currentEditingVideoId);
+      if (!v) return;
+      updateEmbedCodeDisplay();
+      document.getElementById('vturbEmbedModal').classList.add('active');
+    }
+
+    function closeEmbedModal() {
+      document.getElementById('vturbEmbedModal').classList.remove('active');
+    }
+
+    function switchEmbedSnippetTab(tab) {
+      currentEmbedSnippetTab = tab;
+      const btnJs = document.getElementById('btnEmbedTabJs');
+      const btnIf = document.getElementById('btnEmbedTabIframe');
+      if (btnJs) btnJs.classList.toggle('active', tab === 'js');
+      if (btnIf) btnIf.classList.toggle('active', tab === 'iframe');
+      updateEmbedCodeDisplay();
+    }
+
+    function toggleSpeedCodeBox(show) {
+      const box = document.getElementById('embedSpeedContainer');
+      if (box) box.style.display = show ? 'block' : 'none';
+    }
+
+    function updateEmbedCodeDisplay() {
+      if (!currentEditingVideoId) return;
+      const v = videos.find(x => x.id === currentEditingVideoId);
+      if (!v) return;
+
+      const playerHost = appConfig.playerDomain || window.location.origin;
+      const fullUrl = `${playerHost}/player?id=${encodeURIComponent(v.id)}`;
+      const isVertical = document.getElementById('edAspectRatio') && document.getElementById('edAspectRatio').value === '9:16';
+      const padding = isVertical ? '177.77%' : '56.25%';
+      const rad = document.getElementById('edBorderRadius') ? document.getElementById('edBorderRadius').value : '16px';
+
+      let snippet = '';
+      if (currentEmbedSnippetTab === 'js') {
+        snippet = `<!-- VTurb Smart Player Code -->\n<div id="smartplayer_wrapper_${v.id}" style="position:relative;width:100%;padding-top:${padding};overflow:hidden;border-radius:${rad};">\n  <iframe id="smartplayer_frame_${v.id}" src="${fullUrl}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allow="autoplay; fullscreen" loading="lazy"></iframe>\n</div>\n<script type="text/javascript">\n  window._vturb = window._vturb || [];\n  window._vturb.push({ id: "${v.id}" });\n<\/script>`;
+      } else {
+        snippet = `<div style="position:relative;width:100%;padding-top:${padding};overflow:hidden;border-radius:${rad};">\n  <iframe src="${fullUrl}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allow="autoplay; fullscreen" loading="lazy"></iframe>\n</div>`;
+      }
+
+      const snippetEl = document.getElementById('vturbEmbedSnippetArea');
+      if (snippetEl) snippetEl.value = snippet;
+
+      const speedSnippet = `<link rel="dns-prefetch" href="${playerHost}">\n<link rel="preconnect" href="${playerHost}" crossorigin>\n<link rel="preload" href="${fullUrl}" as="document">`;
+      const speedEl = document.getElementById('vturbSpeedSnippetArea');
+      if (speedEl) speedEl.value = speedSnippet;
+    }
+
+    function copyEmbedSnippet() {
+      const area = document.getElementById('vturbEmbedSnippetArea');
+      if (!area) return;
+      navigator.clipboard.writeText(area.value).then(() => {
+        showToast('Código de Embed copiado com sucesso!');
+      }).catch(() => {
+        showToast('Falha ao copiar código.', true);
+      });
+    }
+
+    function copySpeedSnippet() {
+      const area = document.getElementById('vturbSpeedSnippetArea');
+      if (!area) return;
+      navigator.clipboard.writeText(area.value).then(() => {
+        showToast('Código de otimização copiado com sucesso!');
+      }).catch(() => {
+        showToast('Falha ao copiar código.', true);
+      });
     }
 
     async function saveCurrentVideoSettings() {
@@ -5664,6 +5882,8 @@
           v.title = title;
           v.settings = settings;
         }
+        const tEl = document.getElementById('vturbEditorTitle');
+        if (tEl) tEl.textContent = title || 'Sem título';
         renderVideosGrid();
         showToast('Alterações salvas com sucesso!');
       } catch (err) {
