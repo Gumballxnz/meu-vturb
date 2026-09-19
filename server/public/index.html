@@ -6072,7 +6072,7 @@
         window.gapi.load('picker', () => {
           const tokenClient = window.google.accounts.oauth2.initTokenClient({
             client_id: cfg.clientId,
-            scope: 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/drive.readonly',
+            scope: 'https://www.googleapis.com/auth/drive.file',
             callback: (tokenResponse) => {
               if (tokenResponse && tokenResponse.access_token) {
                 googleAccessToken = tokenResponse.access_token;
