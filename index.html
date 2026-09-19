@@ -9,7 +9,7 @@
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="alternate icon" href="/favicon.ico">
   <script>
-    (function() {
+(function() {
       try {
         var t = localStorage.getItem('cloudvturb_theme') || 'light';
         document.documentElement.setAttribute('data-theme', t);
@@ -2575,6 +2575,34 @@
       cursor: pointer;
     }
 
+    .picker-dialog-bg {
+      background: rgba(9, 9, 11, 0.78) !important;
+      backdrop-filter: blur(10px) !important;
+      -webkit-backdrop-filter: blur(10px) !important;
+      z-index: 99998 !important;
+      transition: opacity 0.2s ease !important;
+    }
+
+    .picker-dialog {
+      border-radius: 16px !important;
+      overflow: hidden !important;
+      border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.14)) !important;
+      box-shadow: 0 25px 65px -10px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.08) !important;
+      z-index: 99999 !important;
+      animation: pickerModalFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    }
+
+    @keyframes pickerModalFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(12px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
     .auth-backdrop {
       position: fixed;
       top: 0;
@@ -3867,19 +3895,119 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
       </section>
 
       <section class="tab-view" id="viewStorage">
-        <div class="card-panel" style="max-width: 800px; margin: 0 auto;">
-          <div class="panel-header">
-            <div class="panel-title">Cota de Armazenamento</div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+          <div>
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+                <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+                <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+              </svg>
+              <h1 style="font-size: 20px; font-weight: 700; color: var(--text-main); margin: 0;" id="storageSectionTitle">Armazenamento</h1>
+              <span id="storageScopeBadge" class="badge-status" style="background: rgba(37,99,235,0.12); color: #38bdf8; border: 1px solid rgba(56,189,248,0.25);">Servidor</span>
+            </div>
+            <p style="font-size: 13px; color: var(--text-muted); margin: 0;" id="storageSectionSubtitle">Gerencie a cota de disco e visualize o consumo detalhado por vídeo.</p>
           </div>
 
-          <div style="margin-bottom: 24px;">
-            <div style="display: flex; justify-content: space-between; font-size: 13.5px; font-weight: 600; margin-bottom: 8px;">
-              <span id="storageDetailedUsage"></span>
-              <span id="storageCapacityLabel" style="color: var(--text-dim);"></span>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <button type="button" class="btn-clean-secondary" onclick="loadStorageDetails()" title="Atualizar dados de armazenamento">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+              Atualizar
+            </button>
+          </div>
+        </div>
+
+        <div class="metrics-grid" style="margin-bottom: 20px;">
+          <div class="metric-card">
+            <div class="metric-title">Espaço Ocupado</div>
+            <div class="metric-value" id="storageCardUsed">0 MB</div>
+            <div class="metric-sub" id="storageCardPercent">0% da capacidade total</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-title">Espaço Livre</div>
+            <div class="metric-value" id="storageCardFree" style="color: #10b981;">0 GB</div>
+            <div class="metric-sub" id="storageCardTotal">Disponível de 30 GB</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-title">Vídeos com Armazenamento</div>
+            <div class="metric-value" id="storageCardVideosCount">0</div>
+            <div class="metric-sub" id="storageCardVideosSub">0 ativos • 0 na lixeira</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-title">Média por Arquivo</div>
+            <div class="metric-value" id="storageCardAverage">0 MB</div>
+            <div class="metric-sub">Tamanho médio por vídeo</div>
+          </div>
+        </div>
+
+        <div class="card-panel" style="margin-bottom: 24px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13.5px; font-weight: 600; margin-bottom: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="color: var(--text-main);">Capacidade Utilizada:</span>
+              <span id="storageDetailedUsage" style="color: var(--color-primary); font-weight: 700;">0 MB</span>
+              <span style="color: var(--text-dim);">de</span>
+              <span id="storageCapacityLabel" style="color: var(--text-main);">30 GB</span>
             </div>
-            <div class="progress-bar-bg" style="height: 10px;">
-              <div class="progress-bar-fill-violet" id="storageDetailedFill" style="width: 0%;"></div>
+            <span id="storageProgressPctLabel" style="color: var(--text-muted); font-size: 13px;">0%</span>
+          </div>
+          <div class="progress-bar-bg" style="height: 12px; border-radius: 6px; background: rgba(255,255,255,0.06);">
+            <div class="progress-bar-fill-violet" id="storageDetailedFill" style="width: 0%; height: 100%; border-radius: 6px; transition: width 0.4s ease;"></div>
+          </div>
+        </div>
+
+        <div class="card-panel" style="padding: 0; overflow: hidden;">
+          <div style="padding: 16px 20px; border-bottom: 1px solid var(--border-subtle); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+            <div>
+              <div style="font-size: 15px; font-weight: 700; color: var(--text-main);">Consumo de Disco por Vídeo</div>
+              <p style="font-size: 12px; color: var(--text-dim); margin-top: 2px;">Arquivos locais armazenados no servidor e percentual ocupado por cada VSL.</p>
             </div>
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+              <input type="text" id="storageSearchInput" class="form-input-text" placeholder="Buscar vídeo..." style="width: 200px; padding: 6px 12px; font-size: 12.5px;" oninput="filterStorageVideos()">
+              <select id="storageFilterStatus" class="select-filter" style="font-size: 12.5px; padding: 6px 10px;" onchange="filterStorageVideos()">
+                <option value="all">Todos os status</option>
+                <option value="active">Apenas ativos</option>
+                <option value="trash">Na lixeira</option>
+              </select>
+              <select id="storageFilterUser" class="select-filter" style="font-size: 12.5px; padding: 6px 10px; display: none;" onchange="filterStorageVideos()">
+                <option value="all">Todos os usuários</option>
+              </select>
+              <select id="storageSortSelect" class="select-filter" style="font-size: 12.5px; padding: 6px 10px;" onchange="sortStorageVideos(this.value)">
+                <option value="size_desc">Maior tamanho</option>
+                <option value="size_asc">Menor tamanho</option>
+                <option value="name_asc">Nome (A-Z)</option>
+                <option value="date_desc">Mais recentes</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="table-responsive" style="margin: 0;">
+            <table class="dark-table" style="margin-bottom: 0;">
+              <thead>
+                <tr>
+                  <th>Vídeo</th>
+                  <th id="storageThOwner" style="display: none;">Proprietário</th>
+                  <th>Pasta</th>
+                  <th>Status</th>
+                  <th style="cursor: pointer;" onclick="toggleSortStorage('size')">
+                    Espaço Ocupado <span class="sort-icon-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"/></svg></span>
+                  </th>
+                  <th>% do Total</th>
+                  <th>Data</th>
+                  <th style="text-align: right;">Ações</th>
+                </tr>
+              </thead>
+              <tbody id="storageVideosTableBody"></tbody>
+            </table>
+          </div>
+
+          <div id="storageVideosEmptyState" style="display: none; padding: 60px 20px; text-align: center;">
+            <div style="width: 56px; height: 56px; margin: 0 auto 12px; color: var(--text-dim); display: flex; align-items: center; justify-content: center;">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+              </svg>
+            </div>
+            <div style="font-size: 14px; font-weight: 600; color: var(--text-main); margin-bottom: 4px;">Nenhum vídeo local ocupando armazenamento</div>
+            <div style="font-size: 12.5px; color: var(--text-dim);">Vídeos adicionados por upload ou importação do Google Drive aparecerão listados aqui.</div>
           </div>
         </div>
       </section>
@@ -6736,6 +6864,8 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         switchSettingsTab('account', false);
       } else if (tabName === 'security') {
         loadSecurityDomains();
+      } else if (tabName === 'storage') {
+        loadStorageDetails();
       }
 
       if (updateUrl && window.location.pathname !== target.url) {
@@ -6766,6 +6896,173 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       if (modalLabel) modalLabel.textContent = `${formattedUsage} de ${totalFormatted} usados`;
       const modalProg = document.getElementById('modalProfileStorageProgress');
       if (modalProg) modalProg.style.width = `${pct}%`;
+    }
+
+    async function loadStorageDetails() {
+      const tbody = document.getElementById('storageVideosTableBody');
+      const emptyState = document.getElementById('storageVideosEmptyState');
+      if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text-dim);">Carregando...</td></tr>';
+      if (emptyState) emptyState.style.display = 'none';
+
+      const data = await api('/api/storage/details');
+      window.__storageData = data;
+      renderStorageUI(data);
+    }
+
+    function renderStorageUI(data) {
+      if (!data) return;
+      const isOwner = data.isOwner;
+
+      const titleEl = document.getElementById('storageSectionTitle');
+      if (titleEl) titleEl.textContent = isOwner ? 'Armazenamento do Servidor' : 'Meu Armazenamento';
+
+      const badgeEl = document.getElementById('storageScopeBadge');
+      if (badgeEl) badgeEl.textContent = isOwner ? 'Servidor Global (30 GB)' : 'Cota Individual (3 GB)';
+
+      const cardUsed = document.getElementById('storageCardUsed');
+      if (cardUsed) cardUsed.textContent = data.formattedUsage || '0 MB';
+
+      const cardPct = document.getElementById('storageCardPercent');
+      if (cardPct) cardPct.textContent = `${data.usagePercent || '0'}% da capacidade total`;
+
+      const cardFree = document.getElementById('storageCardFree');
+      if (cardFree) cardFree.textContent = data.formattedFree || '0 GB';
+
+      const cardTotal = document.getElementById('storageCardTotal');
+      if (cardTotal) cardTotal.textContent = `Disponível de ${data.totalFormatted || (isOwner ? '30 GB' : '3 GB')}`;
+
+      const cardCount = document.getElementById('storageCardVideosCount');
+      if (cardCount) cardCount.textContent = data.videosCount || 0;
+
+      const cardSub = document.getElementById('storageCardVideosSub');
+      if (cardSub) cardSub.textContent = `${data.activeVideosCount || 0} ativos • ${data.trashVideosCount || 0} na lixeira`;
+
+      const cardAvg = document.getElementById('storageCardAverage');
+      if (cardAvg) cardAvg.textContent = data.averageSizeFormatted || '0 MB';
+
+      const detUsage = document.getElementById('storageDetailedUsage');
+      if (detUsage) detUsage.textContent = `${data.formattedUsage || '0 MB'} usados`;
+
+      const capLabel = document.getElementById('storageCapacityLabel');
+      if (capLabel) capLabel.textContent = isOwner ? 'Capacidade do Servidor: 30 GB' : `Sua Cota Individual: ${data.totalFormatted || '3 GB'}`;
+
+      const pct = Math.min(100, Math.max(data.usedBytes > 0 ? 1 : 0, parseFloat(data.usagePercent || '0')));
+      const detFill = document.getElementById('storageDetailedFill');
+      if (detFill) detFill.style.width = `${pct}%`;
+
+      const pctLabel = document.getElementById('storageProgressPctLabel');
+      if (pctLabel) pctLabel.textContent = `${data.usagePercent || '0'}%`;
+
+      const thOwner = document.getElementById('storageThOwner');
+      if (thOwner) thOwner.style.display = isOwner ? '' : 'none';
+
+      const filterUser = document.getElementById('storageFilterUser');
+      if (filterUser) {
+        filterUser.style.display = isOwner ? '' : 'none';
+        if (isOwner && data.videos) {
+          const uniqueUsers = {};
+          data.videos.forEach(v => { if (v.userName) uniqueUsers[v.userEmail || v.userName] = v.userName; });
+          const currentOptions = Array.from(filterUser.options).map(o => o.value);
+          Object.entries(uniqueUsers).forEach(([email, name]) => {
+            if (!currentOptions.includes(email)) {
+              const opt = document.createElement('option');
+              opt.value = email;
+              opt.textContent = name;
+              filterUser.appendChild(opt);
+            }
+          });
+        }
+      }
+
+      filterStorageVideos();
+    }
+
+    function filterStorageVideos() {
+      const data = window.__storageData;
+      if (!data) return;
+
+      const searchVal = (document.getElementById('storageSearchInput')?.value || '').toLowerCase().trim();
+      const statusVal = document.getElementById('storageFilterStatus')?.value || 'all';
+      const userVal = document.getElementById('storageFilterUser')?.value || 'all';
+      const sortVal = document.getElementById('storageSortSelect')?.value || 'size_desc';
+
+      let videos = (data.videos || []).filter(v => {
+        if (searchVal && !v.title.toLowerCase().includes(searchVal)) return false;
+        if (statusVal === 'active' && v.isTrash) return false;
+        if (statusVal === 'trash' && !v.isTrash) return false;
+        if (userVal !== 'all' && v.userEmail !== userVal && v.userName !== userVal) return false;
+        return true;
+      });
+
+      videos = videos.slice().sort((a, b) => {
+        if (sortVal === 'size_desc') return b.sizeBytes - a.sizeBytes;
+        if (sortVal === 'size_asc') return a.sizeBytes - b.sizeBytes;
+        if (sortVal === 'name_asc') return (a.title || '').localeCompare(b.title || '');
+        if (sortVal === 'date_desc') return new Date(b.createdAt) - new Date(a.createdAt);
+        return 0;
+      });
+
+      const tbody = document.getElementById('storageVideosTableBody');
+      const emptyState = document.getElementById('storageVideosEmptyState');
+      if (!tbody) return;
+
+      if (videos.length === 0) {
+        tbody.innerHTML = '';
+        if (emptyState) emptyState.style.display = 'block';
+        return;
+      }
+      if (emptyState) emptyState.style.display = 'none';
+
+      const isOwner = data.isOwner;
+      tbody.innerHTML = videos.map(v => {
+        const date = v.createdAt ? new Date(v.createdAt).toLocaleDateString('pt-BR') : '-';
+        const statusBadge = v.isTrash
+          ? `<span class="badge-status" style="background:rgba(239,68,68,0.12);color:#f87171;border:1px solid rgba(239,68,68,0.25);">Lixeira</span>`
+          : `<span class="badge-status" style="background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.25);">Ativo</span>`;
+
+        const ownerCell = isOwner
+          ? `<td><div style="font-size:12.5px;font-weight:600;color:var(--text-main);">${escapeHtml(v.userName || '-')}</div><div style="font-size:11px;color:var(--text-dim);">${escapeHtml(v.userEmail || '')}</div></td>`
+          : '';
+
+        const barWidth = Math.min(100, parseFloat(v.pctOfUsed) || 0);
+
+        return `<tr>
+          <td>
+            <div style="font-size:13px;font-weight:600;color:var(--text-main);max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(v.title)}">${escapeHtml(v.title)}</div>
+            <div style="font-size:11px;color:var(--text-dim);">${v.duration || '-'}</div>
+          </td>
+          ${ownerCell}
+          <td style="font-size:12.5px;color:var(--text-dim);">${escapeHtml(v.folderName || 'Raiz')}</td>
+          <td>${statusBadge}</td>
+          <td>
+            <div style="font-size:13px;font-weight:700;color:var(--text-main);">${v.sizeFormatted}</div>
+            <div style="margin-top:4px;height:4px;border-radius:2px;background:rgba(255,255,255,0.08);overflow:hidden;">
+              <div style="height:100%;border-radius:2px;background:var(--color-primary);width:${barWidth}%;transition:width 0.3s;"></div>
+            </div>
+          </td>
+          <td style="font-size:12.5px;color:var(--text-dim);">${v.pctOfTotal}%</td>
+          <td style="font-size:12px;color:var(--text-dim);">${date}</td>
+          <td style="text-align:right;">
+            <button class="btn-clean-secondary" style="font-size:12px;padding:5px 10px;" onclick="openEditor('${v.id}')">Editar</button>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    function sortStorageVideos(val) {
+      const sel = document.getElementById('storageSortSelect');
+      if (sel) sel.value = val;
+      filterStorageVideos();
+    }
+
+    function toggleSortStorage(field) {
+      const sel = document.getElementById('storageSortSelect');
+      if (!sel) return;
+      const cur = sel.value;
+      if (field === 'size') {
+        sel.value = cur === 'size_desc' ? 'size_asc' : 'size_desc';
+      }
+      filterStorageVideos();
     }
 
     function applyOverviewUI(aData) {
@@ -7450,19 +7747,33 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
 
     function createOnboardingGooglePicker(cfg, token) {
       try {
-        const view = new google.picker.DocsView(google.picker.ViewId.DOCS_VIDEOS);
-        view.setMimeTypes('video/mp4,video/webm,video/quicktime,video/x-matroska,video/avi');
+        const videoView = new google.picker.DocsView(google.picker.ViewId.DOCS_VIDEOS)
+          .setMimeTypes('video/mp4,video/webm,video/quicktime,video/x-matroska,video/avi,video/mov')
+          .setMode(google.picker.DocsViewMode.GRID)
+          .setIncludeFolders(true);
+
+        const driveView = new google.picker.DocsView(google.picker.ViewId.DOCS)
+          .setMimeTypes('video/mp4,video/webm,video/quicktime,video/x-matroska,video/avi,video/mov')
+          .setMode(google.picker.DocsViewMode.GRID)
+          .setIncludeFolders(true)
+          .setLabel('Meu Drive');
+
+        const pWidth = Math.min(window.innerWidth - 32, 1020);
+        const pHeight = Math.min(window.innerHeight - 50, 680);
 
         const picker = new google.picker.PickerBuilder()
-          .enableFeature(google.picker.Feature.NAV_HIDDEN)
+          .enableFeature(google.picker.Feature.SUPPORT_DRIVES)
+          .enableFeature(google.picker.Feature.SUPPORT_TEAM_DRIVES)
           .setAppId(cfg.appId)
           .setOAuthToken(token)
-          .addView(view)
+          .addView(videoView)
+          .addView(driveView)
           .addView(new google.picker.DocsUploadView())
           .setDeveloperKey(cfg.apiKey)
           .setCallback(onbGooglePickerCallback)
           .setLocale('pt-BR')
-          .setTitle('Selecione o vídeo do Google Drive')
+          .setTitle('Importar Vídeo do Google Drive')
+          .setSize(pWidth, pHeight)
           .build();
 
         picker.setVisible(true);
@@ -8594,19 +8905,33 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
 
     function createGooglePicker(cfg, token) {
       try {
-        const view = new google.picker.DocsView(google.picker.ViewId.DOCS_VIDEOS);
-        view.setMimeTypes('video/mp4,video/webm,video/quicktime,video/x-matroska,video/avi');
+        const videoView = new google.picker.DocsView(google.picker.ViewId.DOCS_VIDEOS)
+          .setMimeTypes('video/mp4,video/webm,video/quicktime,video/x-matroska,video/avi,video/mov')
+          .setMode(google.picker.DocsViewMode.GRID)
+          .setIncludeFolders(true);
+
+        const driveView = new google.picker.DocsView(google.picker.ViewId.DOCS)
+          .setMimeTypes('video/mp4,video/webm,video/quicktime,video/x-matroska,video/avi,video/mov')
+          .setMode(google.picker.DocsViewMode.GRID)
+          .setIncludeFolders(true)
+          .setLabel('Meu Drive');
+
+        const pWidth = Math.min(window.innerWidth - 32, 1020);
+        const pHeight = Math.min(window.innerHeight - 50, 680);
 
         const picker = new google.picker.PickerBuilder()
-          .enableFeature(google.picker.Feature.NAV_HIDDEN)
+          .enableFeature(google.picker.Feature.SUPPORT_DRIVES)
+          .enableFeature(google.picker.Feature.SUPPORT_TEAM_DRIVES)
           .setAppId(cfg.appId)
           .setOAuthToken(token)
-          .addView(view)
+          .addView(videoView)
+          .addView(driveView)
           .addView(new google.picker.DocsUploadView())
           .setDeveloperKey(cfg.apiKey)
           .setCallback(onGooglePickerCallback)
           .setLocale('pt-BR')
-          .setTitle('Selecione o vídeo do Google Drive')
+          .setTitle('Importar Vídeo do Google Drive')
+          .setSize(pWidth, pHeight)
           .build();
 
         picker.setVisible(true);

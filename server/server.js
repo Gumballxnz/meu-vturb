@@ -2209,6 +2209,96 @@ app.get('/api/security/check-domain', (req, res) => {
   return res.json({ allowed: false, message: 'Domínio não autorizado. Este vídeo só pode ser executado nos domínios permitidos pelo proprietário.' });
 });
 
+app.get('/api/storage/details', authMiddleware, (req, res) => {
+  const isOwner = req.user.role === 'owner';
+
+  try {
+    const localVideos = isOwner
+      ? db.prepare("SELECT id, file_path, file_size FROM videos WHERE source_type = 'local'").all()
+      : db.prepare("SELECT id, file_path, file_size FROM videos WHERE user_id = ? AND source_type = 'local'").all(req.user.id);
+    for (const lv of localVideos) {
+      if (lv.file_path && fs.existsSync(lv.file_path)) {
+        try {
+          const currentSize = fs.statSync(lv.file_path).size;
+          if (lv.file_size !== currentSize) {
+            db.prepare('UPDATE videos SET file_size = ? WHERE id = ?').run(currentSize, lv.id);
+            lv.file_size = currentSize;
+          }
+        } catch (e) {}
+      }
+    }
+  } catch (e) {}
+
+  let rawVideos = [];
+  if (isOwner) {
+    rawVideos = db.prepare(`
+      SELECT v.id, v.title, v.duration, v.file_size, v.source_type, v.created_at, v.deleted_at,
+             v.user_id, u.name as user_name, u.email as user_email, u.role as user_role,
+             f.name as folder_name
+      FROM videos v
+      LEFT JOIN users u ON u.id = v.user_id
+      LEFT JOIN folders f ON f.id = v.folder_id
+      WHERE v.source_type = 'local' OR v.file_size > 0
+      ORDER BY v.file_size DESC, v.created_at DESC
+    `).all();
+  } else {
+    rawVideos = db.prepare(`
+      SELECT v.id, v.title, v.duration, v.file_size, v.source_type, v.created_at, v.deleted_at,
+             v.user_id,
+             f.name as folder_name
+      FROM videos v
+      LEFT JOIN folders f ON f.id = v.folder_id
+      WHERE v.user_id = ? AND (v.source_type = 'local' OR v.file_size > 0)
+      ORDER BY v.file_size DESC, v.created_at DESC
+    `).all(req.user.id);
+  }
+
+  const totalLimitBytes = isOwner ? SERVER_STORAGE_LIMIT_BYTES : MEMBER_STORAGE_LIMIT_BYTES;
+  const usedBytes = isOwner ? getUsedStorageBytes() : getUserStorageBytes(req.user.id);
+  const freeBytes = Math.max(0, totalLimitBytes - usedBytes);
+  const percent = totalLimitBytes > 0 ? (usedBytes / totalLimitBytes) * 100 : 0;
+
+  const formattedVideos = rawVideos.map(v => {
+    const sizeBytes = Number(v.file_size || 0);
+    const pctOfTotal = totalLimitBytes > 0 ? ((sizeBytes / totalLimitBytes) * 100).toFixed(2) : '0.00';
+    const pctOfUsed = usedBytes > 0 ? ((sizeBytes / usedBytes) * 100).toFixed(1) : '0.0';
+    return {
+      id: v.id,
+      title: v.title,
+      duration: v.duration || '00:00',
+      sizeBytes,
+      sizeFormatted: formatStorage(sizeBytes),
+      pctOfTotal,
+      pctOfUsed,
+      sourceType: v.source_type || 'local',
+      folderName: v.folder_name || 'Raiz',
+      isTrash: !!v.deleted_at,
+      createdAt: v.created_at,
+      userName: v.user_name || null,
+      userEmail: v.user_email || null,
+      userRole: v.user_role || null
+    };
+  });
+
+  res.json({
+    scope: isOwner ? 'global' : 'individual',
+    isOwner,
+    totalBytes: totalLimitBytes,
+    totalFormatted: isOwner ? '30 GB' : '3 GB',
+    usedBytes,
+    formattedUsage: formatStorage(usedBytes),
+    freeBytes,
+    formattedFree: formatStorage(freeBytes),
+    usagePercent: percent < 0.1 && usedBytes > 0 ? '0.1' : percent.toFixed(1),
+    videosCount: rawVideos.length,
+    activeVideosCount: rawVideos.filter(v => !v.deleted_at).length,
+    trashVideosCount: rawVideos.filter(v => !!v.deleted_at).length,
+    averageSizeBytes: rawVideos.length > 0 ? Math.round(usedBytes / rawVideos.length) : 0,
+    averageSizeFormatted: rawVideos.length > 0 ? formatStorage(Math.round(usedBytes / rawVideos.length)) : '0 MB',
+    videos: formattedVideos
+  });
+});
+
 app.get('/api/keys', authMiddleware, (req, res) => {
   const key = db.prepare(`
     SELECT id, name, key_prefix, token, created_at, last_used_at
