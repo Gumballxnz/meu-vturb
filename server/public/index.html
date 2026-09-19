@@ -6392,8 +6392,8 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       toggleAuthMode(mode);
     }
 
-    let pendingVerifyEmail = '';
-    let pendingResetEmail = '';
+    let pendingVerifyEmail = sessionStorage.getItem('cloudvturb_pending_verify_email') || '';
+    let pendingResetEmail = sessionStorage.getItem('cloudvturb_pending_reset_email') || '';
     const resendCooldownTimers = { register: null, reset_password: null };
 
     let pending2FATempToken = '';
@@ -6428,6 +6428,11 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         if (verifyRegForm) verifyRegForm.style.display = 'block';
         if (cardTitle) cardTitle.textContent = 'Verificar Cadastro';
         if (cardSubtitle) cardSubtitle.textContent = 'Digite o código de 8 dígitos enviado por e-mail';
+        if (window.location.pathname !== '/verificar-cadastro') {
+          history.pushState(null, '', '/verificar-cadastro');
+        }
+        const dispEl = document.getElementById('verifyRegisterEmailDisplay');
+        if (dispEl && pendingVerifyEmail) dispEl.textContent = pendingVerifyEmail;
         const codeInput = document.getElementById('regVerifyCode');
         if (codeInput) setTimeout(() => codeInput.focus(), 100);
       } else if (mode === 'forgot') {
@@ -6676,6 +6681,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           body: JSON.stringify({ name, email, password })
         });
         pendingVerifyEmail = email;
+        try { sessionStorage.setItem('cloudvturb_pending_verify_email', email); } catch (e) {}
         const displayEl = document.getElementById('verifyRegisterEmailDisplay');
         if (displayEl) displayEl.textContent = email;
         const codeInput = document.getElementById('regVerifyCode');
@@ -6715,12 +6721,16 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           body: JSON.stringify({ email: pendingVerifyEmail, code })
         });
         if (res.pendingApproval) {
+          try { sessionStorage.removeItem('cloudvturb_pending_verify_email'); } catch (e) {}
+          pendingVerifyEmail = '';
           alert.style.display = 'block';
           alert.style.background = 'var(--warning-light)';
           alert.style.color = '#fbbf24';
           alert.textContent = res.message;
           setTimeout(() => toggleAuthMode('login'), 3500);
         } else {
+          try { sessionStorage.removeItem('cloudvturb_pending_verify_email'); } catch (e) {}
+          pendingVerifyEmail = '';
           token = res.token;
           localStorage.setItem('cloudvturb_token', token);
           currentUser = res.user;
@@ -6731,7 +6741,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           const curP = window.location.pathname.replace(/\/$/, '') || '/';
           if (currentUser && currentUser.onboarding_completed === false) {
             startOnboarding();
-          } else if (curP === '/login' || curP === '/cadastro' || curP === '/') {
+          } else if (curP === '/login' || curP === '/cadastro' || curP === '/verificar-cadastro' || curP === '/') {
             navigateTo('overview');
           } else {
             routeByUrl();
@@ -6763,6 +6773,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           body: JSON.stringify({ email })
         });
         pendingResetEmail = email;
+        try { sessionStorage.setItem('cloudvturb_pending_reset_email', email); } catch (e) {}
         const displayEl = document.getElementById('resetPassEmailDisplay');
         if (displayEl) displayEl.textContent = email;
         const codeInput = document.getElementById('resetPassCode');
@@ -6804,6 +6815,8 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           method: 'POST',
           body: JSON.stringify({ email: pendingResetEmail, code, newPassword })
         });
+        try { sessionStorage.removeItem('cloudvturb_pending_reset_email'); } catch (e) {}
+        pendingResetEmail = '';
         toggleAuthMode('login');
         const loginAlert = document.getElementById('authAlert');
         if (loginAlert) {
@@ -6912,9 +6925,13 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
     function routeByUrl() {
       const p = window.location.pathname.replace(/\/$/, '') || '/';
 
-      if (p === '/login' || p === '/cadastro') {
+      if (p === '/login' || p === '/cadastro' || p === '/verificar-cadastro') {
         document.documentElement.classList.add('auth-pending');
-        showAuth(p === '/cadastro' ? 'register' : 'login');
+        if (p === '/verificar-cadastro') {
+          showAuth('verify_register');
+        } else {
+          showAuth(p === '/cadastro' ? 'register' : 'login');
+        }
         return;
       }
 
@@ -7604,7 +7621,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
               </div>
             </div>
           </td>
-          <td>${v.duration || '10:00'}</td>
+          <td>${v.duration || '-'}</td>
           <td>${(v.plays || 0).toLocaleString()}</td>
           <td>${v.completionRate || '0.0'}%</td>
           <td>${(v.ctaClicks || 0).toLocaleString()}</td>
@@ -8040,7 +8057,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           title,
           videoUrl,
           sourceType: 'remote',
-          duration: '10:00'
+          duration: null
         };
         setOnbStep(2);
         return;
@@ -8100,7 +8117,8 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           videoUrl: uploadRes.videoUrl,
           sourceType: 'local',
           filePath: uploadRes.filePath,
-          fileSize: uploadRes.fileSize || 0
+          fileSize: uploadRes.fileSize || 0,
+          duration: uploadRes.duration || null
         };
         setOnbStep(2);
       } catch (err) {
@@ -8149,7 +8167,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
               sourceType: tempOnboardingVideo.sourceType,
               filePath: tempOnboardingVideo.filePath,
               fileSize: tempOnboardingVideo.fileSize,
-              duration: '10:00',
+              duration: tempOnboardingVideo.duration || null,
               folderId: null,
               settings: {
                 barColor: '#2563EB',
@@ -8234,7 +8252,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         <div class="video-thumb-stage">
           <video src="${v.video_url}#t=0.5" preload="metadata" muted playsinline></video>
           <div class="thumb-badge-source">${isLocal ? 'Hospedado' : 'Cloudflare R2'}</div>
-          <div class="thumb-badge-duration">${v.duration || '05:00'}</div>
+          ${v.duration ? `<div class="thumb-badge-duration">${escapeHtml(v.duration)}</div>` : ''}
           <div class="thumb-play-hover" onclick="openEditor('${v.id}')">
             <div class="play-circle-btn">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
@@ -8410,11 +8428,17 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       const inputTitle = document.getElementById('edTitle');
       if (inputTitle) inputTitle.value = v.title || '';
 
-      const durSec = Math.floor(v.duration || 0);
-      const durM = Math.floor(durSec / 60).toString().padStart(2, '0');
-      const durS = (durSec % 60).toString().padStart(2, '0');
+      let formattedDuration = '--:--';
+      if (typeof v.duration === 'string' && v.duration.includes(':')) {
+        formattedDuration = v.duration;
+      } else if (!isNaN(parseFloat(v.duration)) && parseFloat(v.duration) > 0) {
+        const durSec = Math.floor(parseFloat(v.duration));
+        const durM = Math.floor(durSec / 60).toString().padStart(2, '0');
+        const durS = (durSec % 60).toString().padStart(2, '0');
+        formattedDuration = `${durM}:${durS}`;
+      }
       const durEl = document.getElementById('vturbEditorDuration');
-      if (durEl) durEl.textContent = `${durM}:${durS}`;
+      if (durEl) durEl.textContent = formattedDuration;
 
       const s = v.settings || {};
 
@@ -9203,6 +9227,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       let sourceType = 'remote';
       let filePath = null;
       let fileSize = 0;
+      let videoDuration = null;
 
       if (fileInput && fileInput.files && fileInput.files.length > 0) {
         sourceType = 'local';
@@ -9253,6 +9278,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           videoUrl = uploadRes.videoUrl;
           filePath = uploadRes.filePath;
           fileSize = uploadRes.fileSize || 0;
+          videoDuration = uploadRes.duration || null;
         } catch (err) {
           showToast(err.message, true);
           setButtonLoading(btn, false);
@@ -9276,7 +9302,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
             sourceType,
             filePath,
             fileSize,
-            duration: '10:00',
+            duration: videoDuration,
             folderId: targetFolderId,
             settings: {
               barColor: '#2563EB',
