@@ -28,3 +28,22 @@ videos/
 .DS_Store
 Thumbs.db
 *.log
+
+# Blindagem de Segredos e Chaves SSH (Clean Code)
+.env.local
+.env.*.local
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+*.pfx
+*.p12
+*serviceAccount*.json
+*credentials*.json
+temp_*
+tmp_*
+*scratch*
+test_temp*
+teste_temp*
+*.dump.sql
+vps_oracle.key

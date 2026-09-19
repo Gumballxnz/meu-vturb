@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>CloudVTurb High-Conversion Player</title>
   <style>
-    * {
+* {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
@@ -36,7 +36,7 @@
       display: block;
       pointer-events: none;
     }
-    /* Overlay invisível de proteção contra clique com botão direito */
+
     .anti-copy-shield {
       position: absolute;
       top: 0;
@@ -47,7 +47,7 @@
       cursor: pointer;
       background: transparent;
     }
-    /* Smart Autoplay Overlay */
+
     .smart-autoplay-overlay {
       position: absolute;
       top: 0;
@@ -120,7 +120,6 @@
       }
     }
 
-    /* Barra de Progresso Customizada */
     .progress-bar-container {
       position: absolute;
       bottom: 0;
@@ -150,7 +149,6 @@
       background: rgba(255, 255, 255, 0.4);
     }
 
-    /* Pop-up Continuar de Onde Parou */
     .resume-modal {
       position: absolute;
       top: 20px;
@@ -204,7 +202,6 @@
       color: #ffffff;
     }
 
-    /* Botão CTA Dinâmico (Pitch Delay) */
     .cta-container {
       position: absolute;
       bottom: 24px;
@@ -276,7 +273,6 @@
       }
     }
 
-    /* Ícone de Pause/Play sutil ao clicar */
     .play-pause-indicator {
       position: absolute;
       top: 50%;
@@ -301,24 +297,21 @@
       visibility: visible;
       transform: translate(-50%, -50%) scale(1);
     }
-  </style>
+</style>
 </head>
 <body>
   <div class="player-wrapper" id="playerWrapper">
-    <!-- Elemento de Vídeo -->
+
     <video id="videoElement" playsinline webkit-playsinline preload="auto" disablepictureinpicture controlslist="nodownload nofullscreen noremoteplayback"></video>
 
-    <!-- Overlay Anti-cópia e Interação -->
     <div class="anti-copy-shield" id="antiCopyShield"></div>
 
-    <!-- Indicador de Play/Pause rápido -->
     <div class="play-pause-indicator" id="playPauseIndicator">
       <svg id="playPauseIcon" width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
         <polygon points="5 3 19 12 5 21 5 3"></polygon>
       </svg>
     </div>
 
-    <!-- Smart Autoplay Overlay -->
     <div class="smart-autoplay-overlay" id="smartOverlay">
       <div class="pulse-badge" id="pulseBadge">
         <div class="pulse-icon-box" id="pulseIcon">
@@ -330,19 +323,16 @@
       </div>
     </div>
 
-    <!-- Modal Continuar de Onde Parou -->
     <div class="resume-modal" id="resumeModal">
       <span>Continuar de onde você parou? (<span id="resumeTimeLabel">00:00</span>)</span>
       <button class="resume-btn-confirm" id="btnResumeYes">Sim, continuar</button>
       <button class="resume-btn-dismiss" id="btnResumeNo">Recomeçar</button>
     </div>
 
-    <!-- Barra de Progresso Customizada -->
     <div class="progress-bar-container" id="progressBarContainer">
       <div class="progress-bar-fill" id="progressBarFill"></div>
     </div>
 
-    <!-- Container CTA Dinâmico -->
     <div class="cta-container" id="ctaContainer">
       <a href="#" target="_blank" rel="noopener noreferrer" class="cta-button" id="ctaBtn">
         <span id="ctaBtnText">QUERO GARANTIR MINHA VAGA</span>
@@ -357,20 +347,19 @@
   </div>
 
   <script>
-    (function () {
+(function () {
       'use strict';
 
-      // 1. Parsing dos parâmetros da URL
       const params = new URLSearchParams(window.location.search);
       const videoSrc = params.get('v') || '';
       const barColor = params.get('bar_color') || '#2563eb';
       const borderRadius = params.get('border_radius') || '0px';
-      const smartAutoplay = params.get('smart_autoplay') !== '0'; // Padrão ativo
+      const smartAutoplay = params.get('smart_autoplay') !== '0';
       const overlayCustomText = params.get('autoplay_text');
       const fakeProgress = params.get('fake_progress') === '1';
-      const blockSeek = params.get('block_seek') !== '0'; // Padrão bloqueado
+      const blockSeek = params.get('block_seek') !== '0';
       const resumeEnabled = params.get('resume') === '1';
-      const ctaTime = parseFloat(params.get('cta_time')) || 0; // segundos
+      const ctaTime = parseFloat(params.get('cta_time')) || 0;
       const ctaUrl = params.get('cta_url') || '';
       const ctaText = params.get('cta_text') || 'QUERO GARANTIR MINHA VAGA AGORA';
       const ctaColor = params.get('cta_color') || '#10b981';
@@ -378,7 +367,6 @@
       const pixelsEnabled = params.get('pixels') === '1';
       const vidId = params.get('id') || btoa(videoSrc).substring(0, 16);
 
-      // Elementos do DOM
       const playerWrapper = document.getElementById('playerWrapper');
       const video = document.getElementById('videoElement');
       const antiCopyShield = document.getElementById('antiCopyShield');
@@ -397,7 +385,6 @@
       const playPauseIndicator = document.getElementById('playPauseIndicator');
       const playPauseIcon = document.getElementById('playPauseIcon');
 
-      // 2. Aplicação de Estilos
       if (borderRadius) {
         playerWrapper.style.borderRadius = borderRadius.includes('px') ? borderRadius : borderRadius + 'px';
       }
@@ -422,24 +409,22 @@
         ctaBtn.href = ctaUrl;
       }
 
-      // 3. Proteção básica anti-cópia
       document.addEventListener('contextmenu', function (e) {
         e.preventDefault();
         return false;
       });
       document.addEventListener('keydown', function (e) {
-        // Bloquear Ctrl+S, Ctrl+U, F12
+
         if ((e.ctrlKey && (e.key === 's' || e.key === 'u')) || e.key === 'F12') {
           e.preventDefault();
           return false;
         }
       });
 
-      // 4. Carregamento do Vídeo (Nativo MP4 ou HLS via HLS.js sob demanda)
       if (videoSrc) {
         const isHls = videoSrc.includes('.m3u8');
         if (isHls) {
-          // Carregar script HLS.js dinamicamente se ainda não existir
+
           const script = document.createElement('script');
           script.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest';
           script.onload = function () {
@@ -451,7 +436,7 @@
                 startPlayback();
               });
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-              // Safari iOS nativo
+
               video.src = videoSrc;
               startPlayback();
             }
@@ -463,8 +448,19 @@
         }
       }
 
-      // 5. Smart Autoplay e Início
       let hasUserUnmuted = false;
+
+      let playRegistered = false;
+      function registerPlay() {
+        if (playRegistered) return;
+        playRegistered = true;
+        if (vidId) {
+          const apiOrigin = window.location.origin;
+          fetch(apiOrigin + '/api/videos/' + vidId + '/play', { method: 'POST' }).catch(function () {});
+        }
+      }
+
+      video.addEventListener('play', registerPlay);
 
       function startPlayback() {
         if (smartAutoplay) {
@@ -473,6 +469,7 @@
           if (playPromise !== undefined) {
             playPromise.then(function () {
               // Iniciou mudo com sucesso
+              registerPlay();
             }).catch(function (err) {
               console.log('Autoplay bloqueado pelo navegador, aguardando clique:', err);
             });
@@ -480,10 +477,10 @@
         } else {
           smartOverlay.classList.add('hidden');
           video.play().catch(function () {});
+          registerPlay();
         }
       }
 
-      // Ao clicar no Smart Autoplay Overlay:
       smartOverlay.addEventListener('click', function () {
         unmuteAndRestart();
       });
@@ -492,14 +489,13 @@
         hasUserUnmuted = true;
         smartOverlay.classList.add('hidden');
         video.muted = false;
-        // Reiniciar primeiros segundos para o lead não perder o gancho
+
         if (video.currentTime > 2) {
           video.currentTime = 0;
         }
         video.play().catch(function () {});
       }
 
-      // Toggle Play/Pause no clique do shield
       let indicatorTimeout;
       antiCopyShield.addEventListener('click', function () {
         if (!hasUserUnmuted && smartAutoplay && !smartOverlay.classList.contains('hidden')) {
@@ -528,7 +524,6 @@
         }, 500);
       }
 
-      // 6. Atualização de Progresso (Normal ou Falso / Inteligente)
       const storageKey = 'cloudvturb_pos_' + vidId;
       const pixelFired = { p25: false, p50: false, p75: false, p90: false, pitch: false };
 
@@ -537,23 +532,20 @@
         const dur = video.duration || 1;
         let percentage = (cur / dur) * 100;
 
-        // Progresso Inteligente / Falso (avanço mais acelerado nos primeiros minutos para reter atenção)
         if (fakeProgress && percentage > 0 && percentage < 95) {
-          // Função de aceleração logarítmica sutil: sqrt(progresso) * fator
+
           const factor = Math.min(1.35, 1 + (1 - percentage / 100) * 0.35);
           percentage = Math.min(percentage * factor, 98);
         }
 
         progressBarFill.style.width = Math.min(100, Math.max(0, percentage)) + '%';
 
-        // Salvar progresso no localStorage (a cada 3s)
         if (resumeEnabled && cur > 5 && cur < dur - 5) {
           try {
             localStorage.setItem(storageKey, Math.floor(cur));
           } catch (e) {}
         }
 
-        // Exibir CTA no segundo exato
         if (ctaTime > 0 && cur >= ctaTime) {
           if (!ctaContainer.classList.contains('visible')) {
             ctaContainer.classList.add('visible');
@@ -564,7 +556,6 @@
           }
         }
 
-        // Rastreamento de Pixels por %
         if (pixelsEnabled && dur > 1) {
           const rawPercent = (cur / dur) * 100;
           if (rawPercent >= 25 && !pixelFired.p25) {
@@ -587,7 +578,7 @@
       });
 
       function sendTrackingEvent(eventName, payload) {
-        // Envia mensagem via postMessage para a página mãe que encapsula o iframe
+
         if (window.parent) {
           window.parent.postMessage({
             source: 'cloudvturb_player',
@@ -595,7 +586,7 @@
             data: payload
           }, '*');
         }
-        // Se houver fbq ou gtag na janela pai ou global
+
         try {
           if (typeof window.fbq === 'function') {
             window.fbq('trackCustom', eventName, payload);
@@ -603,7 +594,6 @@
         } catch (e) {}
       }
 
-      // 7. Continuar de Onde Parou (Resume)
       if (resumeEnabled) {
         video.addEventListener('loadedmetadata', function () {
           try {
@@ -627,7 +617,6 @@
                 resumeModal.classList.remove('active');
               };
 
-              // Ocultar modal automaticamente após 10s se não clicado
               setTimeout(function () {
                 resumeModal.classList.remove('active');
               }, 10000);
@@ -636,7 +625,6 @@
         });
       }
 
-      // Limpar localStorage ao terminar vídeo
       video.addEventListener('ended', function () {
         try {
           localStorage.removeItem(storageKey);
@@ -644,6 +632,6 @@
       });
 
     })();
-  </script>
+</script>
 </body>
 </html>

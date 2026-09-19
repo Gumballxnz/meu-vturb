@@ -3,6 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const { execSync } = require('child_process');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
@@ -37,8 +38,8 @@ db.exec(`
     name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
-    role TEXT DEFAULT 'member',     -- 'owner' ou 'member'
-    status TEXT DEFAULT 'pending',  -- 'approved', 'pending', 'blocked'
+    role TEXT DEFAULT 'member',
+    status TEXT DEFAULT 'pending',
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
@@ -46,7 +47,7 @@ db.exec(`
     id TEXT PRIMARY KEY,
     user_id INTEGER,
     title TEXT NOT NULL,
-    source_type TEXT DEFAULT 'remote', -- 'local' ou 'remote'
+    source_type TEXT DEFAULT 'remote',
     file_path TEXT,
     video_url TEXT NOT NULL,
     duration TEXT DEFAULT '05:00',
@@ -58,7 +59,6 @@ db.exec(`
   );
 `);
 
-// Configuração padrão de aprovação
 const getSetting = (key, defaultVal) => {
   const row = db.prepare('SELECT value FROM system_settings WHERE key = ?').get(key);
   return row ? row.value : defaultVal;
@@ -69,7 +69,7 @@ const setSetting = (key, value) => {
 };
 
 if (!getSetting('require_approval', null)) {
-  setSetting('require_approval', '1'); // 1 = Novos cadastros necessitam de aprovação do Owner
+  setSetting('require_approval', '1');
 }
 
 // 2. Middlewares
@@ -103,12 +103,8 @@ function authMiddleware(req, res, next) {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     const user = db.prepare('SELECT id, name, email, role, status FROM users WHERE id = ?').get(decoded.id);
-    if (!user) {
-      return res.status(401).json({ error: 'Usuário não encontrado.' });
-    }
-    if (user.status !== 'approved') {
-      return res.status(403).json({ error: 'Acesso bloqueado ou pendente de aprovação.' });
-    }
+    if (!user) return res.status(401).json({ error: 'Usuário não encontrado.' });
+    if (user.status !== 'approved') return res.status(403).json({ error: 'Acesso bloqueado ou pendente de aprovação.' });
     req.user = user;
     next();
   } catch (err) {
@@ -116,16 +112,15 @@ function authMiddleware(req, res, next) {
   }
 }
 
-// Middleware Apenas Owner
 function ownerMiddleware(req, res, next) {
   if (req.user && req.user.role === 'owner') {
     next();
   } else {
-    res.status(403).json({ error: 'Acesso restrito ao Owner/Administrador.' });
+    res.status(403).json({ error: 'Acesso restrito ao Owner.' });
   }
 }
 
-// 3. Upload de Arquivos com Multer
+// 3. Upload de Arquivos
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, VIDEOS_DIR);
@@ -139,30 +134,24 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 2 * 1024 * 1024 * 1024 } // 2GB por arquivo
+  limits: { fileSize: 2 * 1024 * 1024 * 1024 }
 });
 
 // -------------------------------------------------------------
 // ROTAS DE AUTENTICAÇÃO
 // -------------------------------------------------------------
-
-// Registro de Usuário
 app.post('/api/auth/register', (req, res) => {
   const { name, email, password } = req.body;
-  if (!name || !email || !password) {
-    return res.status(400).json({ error: 'Preencha todos os campos obrigatórios.' });
-  }
+  if (!name || !email || !password) return res.status(400).json({ error: 'Preencha todos os campos.' });
 
   const cleanEmail = email.trim().toLowerCase();
   const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(cleanEmail);
-  if (existing) {
-    return res.status(400).json({ error: 'Este e-mail já está cadastrado.' });
-  }
+  if (existing) return res.status(400).json({ error: 'Este e-mail já está cadastrado.' });
 
   const userCount = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
   const passwordHash = bcrypt.hashSync(password, 10);
 
-  // Se for o primeiro usuário: é automaticamente OWNER e APROVADO!
+  // Primeiro usuário é OWNER
   if (userCount === 0) {
     const info = db.prepare(`
       INSERT INTO users (name, email, password_hash, role, status)
@@ -172,13 +161,12 @@ app.post('/api/auth/register', (req, res) => {
     const token = jwt.sign({ id: info.lastInsertRowid, email: cleanEmail, role: 'owner' }, JWT_SECRET, { expiresIn: '30d' });
     return res.json({
       success: true,
-      message: 'Parabéns! Sua conta de Owner foi criada com sucesso.',
+      message: 'Conta de Owner criada com sucesso!',
       token,
       user: { id: info.lastInsertRowid, name: name.trim(), email: cleanEmail, role: 'owner', status: 'approved' }
     });
   }
 
-  // Usuários subsequentes: respeita require_approval
   const requireApproval = getSetting('require_approval', '1') === '1';
   const initialStatus = requireApproval ? 'pending' : 'approved';
 
@@ -191,48 +179,34 @@ app.post('/api/auth/register', (req, res) => {
     return res.json({
       success: true,
       pendingApproval: true,
-      message: 'Cadastro realizado com sucesso! Sua conta foi enviada para aprovação do Administrador/Owner.'
+      message: 'Cadastro realizado com sucesso! Aguarde a aprovação do Administrador/Owner.'
     });
   } else {
     const token = jwt.sign({ id: info.lastInsertRowid, email: cleanEmail, role: 'member' }, JWT_SECRET, { expiresIn: '30d' });
     return res.json({
       success: true,
       pendingApproval: false,
-      message: 'Conta criada com sucesso!',
       token,
       user: { id: info.lastInsertRowid, name: name.trim(), email: cleanEmail, role: 'member', status: 'approved' }
     });
   }
 });
 
-// Login
 app.post('/api/auth/login', (req, res) => {
   const { email, password } = req.body;
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Informe e-mail e senha.' });
-  }
+  if (!email || !password) return res.status(400).json({ error: 'Informe e-mail e senha.' });
 
   const cleanEmail = email.trim().toLowerCase();
   const user = db.prepare('SELECT * FROM users WHERE email = ?').get(cleanEmail);
-  if (!user) {
-    return res.status(401).json({ error: 'E-mail ou senha incorretos.' });
-  }
-
-  const passwordValid = bcrypt.compareSync(password, user.password_hash);
-  if (!passwordValid) {
+  if (!user || !bcrypt.compareSync(password, user.password_hash)) {
     return res.status(401).json({ error: 'E-mail ou senha incorretos.' });
   }
 
   if (user.status === 'pending') {
-    return res.status(403).json({
-      error: 'Sua conta está aguardando aprovação do Owner/Administrador para ser liberada.'
-    });
+    return res.status(403).json({ error: 'Sua conta está aguardando aprovação do Owner para ser liberada.' });
   }
-
   if (user.status === 'blocked') {
-    return res.status(403).json({
-      error: 'Sua conta foi suspensa ou bloqueada pelo Administrador.'
-    });
+    return res.status(403).json({ error: 'Sua conta foi bloqueada pelo Administrador.' });
   }
 
   const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
@@ -243,22 +217,18 @@ app.post('/api/auth/login', (req, res) => {
   });
 });
 
-// Me (Verifica sessão)
 app.get('/api/auth/me', authMiddleware, (req, res) => {
   res.json({ user: req.user });
 });
 
 // -------------------------------------------------------------
-// ROTAS ADMINISTRATIVAS (APENAS OWNER)
+// ROTAS DO OWNER
 // -------------------------------------------------------------
-
-// Listar Usuários
 app.get('/api/admin/users', authMiddleware, ownerMiddleware, (req, res) => {
   const users = db.prepare('SELECT id, name, email, role, status, created_at FROM users ORDER BY created_at DESC').all();
   res.json({ users });
 });
 
-// Ações de Usuário (Aprovar, Bloquear, Promover, Excluir)
 app.post('/api/admin/users/:id/action', authMiddleware, ownerMiddleware, (req, res) => {
   const targetId = parseInt(req.params.id);
   const { action } = req.body;
@@ -275,27 +245,34 @@ app.post('/api/admin/users/:id/action', authMiddleware, ownerMiddleware, (req, r
     db.prepare("UPDATE users SET role = 'owner', status = 'approved' WHERE id = ?").run(targetId);
   } else if (action === 'delete') {
     db.prepare('DELETE FROM users WHERE id = ?').run(targetId);
-  } else {
-    return res.status(400).json({ error: 'Ação inválida.' });
   }
 
-  res.json({ success: true, message: 'Usuário atualizado com sucesso.' });
+  res.json({ success: true });
 });
 
-// Configurações do Sistema & Armazenamento
 app.get('/api/admin/settings', authMiddleware, (req, res) => {
   const requireApproval = getSetting('require_approval', '1') === '1';
   const usedBytes = getUsedStorageBytes();
   const totalBytes = MAX_STORAGE_BYTES;
+
+  const usedMB = (usedBytes / (1024 * 1024)).toFixed(1);
+  const usedGB = (usedBytes / (1024 * 1024 * 1024)).toFixed(2);
+  const formattedUsage = usedBytes >= (1024 * 1024 * 1024) 
+    ? `${usedGB} GB` 
+    : `${usedMB} MB`;
+
+  const percent = ((usedBytes / totalBytes) * 100);
 
   res.json({
     requireApproval,
     storage: {
       usedBytes,
       totalBytes,
-      usedGB: (usedBytes / (1024 * 1024 * 1024)).toFixed(2),
-      totalGB: (totalBytes / (1024 * 1024 * 1024)).toFixed(0),
-      usagePercent: ((usedBytes / totalBytes) * 100).toFixed(1)
+      usedMB,
+      usedGB,
+      formattedUsage,
+      totalGB: '30',
+      usagePercent: percent < 0.1 && usedBytes > 0 ? '0.1' : percent.toFixed(1)
     }
   });
 });
@@ -305,14 +282,12 @@ app.post('/api/admin/settings', authMiddleware, ownerMiddleware, (req, res) => {
   if (requireApproval !== undefined) {
     setSetting('require_approval', requireApproval ? '1' : '0');
   }
-  res.json({ success: true, message: 'Configurações atualizadas.' });
+  res.json({ success: true });
 });
 
 // -------------------------------------------------------------
-// ROTAS DE VÍDEOS
+// ROTAS DE VÍDEOS & TRACKING DE PLAYS
 // -------------------------------------------------------------
-
-// Listar Vídeos
 app.get('/api/videos', authMiddleware, (req, res) => {
   let rows;
   if (req.user.role === 'owner') {
@@ -329,7 +304,6 @@ app.get('/api/videos', authMiddleware, (req, res) => {
   res.json({ videos });
 });
 
-// Criar Vídeo
 app.post('/api/videos', authMiddleware, (req, res) => {
   const { id, title, videoUrl, sourceType, filePath, duration, settings } = req.body;
   const vidId = id || 'vsl_' + Date.now();
@@ -351,7 +325,6 @@ app.post('/api/videos', authMiddleware, (req, res) => {
   res.json({ success: true, id: vidId });
 });
 
-// Atualizar Vídeo
 app.put('/api/videos/:id', authMiddleware, (req, res) => {
   const { title, settings, duration } = req.body;
   const vidId = req.params.id;
@@ -373,7 +346,6 @@ app.put('/api/videos/:id', authMiddleware, (req, res) => {
   res.json({ success: true });
 });
 
-// Excluir Vídeo
 app.delete('/api/videos/:id', authMiddleware, (req, res) => {
   const vidId = req.params.id;
   const existing = db.prepare('SELECT * FROM videos WHERE id = ?').get(vidId);
@@ -382,47 +354,67 @@ app.delete('/api/videos/:id', authMiddleware, (req, res) => {
     return res.status(403).json({ error: 'Permissão negada.' });
   }
 
-  // Se o arquivo for local, exclui do disco
   if (existing.source_type === 'local' && existing.file_path && fs.existsSync(existing.file_path)) {
-    try {
-      fs.unlinkSync(existing.file_path);
-    } catch (e) {}
+    try { fs.unlinkSync(existing.file_path); } catch (e) {}
   }
 
   db.prepare('DELETE FROM videos WHERE id = ?').run(vidId);
   res.json({ success: true });
 });
 
-// Upload de Vídeo para a VPS (Cota de 30GB)
-app.post('/api/upload', authMiddleware, upload.single('videoFile'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: 'Nenhum arquivo enviado.' });
+// Endpoint de Registro de Play (Aberto para o Player chamar)
+app.post('/api/videos/:id/play', (req, res) => {
+  const vidId = req.params.id;
+  try {
+    db.prepare('UPDATE videos SET plays = plays + 1 WHERE id = ?').run(vidId);
+    const updated = db.prepare('SELECT plays FROM videos WHERE id = ?').get(vidId);
+    res.json({ success: true, plays: updated ? updated.plays : 1 });
+  } catch (e) {
+    res.json({ success: false });
   }
+});
+
+// Upload de Vídeo com Otimização FastStart Automática
+app.post('/api/upload', authMiddleware, upload.single('videoFile'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado.' });
 
   const currentUsed = getUsedStorageBytes();
   if (currentUsed > MAX_STORAGE_BYTES) {
-    // Excluir o arquivo recém-subido para não estourar a cota
     fs.unlinkSync(req.file.path);
-    return res.status(400).json({
-      error: 'Limite de armazenamento da VPS (30 GB) atingido. Exclua vídeos antigos para liberar espaço.'
-    });
+    return res.status(400).json({ error: 'Cota de armazenamento da VPS (30 GB) atingida.' });
+  }
+
+  // Otimização FastStart: move moov atom para o início instantaneamente
+  const originalPath = req.file.path;
+  const fastPath = originalPath + '.fast.mp4';
+
+  try {
+    execSync(`ffmpeg -y -i "${originalPath}" -c copy -movflags +faststart "${fastPath}"`, { timeout: 30000 });
+    if (fs.existsSync(fastPath)) {
+      fs.unlinkSync(originalPath);
+      fs.renameSync(fastPath, originalPath);
+    }
+  } catch (err) {
+    console.log('FastStart ignorado ou ffmpeg em fallback:', err.message);
   }
 
   const host = req.get('host');
   const protocol = req.protocol === 'https' || req.headers['x-forwarded-proto'] === 'https' ? 'https' : 'http';
   const videoUrl = `${protocol}://${host}/videos/${req.file.filename}`;
 
+  const finalStat = fs.statSync(originalPath);
+
   res.json({
     success: true,
     filename: req.file.filename,
-    filePath: req.file.path,
-    fileSize: req.file.size,
+    filePath: originalPath,
+    fileSize: finalStat.size,
     videoUrl: videoUrl
   });
 });
 
 // -------------------------------------------------------------
-// STREAMING DE VÍDEOS DE ALTA PERFORMANCE (HTTP 206 Partial Content)
+// STREAMING DE VÍDEO DE ALTA PERFORMANCE (Adaptive Chunking 1.5MB)
 // -------------------------------------------------------------
 app.get('/videos/:filename', (req, res) => {
   const filePath = path.join(VIDEOS_DIR, req.params.filename);
@@ -438,7 +430,11 @@ app.get('/videos/:filename', (req, res) => {
   if (range) {
     const parts = range.replace(/bytes=/, "").split("-");
     const start = parseInt(parts[0], 10);
-    const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+    
+    // Chunk ideal para VSL instantânea: 1.5 MB por pacote
+    const MAX_CHUNK = 1.5 * 1024 * 1024;
+    let end = parts[1] ? parseInt(parts[1], 10) : start + MAX_CHUNK - 1;
+    if (end >= fileSize) end = fileSize - 1;
 
     if (start >= fileSize) {
       res.status(416).send('Requested range not satisfiable\n' + start + ' >= ' + fileSize);
@@ -458,18 +454,21 @@ app.get('/videos/:filename', (req, res) => {
     res.writeHead(206, head);
     file.pipe(res);
   } else {
+    // Se não pediu Range, envia os primeiros 2MB para carregar instantâneo
+    const MAX_INITIAL = Math.min(2 * 1024 * 1024, fileSize);
+    const file = fs.createReadStream(filePath, { start: 0, end: MAX_INITIAL - 1 });
     const head = {
-      'Content-Length': fileSize,
-      'Content-Type': 'video/mp4',
+      'Content-Range': `bytes 0-${MAX_INITIAL - 1}/${fileSize}`,
       'Accept-Ranges': 'bytes',
+      'Content-Length': MAX_INITIAL,
+      'Content-Type': 'video/mp4',
       'Cache-Control': 'public, max-age=31536000, immutable'
     };
-    res.writeHead(200, head);
-    fs.createReadStream(filePath).pipe(res);
+    res.writeHead(206, head);
+    file.pipe(res);
   }
 });
 
-// Fallback SPA
 app.get('*', (req, res) => {
   if (fs.existsSync(path.join(PUBLIC_DIR, 'index.html'))) {
     res.sendFile(path.join(PUBLIC_DIR, 'index.html'));

@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
-    :root {
+:root {
       --bg-main: #f8fafc;
       --bg-card: #ffffff;
       --border-color: #e2e8f0;
@@ -41,7 +41,6 @@
       flex-direction: column;
     }
 
-    /* Top Navigation Header */
     header {
       background-color: var(--bg-card);
       border-bottom: 1px solid var(--border-color);
@@ -192,7 +191,6 @@
       border-color: #fca5a5;
     }
 
-    /* Subheader Tabs */
     .tabs-bar {
       background: var(--bg-card);
       border-bottom: 1px solid var(--border-color);
@@ -225,7 +223,6 @@
       border-bottom-color: var(--primary);
     }
 
-    /* Main Content */
     main {
       flex: 1;
       max-width: 1440px;
@@ -234,7 +231,6 @@
       width: 100%;
     }
 
-    /* Banner Zero Egress & VPS Storage */
     .savings-banner {
       background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
       color: white;
@@ -286,7 +282,6 @@
       color: var(--success);
     }
 
-    /* Section Views */
     .tab-content {
       display: none;
     }
@@ -294,7 +289,6 @@
       display: block;
     }
 
-    /* Video Library Grid */
     .section-header {
       display: flex;
       justify-content: space-between;
@@ -490,7 +484,6 @@
       border-color: #fecaca;
     }
 
-    /* Modal Styles */
     .modal-backdrop {
       position: fixed;
       top: 0;
@@ -639,7 +632,6 @@
       color: var(--text-main);
     }
 
-    /* Progress bar upload */
     .upload-progress-box {
       margin-top: 14px;
       display: none;
@@ -658,7 +650,6 @@
       transition: width 0.15s ease;
     }
 
-    /* Editor Layout */
     .editor-layout {
       display: grid;
       grid-template-columns: 480px 1fr;
@@ -750,7 +741,6 @@
       margin-top: 2px;
     }
 
-    /* Switch Component */
     .switch {
       position: relative;
       display: inline-block;
@@ -794,7 +784,6 @@
       transform: translateX(20px);
     }
 
-    /* Live Preview Section */
     .preview-panel {
       display: flex;
       flex-direction: column;
@@ -877,7 +866,6 @@
       display: block;
     }
 
-    /* Tables */
     .table-container {
       background: white;
       border: 1px solid var(--border-color);
@@ -923,7 +911,6 @@
     .metric-badge.yellow { background: #fef3c7; color: #92400e; }
     .metric-badge.red { background: #fee2e2; color: #b91c1c; }
 
-    /* Auth Overlay */
     .auth-overlay {
       position: fixed;
       top: 0; left: 0; width: 100%; height: 100%;
@@ -975,7 +962,6 @@
       display: block;
     }
 
-    /* Embed Modal */
     .code-box-wrapper {
       position: relative;
     }
@@ -1005,11 +991,10 @@
       font-weight: 600;
       cursor: pointer;
     }
-  </style>
+</style>
 </head>
 <body>
 
-  <!-- Tela de Login / Cadastro Obrigatória -->
   <div class="auth-overlay" id="authOverlay" style="display: none;">
     <div class="auth-card">
       <div class="auth-logo">
@@ -1023,7 +1008,6 @@
 
       <div id="authAlertBox" class="auth-alert"></div>
 
-      <!-- Formulário de Login -->
       <form id="formLogin" onsubmit="handleLoginSubmit(event)">
         <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 6px;">Acesse sua conta</h3>
         <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">Gerencie suas VSLs e players de alta conversão.</p>
@@ -1044,7 +1028,6 @@
         </div>
       </form>
 
-      <!-- Formulário de Cadastro -->
       <form id="formRegister" style="display: none;" onsubmit="handleRegisterSubmit(event)">
         <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 6px;">Criar nova conta</h3>
         <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;" id="regNotice">A primeira conta criada assume privilégio de Owner.</p>
@@ -1071,7 +1054,6 @@
     </div>
   </div>
 
-  <!-- Header -->
   <header>
     <div class="header-container">
       <div style="display: flex; align-items: center; gap: 20px;">
@@ -1111,7 +1093,6 @@
     </div>
   </header>
 
-  <!-- Tabs Subheader -->
   <div class="tabs-bar">
     <div class="tabs-container">
       <div class="tab-item active" id="tabNavLibrary" onclick="navigateTab('library')">
@@ -1148,7 +1129,7 @@
   </div>
 
   <main>
-    <!-- Banner de Status & Armazenamento VPS -->
+
     <div class="savings-banner">
       <div class="savings-info">
         <h3>
@@ -1174,17 +1155,15 @@
       </div>
     </div>
 
-    <!-- ABA 1: BIBLIOTECA DE VÍDEOS -->
     <div class="tab-content active" id="viewLibrary">
       <div class="section-header">
         <h2 class="section-title">Minhas VSLs Cadastradas</h2>
       </div>
       <div class="video-grid" id="videoGridContainer">
-        <!-- Vídeos renderizados via JS -->
+
       </div>
     </div>
 
-    <!-- ABA 2: TOP VSLS (MÉTRICAS) -->
     <div class="tab-content" id="viewTopVsls">
       <div class="section-header">
         <h2 class="section-title">Desempenho e Retenção</h2>
@@ -1202,19 +1181,17 @@
             </tr>
           </thead>
           <tbody id="topVslTableBody">
-            <!-- Dados de retenção -->
+
           </tbody>
         </table>
       </div>
     </div>
 
-    <!-- ABA 3: GERENCIAR USUÁRIOS (APENAS OWNER) -->
     <div class="tab-content" id="viewUsers">
       <div class="section-header">
         <h2 class="section-title">Controle de Usuários e Aprovações</h2>
       </div>
 
-      <!-- Configuração de Aprovação de Novos Cadastros -->
       <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius); padding: 20px 24px; margin-bottom: 24px;">
         <div class="toggle-row" style="margin-bottom: 0;">
           <div>
@@ -1228,7 +1205,6 @@
         </div>
       </div>
 
-      <!-- Tabela de Usuários -->
       <div class="table-container">
         <table class="table">
           <thead>
@@ -1242,13 +1218,12 @@
             </tr>
           </thead>
           <tbody id="usersTableBody">
-            <!-- Usuários carregados da API -->
+
           </tbody>
         </table>
       </div>
     </div>
 
-    <!-- ABA 4: CONFIGURAÇÕES GLOBAIS -->
     <div class="tab-content" id="viewSettings">
       <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius); padding: 32px; max-width: 800px; margin: 0 auto;">
         <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 12px;">Infraestrutura da VPS</h2>
@@ -1276,7 +1251,6 @@
       </div>
     </div>
 
-    <!-- ABA 5: EDITOR DE VSL & PREVIEW EM TEMPO REAL -->
     <div class="tab-content" id="viewEditor">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <button class="btn-secondary" onclick="navigateTab('library')" style="display: flex; align-items: center; gap: 6px;">
@@ -1288,7 +1262,7 @@
       </div>
 
       <div class="editor-layout">
-        <!-- Sidebar de Controles do Vídeo -->
+
         <div class="editor-sidebar">
           <div class="editor-header-bar">
             <div>
@@ -1297,7 +1271,6 @@
             </div>
           </div>
 
-          <!-- Accordion 1: Estilo Visual -->
           <div class="editor-accordion-item open">
             <div class="accordion-header" onclick="toggleAccordion(this)">
               <div class="accordion-header-left">
@@ -1337,7 +1310,6 @@
             </div>
           </div>
 
-          <!-- Accordion 2: Smart Autoplay -->
           <div class="editor-accordion-item">
             <div class="accordion-header" onclick="toggleAccordion(this)">
               <div class="accordion-header-left">
@@ -1368,7 +1340,6 @@
             </div>
           </div>
 
-          <!-- Accordion 3: Progresso Falso / Retenção -->
           <div class="editor-accordion-item">
             <div class="accordion-header" onclick="toggleAccordion(this)">
               <div class="accordion-header-left">
@@ -1405,7 +1376,6 @@
             </div>
           </div>
 
-          <!-- Accordion 4: Botão CTA Dinâmico (Pitch Delay) -->
           <div class="editor-accordion-item">
             <div class="accordion-header" onclick="toggleAccordion(this)">
               <div class="accordion-header-left">
@@ -1463,7 +1433,6 @@
             </div>
           </div>
 
-          <!-- Accordion 5: Continuar de Onde Parou -->
           <div class="editor-accordion-item">
             <div class="accordion-header" onclick="toggleAccordion(this)">
               <div class="accordion-header-left">
@@ -1488,7 +1457,6 @@
             </div>
           </div>
 
-          <!-- Accordion 6: Rastreamento de Pixels -->
           <div class="editor-accordion-item">
             <div class="accordion-header" onclick="toggleAccordion(this)">
               <div class="accordion-header-left">
@@ -1514,7 +1482,6 @@
           </div>
         </div>
 
-        <!-- Preview ao Vivo -->
         <div class="preview-panel">
           <div class="preview-controls-bar">
             <div style="font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
@@ -1541,7 +1508,6 @@
     </div>
   </main>
 
-  <!-- Modal Cadastrar Novo Vídeo -->
   <div class="modal-backdrop" id="newVideoModal">
     <div class="modal-window">
       <div class="modal-header">
@@ -1564,7 +1530,6 @@
           </button>
         </div>
 
-        <!-- Opção 1: Upload direto para o servidor -->
         <div id="sourceVpsGroup" class="form-group">
           <label class="form-label">Arquivo de Vídeo (.mp4)</label>
           <input type="file" id="newVideoUploadFile" class="form-input" accept="video/mp4,video/webm">
@@ -1581,7 +1546,6 @@
           </div>
         </div>
 
-        <!-- Opção 2: URL direta R2 / CDN -->
         <div id="sourceR2Group" class="form-group" style="display: none;">
           <label class="form-label">URL Direta (.mp4 ou .m3u8)</label>
           <input type="url" id="newVideoUrl" class="form-input" placeholder="https://pub-r2.meudominio.com/video.mp4">
@@ -1595,7 +1559,6 @@
     </div>
   </div>
 
-  <!-- Modal Gerador de Embed -->
   <div class="modal-backdrop" id="embedModal">
     <div class="modal-window" style="max-width: 640px;">
       <div class="modal-header">
@@ -1620,10 +1583,7 @@
   </div>
 
   <script>
-    // -------------------------------------------------------------
-    // ESTADO E AUTENTICAÇÃO
-    // -------------------------------------------------------------
-    let currentUser = null;
+let currentUser = null;
     let authToken = localStorage.getItem('cloudvturb_token') || '';
     let videos = [];
     let currentEditingId = null;
@@ -1655,9 +1615,6 @@
       }
     }
 
-    // -------------------------------------------------------------
-    // FLUXO DE LOGIN & CADASTRO
-    // -------------------------------------------------------------
     async function checkAuthSession() {
       if (!authToken) {
         showAuthModal('login');
@@ -1753,10 +1710,12 @@
     }
 
     function logoutUser() {
-      localStorage.removeItem('cloudvturb_token');
-      authToken = '';
-      currentUser = null;
-      window.location.reload();
+      if (confirm('Tem certeza que deseja sair da sua conta?')) {
+        localStorage.removeItem('cloudvturb_token');
+        authToken = '';
+        currentUser = null;
+        window.location.reload();
+      }
     }
 
     function setupUserInterface() {
@@ -1774,25 +1733,21 @@
       }
     }
 
-    // -------------------------------------------------------------
-    // CARREGAMENTO DE DADOS
-    // -------------------------------------------------------------
     async function loadDashboardData() {
       try {
-        // Carregar vídeos da API
         const data = await apiRequest('/api/videos');
         videos = data.videos || [];
         renderLibrary();
         renderTopVsls();
 
-        // Carregar configurações e armazenamento da VPS
         const setRes = await apiRequest('/api/admin/settings');
         if (setRes.storage) {
-          document.getElementById('bannerStorageVal').textContent = `${setRes.storage.usedGB} / ${setRes.storage.totalGB} GB`;
+          const displayUsage = setRes.storage.formattedUsage || `${setRes.storage.usedMB} MB`;
+          document.getElementById('bannerStorageVal').textContent = `${displayUsage} / ${setRes.storage.totalGB} GB`;
           document.getElementById('bannerStoragePercent').textContent = `${setRes.storage.usagePercent}%`;
-          document.getElementById('settingsStorageFill').style.width = `${setRes.storage.usagePercent}%`;
-          document.getElementById('settingsStorageUsed').textContent = `${setRes.storage.usedGB} GB usados`;
-          document.getElementById('vpsUsageBadge').textContent = `${setRes.storage.usedGB} GB / 30 GB`;
+          document.getElementById('settingsStorageFill').style.width = `${Math.max(1, parseFloat(setRes.storage.usagePercent))}%`;
+          document.getElementById('settingsStorageUsed').textContent = `${displayUsage} usados`;
+          document.getElementById('vpsUsageBadge').textContent = `${displayUsage} / 30 GB`;
         }
         if (currentUser && currentUser.role === 'owner') {
           document.getElementById('cfgRequireApprovalSwitch').checked = setRes.requireApproval;
@@ -1803,9 +1758,6 @@
       }
     }
 
-    // -------------------------------------------------------------
-    // GERENCIAMENTO DE USUÁRIOS (OWNER)
-    // -------------------------------------------------------------
     async function loadUsersList() {
       if (!currentUser || currentUser.role !== 'owner') return;
       try {
@@ -1868,9 +1820,6 @@
       }
     }
 
-    // -------------------------------------------------------------
-    // NAVEGAÇÃO DE TABS
-    // -------------------------------------------------------------
     function navigateTab(tabName) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.tab-item').forEach(el => el.classList.remove('active'));
@@ -1895,9 +1844,6 @@
       }
     }
 
-    // -------------------------------------------------------------
-    // RENDERIZAÇÃO DA BIBLIOTECA
-    // -------------------------------------------------------------
     function renderLibrary() {
       const container = document.getElementById('videoGridContainer');
       container.innerHTML = '';
@@ -1981,9 +1927,6 @@
       });
     }
 
-    // -------------------------------------------------------------
-    // MODAL DE NOVO VÍDEO & UPLOAD
-    // -------------------------------------------------------------
     function openNewVideoModal() {
       document.getElementById('newVideoTitle').value = '';
       document.getElementById('newVideoUrl').value = '';
@@ -2085,7 +2028,6 @@
         }
       }
 
-      // Salvar na API
       try {
         const res = await apiRequest('/api/videos', {
           method: 'POST',
@@ -2136,9 +2078,6 @@
       }
     }
 
-    // -------------------------------------------------------------
-    // EDITOR DE VSL & PREVIEW
-    // -------------------------------------------------------------
     function openEditor(id) {
       currentEditingId = id;
       const v = videos.find(x => x.id === id);
@@ -2300,9 +2239,6 @@
       }
     }
 
-    // -------------------------------------------------------------
-    // MODAL DE CÓDIGO EMBED
-    // -------------------------------------------------------------
     function openEmbedModalForVideo(videoId) {
       const v = videos.find(x => x.id === videoId);
       if (!v) return;
@@ -2312,7 +2248,7 @@
       const isVertical = v.settings && v.settings.aspectRatio === '9:16';
       const aspectPadding = isVertical ? '177.77%' : '56.25%';
 
-      const code = `<!-- CloudVTurb High-Conversion Embed -->\n` +
+      const code = `\n` +
         `<div style="position:relative;width:100%;padding-top:${aspectPadding};overflow:hidden;border-radius:${v.settings ? v.settings.borderRadius || '12px' : '12px'};">\n` +
         `  <iframe src="${fullUrl}" \n` +
         `    style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" \n` +
@@ -2346,10 +2282,9 @@
       return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     }
 
-    // Início
     window.addEventListener('DOMContentLoaded', () => {
       checkAuthSession();
     });
-  </script>
+</script>
 </body>
 </html>
