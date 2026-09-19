@@ -7754,13 +7754,18 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         const videoView = new google.picker.DocsView(google.picker.ViewId.DOCS_VIDEOS)
           .setMimeTypes('video/mp4,video/webm,video/quicktime,video/x-matroska,video/avi,video/mov')
           .setMode(google.picker.DocsViewMode.GRID)
-          .setIncludeFolders(true);
+          .setIncludeFolders(false);
 
         const driveView = new google.picker.DocsView(google.picker.ViewId.DOCS)
           .setMimeTypes('video/mp4,video/webm,video/quicktime,video/x-matroska,video/avi,video/mov')
           .setMode(google.picker.DocsViewMode.GRID)
-          .setIncludeFolders(true)
+          .setIncludeFolders(false)
           .setLabel('Meu Drive');
+
+        const foldersView = new google.picker.DocsView(google.picker.ViewId.FOLDERS)
+          .setSelectFolderEnabled(true)
+          .setMode(google.picker.DocsViewMode.LIST)
+          .setLabel('Pastas');
 
         const pWidth = Math.min(window.innerWidth - 32, 1020);
         const pHeight = Math.min(window.innerHeight - 50, 680);
@@ -7772,6 +7777,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           .setOAuthToken(token)
           .addView(videoView)
           .addView(driveView)
+          .addView(foldersView)
           .addView(new google.picker.DocsUploadView())
           .setDeveloperKey(cfg.apiKey)
           .setCallback(onbGooglePickerCallback)
@@ -8912,13 +8918,18 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         const videoView = new google.picker.DocsView(google.picker.ViewId.DOCS_VIDEOS)
           .setMimeTypes('video/mp4,video/webm,video/quicktime,video/x-matroska,video/avi,video/mov')
           .setMode(google.picker.DocsViewMode.GRID)
-          .setIncludeFolders(true);
+          .setIncludeFolders(false);
 
         const driveView = new google.picker.DocsView(google.picker.ViewId.DOCS)
           .setMimeTypes('video/mp4,video/webm,video/quicktime,video/x-matroska,video/avi,video/mov')
           .setMode(google.picker.DocsViewMode.GRID)
-          .setIncludeFolders(true)
+          .setIncludeFolders(false)
           .setLabel('Meu Drive');
+
+        const foldersView = new google.picker.DocsView(google.picker.ViewId.FOLDERS)
+          .setSelectFolderEnabled(true)
+          .setMode(google.picker.DocsViewMode.LIST)
+          .setLabel('Pastas');
 
         const pWidth = Math.min(window.innerWidth - 32, 1020);
         const pHeight = Math.min(window.innerHeight - 50, 680);
@@ -8930,6 +8941,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           .setOAuthToken(token)
           .addView(videoView)
           .addView(driveView)
+          .addView(foldersView)
           .addView(new google.picker.DocsUploadView())
           .setDeveloperKey(cfg.apiKey)
           .setCallback(onGooglePickerCallback)
