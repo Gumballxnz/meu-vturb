@@ -863,6 +863,93 @@
       border-color: rgba(239, 68, 68, 0.3);
     }
 
+    .user-actions-wrap {
+      position: relative;
+      display: inline-block;
+    }
+
+    .btn-user-menu {
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-dim);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .btn-user-menu:hover {
+      background: var(--bg-surface);
+      border-color: var(--border-subtle);
+      color: var(--text-main);
+    }
+
+    .user-actions-dropdown {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 100%;
+      margin-top: 4px;
+      min-width: 180px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      z-index: 1000;
+      padding: 6px 0;
+      animation: dropdownFadeIn 0.12s ease;
+    }
+
+    .user-actions-dropdown.active {
+      display: block;
+    }
+
+    @keyframes dropdownFadeIn {
+      from { opacity: 0; transform: translateY(-4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .user-actions-dropdown button {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 16px;
+      background: transparent;
+      border: none;
+      color: var(--text-main);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.1s ease;
+      text-align: left;
+    }
+
+    .user-actions-dropdown button:hover {
+      background: var(--bg-surface);
+    }
+
+    .user-actions-dropdown button.danger {
+      color: #f87171;
+    }
+
+    .user-actions-dropdown button.danger:hover {
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    .user-actions-dropdown .dropdown-divider {
+      height: 1px;
+      background: var(--border-subtle);
+      margin: 4px 0;
+    }
+
     .editor-grid-wrapper {
       display: grid;
       grid-template-columns: 420px 1fr;
@@ -2100,13 +2187,6 @@
               <div class="progress-bar-fill-violet" id="storageDetailedFill" style="width: 0%;"></div>
             </div>
           </div>
-
-          <div id="storageTopologyCard" style="display: none; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 20px; font-size: 13px; line-height: 1.7;">
-            <strong style="color: var(--text-main); font-size: 14px; display: block; margin-bottom: 6px;">Topologia de Entrega (Administrador):</strong>
-            • <strong>Streaming Direto:</strong> HTTP 206 Partial Content com otimização FastStart.<br>
-            • <strong>Subdomínio Player:</strong> <code id="lblTopologyPlayer" style="color:var(--primary);">player.seudominio.com</code><br>
-            • <strong>Painel Administrativo:</strong> <code id="lblTopologyDash" style="color:var(--primary);">dash.seudominio.com</code><br>
-          </div>
         </div>
       </section>
 
@@ -2874,8 +2954,6 @@
         document.getElementById('sidebarAppName').textContent = appConfig.appName || 'CloudVTurb';
         document.getElementById('cfgAppNameInput').value = appConfig.appName || 'CloudVTurb';
         document.getElementById('cfgBaseDomainInput').value = appConfig.baseDomain || window.location.hostname;
-        document.getElementById('lblTopologyPlayer').textContent = appConfig.playerDomain || window.location.origin;
-        document.getElementById('lblTopologyDash').textContent = appConfig.dashDomain || window.location.origin;
       } catch (e) {}
 
       if (isAuthRoute) {
@@ -3289,11 +3367,6 @@
           if (document.getElementById('modalProfileStorageLabel')) {
             document.getElementById('modalProfileStorageLabel').textContent = `${sData.storage.formattedUsage} de ${sData.storage.totalFormatted} usados`;
             document.getElementById('modalProfileStorageProgress').style.width = `${pct}%`;
-          }
-
-          const topologyBox = document.getElementById('storageTopologyCard');
-          if (topologyBox) {
-            topologyBox.style.display = isOwner ? 'block' : 'none';
           }
         }
 
@@ -4784,6 +4857,21 @@
           if (u.status === 'approved') statusBadge = '<span class="badge-status green">Aprovado</span>';
           if (u.status === 'blocked') statusBadge = '<span class="badge-status red">Bloqueado</span>';
 
+          let menuItems = '';
+          if (!isSelf) {
+            if (u.status !== 'approved') {
+              menuItems += `<button onclick="execUserAction(${u.id}, 'approve'); closeAllUserMenus()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>Aprovar</button>`;
+            }
+            if (u.status !== 'blocked') {
+              menuItems += `<button onclick="execUserAction(${u.id}, 'block'); closeAllUserMenus()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"></line></svg>Bloquear</button>`;
+            }
+            if (u.role !== 'owner') {
+              menuItems += `<button onclick="execUserAction(${u.id}, 'make_owner'); closeAllUserMenus()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>Tornar Owner</button>`;
+            }
+            menuItems += `<div class="dropdown-divider"></div>`;
+            menuItems += `<button class="danger" onclick="execUserAction(${u.id}, 'delete'); closeAllUserMenus()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>Excluir</button>`;
+          }
+
           const tr = document.createElement('tr');
           tr.innerHTML = `
             <td><strong>${escapeHtml(u.name)}</strong></td>
@@ -4794,10 +4882,10 @@
             <td>${new Date(u.created_at).toLocaleDateString('pt-BR')}</td>
             <td style="text-align: right;">
               ${isSelf ? '<span style="font-size:12px;color:var(--text-dim);">Sua Conta</span>' : `
-                ${u.status !== 'approved' ? `<button class="btn-clean-secondary" style="padding:3px 8px;margin-right:4px;" onclick="execUserAction(${u.id}, 'approve')">Aprovar</button>` : ''}
-                ${u.status !== 'blocked' ? `<button class="btn-clean-secondary" style="padding:3px 8px;margin-right:4px;" onclick="execUserAction(${u.id}, 'block')">Bloquear</button>` : ''}
-                ${u.role !== 'owner' ? `<button class="btn-clean-secondary" style="padding:3px 8px;margin-right:4px;" onclick="execUserAction(${u.id}, 'make_owner')">Tornar Owner</button>` : ''}
-                <button class="btn-action-danger" style="padding:4px 8px;" onclick="execUserAction(${u.id}, 'delete')">Excluir</button>
+                <div class="user-actions-wrap">
+                  <button class="btn-user-menu" onclick="toggleUserMenu(this, event)" title="Ações">⋮</button>
+                  <div class="user-actions-dropdown">${menuItems}</div>
+                </div>
               `}
             </td>
           `;
@@ -4807,6 +4895,20 @@
         console.error('Falha ao listar usuários:', err);
       }
     }
+
+    function toggleUserMenu(btn, event) {
+      event.stopPropagation();
+      const dropdown = btn.nextElementSibling;
+      const isOpen = dropdown.classList.contains('active');
+      closeAllUserMenus();
+      if (!isOpen) dropdown.classList.add('active');
+    }
+
+    function closeAllUserMenus() {
+      document.querySelectorAll('.user-actions-dropdown.active').forEach(d => d.classList.remove('active'));
+    }
+
+    document.addEventListener('click', closeAllUserMenus);
 
     function execUserAction(id, action) {
       const actionLabels = {

@@ -31,9 +31,9 @@ const SERVER_STORAGE_LIMIT_BYTES = 30 * 1024 * 1024 * 1024;
 const MEMBER_STORAGE_LIMIT_BYTES = 3 * 1024 * 1024 * 1024;
 const MAX_STORAGE_BYTES = SERVER_STORAGE_LIMIT_BYTES;
 const APP_NAME = process.env.APP_NAME || 'CloudVTurb';
-const BASE_DOMAIN = (process.env.BASE_DOMAIN || 'roleta-sorte.online').toLowerCase();
-const PLAYER_DOMAIN = (process.env.PLAYER_DOMAIN || `player.${BASE_DOMAIN}`).toLowerCase();
-const DASH_DOMAIN = (process.env.DASH_DOMAIN || `dash.${BASE_DOMAIN}`).toLowerCase();
+const BASE_DOMAIN = (process.env.BASE_DOMAIN || '').toLowerCase();
+const PLAYER_DOMAIN = (process.env.PLAYER_DOMAIN || (BASE_DOMAIN ? `player.${BASE_DOMAIN}` : '')).toLowerCase();
+const DASH_DOMAIN = (process.env.DASH_DOMAIN || (BASE_DOMAIN ? `dash.${BASE_DOMAIN}` : '')).toLowerCase();
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const VIDEOS_DIR = process.env.VIDEOS_DIR || path.join(__dirname, 'videos');
@@ -115,13 +115,6 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_analytics_session_milestone ON analytics_events(session_id, event_type, milestone);
 `);
 
-try {
-  db.prepare(`
-    UPDATE videos
-    SET video_url = REPLACE(video_url, 'https://roleta-sorte.online/videos/', 'https://' || ? || '/videos/')
-    WHERE video_url LIKE '%roleta-sorte.online/videos/%'
-  `).run(PLAYER_DOMAIN);
-} catch (e) {}
 
 const userCols = ['full_name', 'country', 'phone', 'address_street', 'postal_code', 'state_province'];
 for (const col of userCols) {
@@ -359,13 +352,14 @@ function checkStorageQuotaPre(req, res, next) {
 
 app.get('/api/config', (req, res) => {
   const host = req.get('host') || '';
-  const isProd = host.includes(BASE_DOMAIN);
-  const playerDomain = isProd ? `https://${PLAYER_DOMAIN}` : `${req.protocol}://${host}`;
+  const isProd = Boolean(BASE_DOMAIN && host.includes(BASE_DOMAIN));
+  const playerDomain = (isProd && PLAYER_DOMAIN) ? `https://${PLAYER_DOMAIN}` : `${req.protocol}://${host}`;
+  const dashDomain = (isProd && DASH_DOMAIN) ? `https://${DASH_DOMAIN}` : `${req.protocol}://${host}`;
   res.json({
     appName: APP_NAME,
     baseDomain: BASE_DOMAIN,
     playerDomain: playerDomain,
-    dashDomain: isProd ? `https://${DASH_DOMAIN}` : `${req.protocol}://${host}`
+    dashDomain: dashDomain
   });
 });
 
@@ -931,8 +925,11 @@ app.get('/api/videos/:id/public', (req, res) => {
     try { settings = JSON.parse(v.settings_json || '{}'); } catch (e) {}
 
     let videoUrl = v.video_url;
-    if (videoUrl && videoUrl.includes('roleta-sorte.online/videos/') && !videoUrl.includes(`${PLAYER_DOMAIN}/videos/`)) {
-      videoUrl = videoUrl.replace('https://roleta-sorte.online/videos/', `https://${PLAYER_DOMAIN}/videos/`);
+    if (videoUrl && videoUrl.startsWith('/videos/')) {
+      const origin = PLAYER_DOMAIN ? `https://${PLAYER_DOMAIN}` : `${req.protocol}://${req.get('host')}`;
+      videoUrl = `${origin}${videoUrl}`;
+    } else if (videoUrl && PLAYER_DOMAIN && videoUrl.includes('/videos/') && !videoUrl.includes(`${PLAYER_DOMAIN}/videos/`)) {
+      videoUrl = videoUrl.replace(/^https?:\/\/[^\/]+(\/videos\/)/, `https://${PLAYER_DOMAIN}$1`);
     }
 
     res.json({
