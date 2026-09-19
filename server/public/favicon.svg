@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <defs>
+    <linearGradient id="cvtGrad" x1="4" y1="4" x2="44" y2="44" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <linearGradient id="playGrad" x1="18" y1="14" x2="34" y2="34" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e0e7ff"/>
+    </linearGradient>
+    <filter id="cvtGlow" x="0" y="0" width="48" height="48" filterUnits="userSpaceOnUse">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+  <rect x="4" y="4" width="40" height="40" rx="12" fill="url(#cvtGrad)"/>
+  <path d="M20 16.5L32 24L20 31.5V16.5Z" fill="url(#playGrad)"/>
+  <circle cx="34" cy="14" r="3" fill="#10b981"/>
+</svg>

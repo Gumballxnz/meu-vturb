@@ -8,6 +8,12 @@ services:
     environment:
       - PORT=4000
       - NODE_ENV=production
+      - JWT_SECRET=${JWT_SECRET}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+      - BASE_DOMAIN=${BASE_DOMAIN:-}
+      - PLAYER_DOMAIN=${PLAYER_DOMAIN:-}
+      - DASH_DOMAIN=${DASH_DOMAIN:-}
+      - APP_NAME=${APP_NAME:-CloudVTurb}
       - DATA_DIR=/app/data
       - VIDEOS_DIR=/app/videos
       - PUBLIC_DIR=/app/public

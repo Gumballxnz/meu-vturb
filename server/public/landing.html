@@ -3,19 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CloudVTurb — O Player de VSL Mais Rápido do Mercado</title>
+  <meta name="theme-color" content="#09090b">
+  <meta name="description" content="Plataforma de alta performance para hospedagem de VSLs com Smart Autoplay dinâmico, Pitch Delay milimétrico e retenção máxima.">
+  <title>CloudVTurb — Hospedagem de VSL Ultra-Rápida</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
   <style>
-:root {
-      --bg: #090d16;
-      --bg-card: #0f172a;
-      --border: #1e293b;
-      --text: #f8fafc;
-      --muted: #94a3b8;
-      --primary: #2563eb;
-      --primary-glow: rgba(37, 99, 235, 0.4);
+    :root {
+      --bg: #09090b;
+      --bg-card: #121215;
+      --border: #27272a;
+      --text: #f4f4f5;
+      --muted: #a1a1aa;
+      --dim: #71717a;
+      --primary: #7c3aed;
+      --primary-glow: rgba(124, 58, 237, 0.45);
       --success: #10b981;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -29,7 +33,7 @@
     .header {
       position: sticky;
       top: 0;
-      background: rgba(9, 13, 22, 0.85);
+      background: rgba(9, 9, 11, 0.85);
       backdrop-filter: blur(12px);
       border-bottom: 1px solid var(--border);
       z-index: 100;
@@ -38,7 +42,7 @@
       max-width: 1200px;
       margin: 0 auto;
       padding: 0 24px;
-      height: 76px;
+      height: 72px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -49,85 +53,84 @@
       gap: 12px;
       text-decoration: none;
       color: white;
-      font-weight: 900;
-      font-size: 22px;
+      font-weight: 800;
+      font-size: 20px;
     }
     .brand-icon {
-      width: 42px;
-      height: 42px;
-      border-radius: 12px;
-      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
       display: flex;
       align-items: center;
       justify-content: center;
       box-shadow: 0 4px 14px var(--primary-glow);
     }
-    .brand span { color: #38bdf8; }
+    .brand span { color: #a78bfa; }
     .header-nav {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 14px;
     }
     .btn-login {
       color: var(--muted);
       text-decoration: none;
       font-size: 14px;
       font-weight: 600;
-      padding: 10px 18px;
+      padding: 9px 16px;
       border-radius: 8px;
       transition: color 0.2s;
     }
     .btn-login:hover { color: white; }
     .btn-cta {
-      background: var(--primary);
+      background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
       color: white;
       text-decoration: none;
       font-size: 14px;
       font-weight: 700;
-      padding: 12px 22px;
-      border-radius: 10px;
+      padding: 10px 20px;
+      border-radius: 8px;
       box-shadow: 0 4px 16px var(--primary-glow);
       transition: transform 0.2s, background 0.2s;
     }
     .btn-cta:hover {
-      background: #1d4ed8;
-      transform: translateY(-2px);
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      transform: translateY(-1px);
     }
-
     .hero {
       max-width: 1200px;
       margin: 0 auto;
-      padding: 100px 24px 60px;
+      padding: 90px 24px 60px;
       text-align: center;
     }
     .badge-pill {
       display: inline-flex;
       align-items: center;
       gap: 8px;
-      background: rgba(37, 99, 235, 0.12);
-      border: 1px solid rgba(56, 189, 248, 0.3);
+      background: rgba(124, 58, 237, 0.15);
+      border: 1px solid rgba(139, 92, 246, 0.35);
       padding: 6px 16px;
       border-radius: 9999px;
       font-size: 13px;
-      color: #38bdf8;
+      color: #c4b5fd;
       font-weight: 600;
       margin-bottom: 24px;
     }
     .hero h1 {
-      font-size: 54px;
+      font-size: 52px;
       font-weight: 900;
       line-height: 1.15;
       letter-spacing: -1.5px;
-      margin-bottom: 24px;
-      background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
+      margin-bottom: 20px;
+      background: linear-gradient(180deg, #ffffff 0%, #a1a1aa 100%);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
     }
     @media(max-width: 768px) {
-      .hero h1 { font-size: 36px; }
+      .hero h1 { font-size: 34px; }
     }
     .hero p {
-      font-size: 18px;
+      font-size: 17px;
       color: var(--muted);
       max-width: 680px;
       margin: 0 auto 36px;
@@ -136,57 +139,57 @@
     .hero-actions {
       display: flex;
       justify-content: center;
-      gap: 16px;
+      gap: 14px;
       margin-bottom: 60px;
+      flex-wrap: wrap;
     }
-
     .features {
       max-width: 1200px;
       margin: 0 auto;
-      padding: 40px 24px 100px;
+      padding: 20px 24px 100px;
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 24px;
+      gap: 20px;
     }
     .feature-card {
       background: var(--bg-card);
       border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 32px;
+      border-radius: 14px;
+      padding: 28px;
       text-align: left;
       transition: border-color 0.2s;
     }
-    .feature-card:hover { border-color: #334155; }
+    .feature-card:hover { border-color: #3f3f46; }
     .feature-icon {
-      width: 48px;
-      height: 48px;
-      border-radius: 12px;
-      background: rgba(37, 99, 235, 0.15);
-      color: #38bdf8;
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      background: rgba(124, 58, 237, 0.18);
+      color: #a78bfa;
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 20px;
+      margin-bottom: 18px;
     }
     .feature-title {
-      font-size: 18px;
+      font-size: 17px;
       font-weight: 700;
       margin-bottom: 8px;
+      color: var(--text);
     }
     .feature-desc {
-      font-size: 14px;
+      font-size: 13.5px;
       color: var(--muted);
       line-height: 1.6;
     }
-
     footer {
       border-top: 1px solid var(--border);
-      padding: 40px 24px;
+      padding: 36px 24px;
       text-align: center;
-      color: var(--muted);
+      color: var(--dim);
       font-size: 13px;
     }
-</style>
+  </style>
 </head>
 <body>
 
@@ -194,32 +197,33 @@
     <div class="header-container">
       <a href="/" class="brand">
         <div class="brand-icon">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM10 17l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+          <svg width="20" height="20" viewBox="0 0 48 48" fill="none">
+            <path d="M20 16.5L32 24L20 31.5V16.5Z" fill="#ffffff"/>
+            <circle cx="34" cy="14" r="3" fill="#10b981"/>
           </svg>
         </div>
-        <div>Cloud<span>VTurb</span></div>
+        <div><span>Cloud</span>VTurb</div>
       </a>
 
       <div class="header-nav">
-        <a href="https://dash.roleta-sorte.online/login" class="btn-login">Fazer Login</a>
-        <a href="https://dash.roleta-sorte.online/cadastro" class="btn-cta">Acessar Plataforma</a>
+        <a href="/login" class="btn-login">Entrar</a>
+        <a href="/cadastro" class="btn-cta">Acessar Plataforma</a>
       </div>
     </div>
   </header>
 
   <section class="hero">
-    <div class="badge-pill">⚡ Infraestrutura Zero Egress + Cloudflare Edge</div>
+    <div class="badge-pill">⚡ Streaming Otimizado HTTP 206 + Cloudflare R2</div>
     <h1>O Player de VSL Mais Rápido<br>Com Custo Zero de Tráfego</h1>
     <p>
-      Hospede suas VSLs com carregamento instantâneo, Smart Autoplay com áudio dinâmico, Pitch Delay milimétrico e proteção anti-cópia avançada.
+      Hospede suas VSLs com carregamento instantâneo, Smart Autoplay dinâmico com áudio, Pitch Delay milimétrico e analytics de retenção real segundo a segundo.
     </p>
 
     <div class="hero-actions">
-      <a href="https://dash.roleta-sorte.online/cadastro" class="btn-cta" style="font-size: 16px; padding: 16px 36px;">
+      <a href="/cadastro" class="btn-cta" style="font-size: 15px; padding: 14px 32px;">
         Entrar no Dashboard →
       </a>
-      <a href="https://dash.roleta-sorte.online/login" class="btn-login" style="border: 1px solid var(--border); padding: 16px 28px;">
+      <a href="/login" class="btn-login" style="border: 1px solid var(--border); padding: 14px 24px;">
         Já sou cadastrado
       </a>
     </div>
@@ -228,46 +232,45 @@
   <section class="features">
     <div class="feature-card">
       <div class="feature-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
           <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path>
         </svg>
       </div>
-      <div class="feature-title">Smart Autoplay com Som</div>
+      <div class="feature-title">Smart Autoplay com Áudio</div>
       <div class="feature-desc">
-        O vídeo inicia no mudo sem bloqueios de navegadores, com tarja pulsante. Ao clicar, o áudio é ativado e volta os primeiros segundos para reter o lead.
+        Inicia no mudo sem restrições dos navegadores, exibindo tarja pulsante. Ao tocar, ativa o áudio e reinicia suavemente para reter o lead.
       </div>
     </div>
 
     <div class="feature-card">
       <div class="feature-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <circle cx="12" cy="12" r="10"></circle>
           <polyline points="12 6 12 12 16 14"></polyline>
         </svg>
       </div>
       <div class="feature-title">Pitch Delay & CTA Dinâmico</div>
       <div class="feature-desc">
-        Injeta o botão de compra exatamente no segundo da oferta com animação pulsante, link de checkout direto e subtexto de garantia.
+        Exibe o botão de compra exatamente no segundo da oferta com link de checkout direto, subtexto de garantia e taxa de clique calculada em tempo real.
       </div>
     </div>
 
     <div class="feature-card">
       <div class="feature-icon">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
-          <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
         </svg>
       </div>
-      <div class="feature-title">Zero Egress & Armazenamento 30GB</div>
+      <div class="feature-title">Analytics Real de Retenção</div>
       <div class="feature-desc">
-        Roda com streaming ultra-rápido HTTP 206 e cache direto na Cloudflare, eliminando faturas de saída de dados de provedores comuns.
+        Métricas reais de visualizações, visitantes únicos, marcos de retenção (10% a 100%) e conversão do pitch sem números simulados.
       </div>
     </div>
   </section>
 
   <footer>
-    © 2026 CloudVTurb Platform. Todos os direitos reservados.
+    © 2026 CloudVTurb. Todos os direitos reservados.
   </footer>
 
 </body>

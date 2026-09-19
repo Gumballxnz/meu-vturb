@@ -11,8 +11,20 @@ const Database = require('better-sqlite3');
 
 const app = express();
 const PORT = process.env.PORT || 4000;
-const JWT_SECRET = process.env.JWT_SECRET || 'cloudvturb_ultra_secret_key_2026_jwt_token_99';
-const MAX_STORAGE_BYTES = 30 * 1024 * 1024 * 1024;
+const NODE_ENV = process.env.NODE_ENV || 'development';
+
+if (NODE_ENV === 'production' && (!process.env.JWT_SECRET || process.env.JWT_SECRET === 'cloudvturb_ultra_secret_key_2026_jwt_token_99')) {
+  console.error('ERRO FATAL: JWT_SECRET seguro deve ser configurado via variável de ambiente em produção.');
+  process.exit(1);
+}
+
+const SERVER_STORAGE_LIMIT_BYTES = 30 * 1024 * 1024 * 1024;
+const MEMBER_STORAGE_LIMIT_BYTES = 3 * 1024 * 1024 * 1024;
+const MAX_STORAGE_BYTES = SERVER_STORAGE_LIMIT_BYTES;
+const APP_NAME = process.env.APP_NAME || 'CloudVTurb';
+const BASE_DOMAIN = (process.env.BASE_DOMAIN || 'roleta-sorte.online').toLowerCase();
+const PLAYER_DOMAIN = (process.env.PLAYER_DOMAIN || `player.${BASE_DOMAIN}`).toLowerCase();
+const DASH_DOMAIN = (process.env.DASH_DOMAIN || `dash.${BASE_DOMAIN}`).toLowerCase();
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const VIDEOS_DIR = process.env.VIDEOS_DIR || path.join(__dirname, 'videos');
@@ -55,14 +67,49 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
   );
+
+  CREATE TABLE IF NOT EXISTS analytics_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    video_id TEXT NOT NULL,
+    visitor_id TEXT NOT NULL,
+    session_id TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    milestone INTEGER,
+    watch_time REAL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(video_id) REFERENCES videos(id) ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_analytics_vid_event ON analytics_events(video_id, event_type);
+  CREATE INDEX IF NOT EXISTS idx_analytics_vid_created ON analytics_events(video_id, created_at);
+  CREATE INDEX IF NOT EXISTS idx_analytics_vid_visitor ON analytics_events(video_id, visitor_id);
+  CREATE INDEX IF NOT EXISTS idx_analytics_session_milestone ON analytics_events(session_id, event_type, milestone);
 `);
 
 try {
   db.prepare(`
     UPDATE videos
-    SET video_url = REPLACE(video_url, 'https://roleta-sorte.online/videos/', 'https://player.roleta-sorte.online/videos/')
+    SET video_url = REPLACE(video_url, 'https://roleta-sorte.online/videos/', 'https://' || ? || '/videos/')
     WHERE video_url LIKE '%roleta-sorte.online/videos/%'
-  `).run();
+  `).run(PLAYER_DOMAIN);
+} catch (e) {}
+
+try {
+  db.exec("ALTER TABLE videos ADD COLUMN file_size INTEGER DEFAULT 0");
+} catch (e) {}
+
+try {
+  const localVids = db.prepare("SELECT id, file_path, file_size FROM videos WHERE source_type = 'local'").all();
+  for (const v of localVids) {
+    if (v.file_path && fs.existsSync(v.file_path)) {
+      try {
+        const realSize = fs.statSync(v.file_path).size;
+        if (!v.file_size || v.file_size !== realSize) {
+          db.prepare("UPDATE videos SET file_size = ? WHERE id = ?").run(realSize, v.id);
+        }
+      } catch (err) {}
+    }
+  }
 } catch (e) {}
 
 const getSetting = (key, defaultVal) => {
@@ -78,13 +125,34 @@ if (!getSetting('require_approval', null)) {
   setSetting('require_approval', '1');
 }
 
-app.use(cors());
-app.use(express.json());
+const rawAllowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+  : [];
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (!origin || NODE_ENV !== 'production' || rawAllowedOrigins.length === 0) {
+      return callback(null, true);
+    }
+    const cleanOrigin = origin.toLowerCase().replace(/\/$/, '');
+    const isAllowed = rawAllowedOrigins.some(allowed => {
+      if (allowed === '*' || cleanOrigin === allowed) return true;
+      if (allowed.startsWith('*.') && cleanOrigin.endsWith(allowed.slice(1))) return true;
+      return false;
+    });
+    if (isAllowed) return callback(null, true);
+    return callback(new Error('Origem não autorizada por política de CORS.'));
+  },
+  credentials: true
+};
+
+app.use(cors(corsOptions));
+app.use(express.json({ limit: '2mb' }));
 
 app.use((req, res, next) => {
   const host = (req.headers.host || '').toLowerCase();
 
-  if (host.startsWith('player.')) {
+  if (host === PLAYER_DOMAIN || host.startsWith('player.')) {
     if (req.path.startsWith('/videos/') || req.path.startsWith('/api/')) {
       return next();
     }
@@ -101,12 +169,12 @@ app.use((req, res, next) => {
     }
   }
 
-  if (host === 'roleta-sorte.online' || host === 'www.roleta-sorte.online') {
+  if (host === BASE_DOMAIN || host === 'www.' + BASE_DOMAIN) {
     if (req.path === '/login') {
-      return res.redirect(301, 'https://dash.roleta-sorte.online/login');
+      return res.redirect(301, `https://${DASH_DOMAIN}/login`);
     }
     if (req.path === '/cadastro') {
-      return res.redirect(301, 'https://dash.roleta-sorte.online/cadastro');
+      return res.redirect(301, `https://${DASH_DOMAIN}/cadastro`);
     }
     if (req.path === '/' || req.path === '/index.html' || req.path === '') {
       return res.sendFile(path.join(PUBLIC_DIR, 'landing.html'));
@@ -116,7 +184,7 @@ app.use((req, res, next) => {
     }
   }
 
-  const dashRoutes = ['/', '/login', '/cadastro', '/videos', '/metricas', '/usuarios', '/servidor'];
+  const dashRoutes = ['/', '/login', '/cadastro', '/videos', '/metricas', '/usuarios', '/servidor', '/analytics'];
   if (dashRoutes.includes(req.path)) {
     return res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
   }
@@ -142,6 +210,24 @@ function getUsedStorageBytes() {
   } catch (e) {
     return 0;
   }
+}
+
+function getUserStorageBytes(userId) {
+  try {
+    const row = db.prepare("SELECT COALESCE(SUM(file_size), 0) as total FROM videos WHERE user_id = ? AND source_type = 'local'").get(userId);
+    return row ? row.total : 0;
+  } catch (e) {
+    return 0;
+  }
+}
+
+function formatStorage(bytes) {
+  const mb = bytes / (1024 * 1024);
+  const gb = bytes / (1024 * 1024 * 1024);
+  if (bytes >= 1024 * 1024 * 1024) {
+    return `${gb.toFixed(1).replace('.', ',')} GB`;
+  }
+  return `${mb.toFixed(0)} MB`;
 }
 
 function authMiddleware(req, res, next) {
@@ -171,6 +257,9 @@ function ownerMiddleware(req, res, next) {
   }
 }
 
+const ALLOWED_MIME_TYPES = ['video/mp4', 'video/webm'];
+const ALLOWED_EXTS = ['.mp4', '.webm'];
+
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, VIDEOS_DIR);
@@ -184,7 +273,42 @@ const storage = multer.diskStorage({
 
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 2 * 1024 * 1024 * 1024 }
+  limits: { fileSize: 2 * 1024 * 1024 * 1024 },
+  fileFilter: function (req, file, cb) {
+    const ext = path.extname(file.originalname || '').toLowerCase();
+    if (!ALLOWED_EXTS.includes(ext) || !ALLOWED_MIME_TYPES.includes(file.mimetype)) {
+      return cb(new Error('Formato inválido. Apenas vídeos MP4 e WebM são aceitos.'));
+    }
+    cb(null, true);
+  }
+});
+
+function checkStorageQuotaPre(req, res, next) {
+  const incomingLength = parseInt(req.headers['content-length'] || '0', 10);
+  const isOwner = req.user && req.user.role === 'owner';
+  if (!isOwner) {
+    const userUsed = getUserStorageBytes(req.user ? req.user.id : 0);
+    if (userUsed + incomingLength > MEMBER_STORAGE_LIMIT_BYTES) {
+      return res.status(400).json({ error: 'Cota individual de 3 GB atingida. Remova vídeos para liberar espaço.' });
+    }
+  }
+  const currentUsed = getUsedStorageBytes();
+  if (currentUsed + incomingLength > SERVER_STORAGE_LIMIT_BYTES) {
+    return res.status(400).json({ error: 'Capacidade do servidor temporariamente esgotada.' });
+  }
+  next();
+}
+
+app.get('/api/config', (req, res) => {
+  const host = req.get('host') || '';
+  const isProd = host.includes(BASE_DOMAIN);
+  const playerDomain = isProd ? `https://${PLAYER_DOMAIN}` : `${req.protocol}://${host}`;
+  res.json({
+    appName: APP_NAME,
+    baseDomain: BASE_DOMAIN,
+    playerDomain: playerDomain,
+    dashDomain: isProd ? `https://${DASH_DOMAIN}` : `${req.protocol}://${host}`
+  });
 });
 
 app.post('/api/auth/register', (req, res) => {
@@ -207,7 +331,7 @@ app.post('/api/auth/register', (req, res) => {
     const token = jwt.sign({ id: info.lastInsertRowid, email: cleanEmail, role: 'owner' }, JWT_SECRET, { expiresIn: '30d' });
     return res.json({
       success: true,
-      message: 'Conta de Owner criada com sucesso!',
+      message: 'Conta de Administrador criada com sucesso!',
       token,
       user: { id: info.lastInsertRowid, name: name.trim(), email: cleanEmail, role: 'owner', status: 'approved' }
     });
@@ -225,7 +349,7 @@ app.post('/api/auth/register', (req, res) => {
     return res.json({
       success: true,
       pendingApproval: true,
-      message: 'Cadastro realizado! Aguarde a aprovação do Administrador/Owner para poder acessar.'
+      message: 'Cadastro realizado! Aguarde a aprovação do Administrador para acessar a plataforma.'
     });
   } else {
     const token = jwt.sign({ id: info.lastInsertRowid, email: cleanEmail, role: 'member' }, JWT_SECRET, { expiresIn: '30d' });
@@ -249,10 +373,10 @@ app.post('/api/auth/login', (req, res) => {
   }
 
   if (user.status === 'pending') {
-    return res.status(403).json({ error: 'Sua conta está aguardando aprovação do Owner para ser liberada.' });
+    return res.status(403).json({ error: 'Sua conta está aguardando aprovação do Administrador.' });
   }
   if (user.status === 'blocked') {
-    return res.status(403).json({ error: 'Sua conta foi bloqueada pelo Administrador.' });
+    return res.status(403).json({ error: 'Sua conta foi desativada pelo Administrador.' });
   }
 
   const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
@@ -269,15 +393,25 @@ app.get('/api/auth/me', authMiddleware, (req, res) => {
 
 app.get('/api/admin/users', authMiddleware, ownerMiddleware, (req, res) => {
   const users = db.prepare('SELECT id, name, email, role, status, created_at FROM users ORDER BY created_at DESC').all();
-  res.json({ users });
+  const usersWithStorage = users.map(u => {
+    const usedBytes = getUserStorageBytes(u.id);
+    const videoCount = db.prepare('SELECT COUNT(*) as count FROM videos WHERE user_id = ?').get(u.id).count;
+    return {
+      ...u,
+      storageBytes: usedBytes,
+      storageFormatted: formatStorage(usedBytes),
+      videoCount
+    };
+  });
+  res.json({ users: usersWithStorage });
 });
 
 app.post('/api/admin/users/:id/action', authMiddleware, ownerMiddleware, (req, res) => {
-  const targetId = parseInt(req.params.id);
+  const targetId = parseInt(req.params.id, 10);
   const { action } = req.body;
 
   if (targetId === req.user.id && (action === 'block' || action === 'delete')) {
-    return res.status(400).json({ error: 'Você não pode bloquear ou excluir a si mesmo.' });
+    return res.status(400).json({ error: 'Você não pode alterar o status da sua própria conta.' });
   }
 
   if (action === 'approve') {
@@ -294,28 +428,53 @@ app.post('/api/admin/users/:id/action', authMiddleware, ownerMiddleware, (req, r
 });
 
 app.get('/api/admin/settings', authMiddleware, (req, res) => {
-  const requireApproval = getSetting('require_approval', '1') === '1';
-  const usedBytes = getUsedStorageBytes();
-  const totalBytes = MAX_STORAGE_BYTES;
+  const isOwner = req.user.role === 'owner';
+  const requireApproval = isOwner ? (getSetting('require_approval', '1') === '1') : false;
 
-  const usedMB = (usedBytes / (1024 * 1024)).toFixed(1);
-  const usedGB = (usedBytes / (1024 * 1024 * 1024)).toFixed(2);
-  const formattedUsage = usedBytes >= (1024 * 1024 * 1024)
-    ? `${usedGB} GB`
-    : `${usedMB} MB`;
+  if (isOwner) {
+    const usedBytes = getUsedStorageBytes();
+    const totalBytes = SERVER_STORAGE_LIMIT_BYTES;
+    const percent = totalBytes > 0 ? (usedBytes / totalBytes) * 100 : 0;
+    return res.json({
+      isOwner: true,
+      requireApproval,
+      appName: APP_NAME,
+      baseDomain: BASE_DOMAIN,
+      playerDomain: PLAYER_DOMAIN,
+      dashDomain: DASH_DOMAIN,
+      storage: {
+        usedBytes,
+        totalBytes,
+        usedMB: (usedBytes / (1024 * 1024)).toFixed(1),
+        usedGB: (usedBytes / (1024 * 1024 * 1024)).toFixed(2),
+        formattedUsage: formatStorage(usedBytes),
+        totalFormatted: '30 GB',
+        totalGB: '30',
+        usagePercent: percent < 0.1 && usedBytes > 0 ? '0.1' : percent.toFixed(1),
+        isIndividual: false
+      }
+    });
+  }
 
-  const percent = ((usedBytes / totalBytes) * 100);
-
+  const usedBytes = getUserStorageBytes(req.user.id);
+  const totalBytes = MEMBER_STORAGE_LIMIT_BYTES;
+  const percent = totalBytes > 0 ? (usedBytes / totalBytes) * 100 : 0;
   res.json({
-    requireApproval,
+    isOwner: false,
+    appName: APP_NAME,
+    baseDomain: BASE_DOMAIN,
+    playerDomain: PLAYER_DOMAIN,
+    dashDomain: DASH_DOMAIN,
     storage: {
       usedBytes,
       totalBytes,
-      usedMB,
-      usedGB,
-      formattedUsage,
-      totalGB: '30',
-      usagePercent: percent < 0.1 && usedBytes > 0 ? '0.1' : percent.toFixed(1)
+      usedMB: (usedBytes / (1024 * 1024)).toFixed(1),
+      usedGB: (usedBytes / (1024 * 1024 * 1024)).toFixed(2),
+      formattedUsage: formatStorage(usedBytes),
+      totalFormatted: '3 GB',
+      totalGB: '3',
+      usagePercent: percent < 0.1 && usedBytes > 0 ? '0.1' : percent.toFixed(1),
+      isIndividual: true
     }
   });
 });
@@ -346,18 +505,39 @@ app.get('/api/videos', authMiddleware, (req, res) => {
 
 app.post('/api/videos', authMiddleware, (req, res) => {
   const { id, title, videoUrl, sourceType, filePath, duration, settings } = req.body;
-  const vidId = id || 'vsl_' + Date.now();
+
+  if (!videoUrl || typeof videoUrl !== 'string') {
+    return res.status(400).json({ error: 'URL do vídeo é obrigatória.' });
+  }
+
+  const cleanUrl = videoUrl.trim();
+  if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://') && !cleanUrl.startsWith('/videos/')) {
+    return res.status(400).json({ error: 'URL do vídeo inválida.' });
+  }
+
+  const vidId = id && /^[a-zA-Z0-9_-]+$/.test(id) ? id : 'vsl_' + Date.now();
+  const cleanTitle = (title || 'Minha VSL').trim().slice(0, 150);
+
+  let resolvedSize = 0;
+  if (sourceType === 'local') {
+    if (fileSize && typeof fileSize === 'number') {
+      resolvedSize = fileSize;
+    } else if (filePath && fs.existsSync(filePath)) {
+      try { resolvedSize = fs.statSync(filePath).size; } catch (e) {}
+    }
+  }
 
   db.prepare(`
-    INSERT INTO videos (id, user_id, title, source_type, file_path, video_url, duration, settings_json)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO videos (id, user_id, title, source_type, file_path, file_size, video_url, duration, settings_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     vidId,
     req.user.id,
-    title || 'Minha VSL',
-    sourceType || 'remote',
+    cleanTitle,
+    sourceType === 'local' ? 'local' : 'remote',
     filePath || null,
-    videoUrl,
+    resolvedSize,
+    cleanUrl,
     duration || '10:00',
     JSON.stringify(settings || {})
   );
@@ -381,7 +561,12 @@ app.put('/api/videos/:id', authMiddleware, (req, res) => {
       duration = COALESCE(?, duration),
       settings_json = COALESCE(?, settings_json)
     WHERE id = ?
-  `).run(title, duration, settings ? JSON.stringify(settings) : null, vidId);
+  `).run(
+    title ? title.trim().slice(0, 150) : null,
+    duration || null,
+    settings ? JSON.stringify(settings) : null,
+    vidId
+  );
 
   res.json({ success: true });
 });
@@ -398,6 +583,7 @@ app.delete('/api/videos/:id', authMiddleware, (req, res) => {
     try { fs.unlinkSync(existing.file_path); } catch (e) {}
   }
 
+  db.prepare('DELETE FROM analytics_events WHERE video_id = ?').run(vidId);
   db.prepare('DELETE FROM videos WHERE id = ?').run(vidId);
   res.json({ success: true });
 });
@@ -422,8 +608,8 @@ app.get('/api/videos/:id/public', (req, res) => {
     try { settings = JSON.parse(v.settings_json || '{}'); } catch (e) {}
 
     let videoUrl = v.video_url;
-    if (videoUrl && videoUrl.includes('roleta-sorte.online/videos/') && !videoUrl.includes('player.roleta-sorte.online/videos/')) {
-      videoUrl = videoUrl.replace('https://roleta-sorte.online/videos/', 'https://player.roleta-sorte.online/videos/');
+    if (videoUrl && videoUrl.includes('roleta-sorte.online/videos/') && !videoUrl.includes(`${PLAYER_DOMAIN}/videos/`)) {
+      videoUrl = videoUrl.replace('https://roleta-sorte.online/videos/', `https://${PLAYER_DOMAIN}/videos/`);
     }
 
     res.json({
@@ -438,46 +624,275 @@ app.get('/api/videos/:id/public', (req, res) => {
   }
 });
 
-app.post('/api/upload', authMiddleware, upload.single('videoFile'), (req, res) => {
-  if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado.' });
+const ALLOWED_ANALYTICS_EVENTS = [
+  'page_view',
+  'play',
+  'pause',
+  'progress',
+  'pitch_viewed',
+  'cta_shown',
+  'cta_clicked',
+  'complete'
+];
 
-  const currentUsed = getUsedStorageBytes();
-  if (currentUsed > MAX_STORAGE_BYTES) {
-    fs.unlinkSync(req.file.path);
-    return res.status(400).json({ error: 'Cota de armazenamento (30 GB) atingida.' });
+app.post('/api/analytics/event', (req, res) => {
+  const { videoId, visitorId, sessionId, eventType, milestone, watchTime } = req.body || {};
+
+  if (!videoId || !visitorId || !sessionId || !eventType) {
+    return res.status(400).json({ error: 'Dados analíticos insuficientes.' });
   }
 
-  const originalPath = req.file.path;
-  const fastPath = originalPath + '.fast.mp4';
+  if (!ALLOWED_ANALYTICS_EVENTS.includes(eventType)) {
+    return res.status(400).json({ error: 'Tipo de evento não reconhecido.' });
+  }
 
-  try {
-    execSync(`nice -n 19 ffmpeg -y -i "${originalPath}" -c copy -movflags +faststart "${fastPath}"`, { timeout: 30000 });
-    if (fs.existsSync(fastPath)) {
-      fs.unlinkSync(originalPath);
-      fs.renameSync(fastPath, originalPath);
+  const cleanVidId = String(videoId).slice(0, 64);
+  const cleanVisitorId = String(visitorId).slice(0, 64);
+  const cleanSessionId = String(sessionId).slice(0, 64);
+  const cleanMilestone = milestone !== undefined && milestone !== null ? parseInt(milestone, 10) : null;
+  const cleanWatchTime = typeof watchTime === 'number' ? Math.max(0, watchTime) : 0;
+
+  const video = db.prepare('SELECT id FROM videos WHERE id = ?').get(cleanVidId);
+  if (!video) {
+    return res.status(404).json({ error: 'Vídeo não cadastrado.' });
+  }
+
+  if (eventType === 'progress' && cleanMilestone !== null) {
+    const exists = db.prepare(`
+      SELECT id FROM analytics_events
+      WHERE session_id = ? AND event_type = 'progress' AND milestone = ?
+      LIMIT 1
+    `).get(cleanSessionId, cleanMilestone);
+    if (exists) return res.json({ success: true, duplicate: true });
+  }
+
+  if (eventType === 'page_view') {
+    const exists = db.prepare(`
+      SELECT id FROM analytics_events
+      WHERE session_id = ? AND event_type = 'page_view'
+      LIMIT 1
+    `).get(cleanSessionId);
+    if (exists) return res.json({ success: true, duplicate: true });
+  }
+
+  if (eventType === 'pitch_viewed') {
+    const exists = db.prepare(`
+      SELECT id FROM analytics_events
+      WHERE session_id = ? AND event_type = 'pitch_viewed'
+      LIMIT 1
+    `).get(cleanSessionId);
+    if (exists) return res.json({ success: true, duplicate: true });
+  }
+
+  if (eventType === 'cta_shown') {
+    const exists = db.prepare(`
+      SELECT id FROM analytics_events
+      WHERE session_id = ? AND event_type = 'cta_shown'
+      LIMIT 1
+    `).get(cleanSessionId);
+    if (exists) return res.json({ success: true, duplicate: true });
+  }
+
+  db.prepare(`
+    INSERT INTO analytics_events (video_id, visitor_id, session_id, event_type, milestone, watch_time)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(cleanVidId, cleanVisitorId, cleanSessionId, eventType, cleanMilestone, cleanWatchTime);
+
+  if (eventType === 'play') {
+    const playRecordedForSession = db.prepare(`
+      SELECT COUNT(*) as count FROM analytics_events
+      WHERE session_id = ? AND event_type = 'play'
+    `).get(cleanSessionId).count;
+
+    if (playRecordedForSession === 1) {
+      db.prepare('UPDATE videos SET plays = plays + 1 WHERE id = ?').run(cleanVidId);
     }
-  } catch (err) {
-    console.log('FastStart log:', err.message);
   }
 
-  const host = req.get('host') || '';
-  const isProd = host.includes('roleta-sorte.online');
-  const videoDomain = isProd ? 'https://player.roleta-sorte.online' : `${req.protocol}://${host}`;
-  const videoUrl = `${videoDomain}/videos/${req.file.filename}`;
+  res.json({ success: true });
+});
 
-  const finalStat = fs.statSync(originalPath);
+app.get('/api/analytics/overview', authMiddleware, (req, res) => {
+  const isOwner = req.user.role === 'owner';
+  const videoFilter = isOwner
+    ? '1=1'
+    : 'video_id IN (SELECT id FROM videos WHERE user_id = ' + req.user.id + ')';
+
+  const userVideos = isOwner
+    ? db.prepare('SELECT id, title, plays FROM videos ORDER BY created_at DESC').all()
+    : db.prepare('SELECT id, title, plays FROM videos WHERE user_id = ? ORDER BY created_at DESC').all(req.user.id);
+
+  const totalViews = db.prepare(`SELECT COUNT(*) as count FROM analytics_events WHERE event_type = 'page_view' AND ${videoFilter}`).get().count;
+  const totalPlays = db.prepare(`SELECT COUNT(*) as count FROM analytics_events WHERE event_type = 'play' AND ${videoFilter}`).get().count;
+  const uniquePlays = db.prepare(`SELECT COUNT(DISTINCT visitor_id) as count FROM analytics_events WHERE event_type = 'play' AND ${videoFilter}`).get().count;
+  const ctaClicks = db.prepare(`SELECT COUNT(*) as count FROM analytics_events WHERE event_type = 'cta_clicked' AND ${videoFilter}`).get().count;
+  const pitchViews = db.prepare(`SELECT COUNT(*) as count FROM analytics_events WHERE event_type = 'pitch_viewed' AND ${videoFilter}`).get().count;
+  const completes = db.prepare(`SELECT COUNT(DISTINCT session_id) as count FROM analytics_events WHERE (event_type = 'complete' OR (event_type = 'progress' AND milestone = 100)) AND ${videoFilter}`).get().count;
+
+  const totalPlaysBase = totalPlays > 0 ? totalPlays : userVideos.reduce((acc, v) => acc + (v.plays || 0), 0);
+  const completionRate = totalPlaysBase > 0 ? ((completes / totalPlaysBase) * 100).toFixed(1) : '0.0';
+  const conversionRate = totalPlaysBase > 0 ? ((ctaClicks / totalPlaysBase) * 100).toFixed(1) : '0.0';
+
+  const usedBytes = isOwner ? getUsedStorageBytes() : getUserStorageBytes(req.user.id);
+  const totalBytes = isOwner ? SERVER_STORAGE_LIMIT_BYTES : MEMBER_STORAGE_LIMIT_BYTES;
 
   res.json({
-    success: true,
-    filename: req.file.filename,
-    filePath: originalPath,
-    fileSize: finalStat.size,
-    videoUrl: videoUrl
+    totalViews,
+    totalPlays: totalPlaysBase,
+    uniquePlays: uniquePlays || totalPlaysBase,
+    ctaClicks,
+    pitchViews,
+    completionRate,
+    conversionRate,
+    usedStorage: {
+      usedBytes,
+      totalBytes,
+      formatted: formatStorage(usedBytes),
+      isIndividual: !isOwner
+    }
+  });
+});
+
+app.get('/api/analytics/video/:id', authMiddleware, (req, res) => {
+  const vidId = req.params.id;
+  const video = db.prepare('SELECT id, title, user_id, plays, settings_json FROM videos WHERE id = ?').get(vidId);
+  if (!video) return res.status(404).json({ error: 'Vídeo não encontrado.' });
+  if (req.user.role !== 'owner' && video.user_id !== req.user.id) {
+    return res.status(403).json({ error: 'Permissão negada.' });
+  }
+
+  const period = req.query.period || 'all';
+  let dateCondition = '1=1';
+  if (period === '24h') {
+    dateCondition = "created_at >= datetime('now', '-24 hours')";
+  } else if (period === '7d') {
+    dateCondition = "created_at >= datetime('now', '-7 days')";
+  } else if (period === '30d') {
+    dateCondition = "created_at >= datetime('now', '-30 days')";
+  }
+
+  const views = db.prepare(`SELECT COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'page_view' AND ${dateCondition}`).get(vidId).count;
+  const plays = db.prepare(`SELECT COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'play' AND ${dateCondition}`).get(vidId).count;
+  const uniqueVisitors = db.prepare(`SELECT COUNT(DISTINCT visitor_id) as count FROM analytics_events WHERE video_id = ? AND ${dateCondition}`).get(vidId).count;
+  const uniquePlays = db.prepare(`SELECT COUNT(DISTINCT visitor_id) as count FROM analytics_events WHERE video_id = ? AND event_type = 'play' AND ${dateCondition}`).get(vidId).count;
+  const pitchViews = db.prepare(`SELECT COUNT(DISTINCT session_id) as count FROM analytics_events WHERE video_id = ? AND event_type = 'pitch_viewed' AND ${dateCondition}`).get(vidId).count;
+  const ctaShown = db.prepare(`SELECT COUNT(DISTINCT session_id) as count FROM analytics_events WHERE video_id = ? AND event_type = 'cta_shown' AND ${dateCondition}`).get(vidId).count;
+  const ctaClicks = db.prepare(`SELECT COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'cta_clicked' AND ${dateCondition}`).get(vidId).count;
+  const ctaUniqueClicks = db.prepare(`SELECT COUNT(DISTINCT visitor_id) as count FROM analytics_events WHERE video_id = ? AND event_type = 'cta_clicked' AND ${dateCondition}`).get(vidId).count;
+
+  const milestonesList = [10, 25, 50, 75, 90, 100];
+  const retentionCurve = [];
+
+  const basePlays = plays > 0 ? plays : (period === 'all' ? video.plays || 0 : 0);
+
+  retentionCurve.push({
+    milestone: 0,
+    label: '0%',
+    sessions: basePlays,
+    percent: basePlays > 0 ? 100 : 0
+  });
+
+  for (const m of milestonesList) {
+    const count = db.prepare(`
+      SELECT COUNT(DISTINCT session_id) as count
+      FROM analytics_events
+      WHERE video_id = ? AND event_type = 'progress' AND milestone = ? AND ${dateCondition}
+    `).get(vidId, m).count;
+
+    const pct = basePlays > 0 ? Math.min(100, Math.round((count / basePlays) * 100)) : 0;
+    retentionCurve.push({
+      milestone: m,
+      label: `${m}%`,
+      sessions: count,
+      percent: pct
+    });
+  }
+
+  const pitchRate = basePlays > 0 ? ((pitchViews / basePlays) * 100).toFixed(1) : '0.0';
+  const ctaClickRate = pitchViews > 0 ? ((ctaClicks / pitchViews) * 100).toFixed(1) : (basePlays > 0 ? ((ctaClicks / basePlays) * 100).toFixed(1) : '0.0');
+
+  res.json({
+    video: {
+      id: video.id,
+      title: video.title
+    },
+    period,
+    metrics: {
+      views,
+      plays: basePlays,
+      uniqueVisitors,
+      uniquePlays: uniquePlays > 0 ? uniquePlays : basePlays,
+      pitchViews,
+      ctaShown,
+      ctaClicks,
+      ctaUniqueClicks,
+      pitchRate,
+      ctaClickRate
+    },
+    retentionCurve
+  });
+});
+
+app.post('/api/upload', authMiddleware, checkStorageQuotaPre, (req, res) => {
+  upload.single('videoFile')(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ error: err.message || 'Falha no upload do arquivo.' });
+    }
+
+    if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado.' });
+
+    const originalPath = req.file.path;
+    const isOwner = req.user.role === 'owner';
+    const userUsed = getUserStorageBytes(req.user.id);
+    const initialSize = fs.statSync(originalPath).size;
+
+    if (!isOwner && (userUsed + initialSize > MEMBER_STORAGE_LIMIT_BYTES)) {
+      try { fs.unlinkSync(originalPath); } catch (e) {}
+      return res.status(400).json({ error: 'Cota individual de 3 GB atingida. Remova vídeos para liberar espaço.' });
+    }
+
+    const currentUsed = getUsedStorageBytes();
+    if (currentUsed > SERVER_STORAGE_LIMIT_BYTES) {
+      try { fs.unlinkSync(originalPath); } catch (e) {}
+      return res.status(400).json({ error: 'Capacidade do servidor esgotada.' });
+    }
+
+    const fastPath = originalPath + '.fast.mp4';
+    try {
+      execSync(`nice -n 19 ffmpeg -y -i "${originalPath}" -c copy -movflags +faststart "${fastPath}"`, { timeout: 30000 });
+      if (fs.existsSync(fastPath)) {
+        fs.unlinkSync(originalPath);
+        fs.renameSync(fastPath, originalPath);
+      }
+    } catch (ffmpegErr) {
+      console.log('FastStart log:', ffmpegErr.message);
+    }
+
+    const finalStat = fs.statSync(originalPath);
+
+    if (!isOwner && (userUsed + finalStat.size > MEMBER_STORAGE_LIMIT_BYTES)) {
+      try { fs.unlinkSync(originalPath); } catch (e) {}
+      return res.status(400).json({ error: 'Cota individual de 3 GB excedida para este vídeo.' });
+    }
+
+    const host = req.get('host') || '';
+    const isProd = host.includes(BASE_DOMAIN);
+    const videoDomain = isProd ? `https://${PLAYER_DOMAIN}` : `${req.protocol}://${host}`;
+    const videoUrl = `${videoDomain}/videos/${req.file.filename}`;
+
+    res.json({
+      success: true,
+      filename: req.file.filename,
+      filePath: originalPath,
+      fileSize: finalStat.size,
+      videoUrl: videoUrl
+    });
   });
 });
 
 app.get('/videos/:filename', (req, res) => {
-  const filePath = path.join(VIDEOS_DIR, req.params.filename);
+  const safeFilename = path.basename(req.params.filename);
+  const filePath = path.join(VIDEOS_DIR, safeFilename);
 
   if (!fs.existsSync(filePath)) {
     return res.status(404).send('Vídeo não encontrado.');
@@ -488,7 +903,7 @@ app.get('/videos/:filename', (req, res) => {
   const range = req.headers.range;
 
   if (range) {
-    const parts = range.replace(/bytes=/, "").split("-");
+    const parts = range.replace(/bytes=/, '').split('-');
     const start = parseInt(parts[0], 10);
     const MAX_CHUNK = 1.5 * 1024 * 1024;
     let end = parts[1] ? parseInt(parts[1], 10) : start + MAX_CHUNK - 1;
@@ -505,7 +920,7 @@ app.get('/videos/:filename', (req, res) => {
       'Content-Range': `bytes ${start}-${end}/${fileSize}`,
       'Accept-Ranges': 'bytes',
       'Content-Length': chunksize,
-      'Content-Type': 'video/mp4',
+      'Content-Type': safeFilename.endsWith('.webm') ? 'video/webm' : 'video/mp4',
       'Cache-Control': 'public, max-age=31536000, immutable'
     };
 
@@ -518,7 +933,7 @@ app.get('/videos/:filename', (req, res) => {
       'Content-Range': `bytes 0-${MAX_INITIAL - 1}/${fileSize}`,
       'Accept-Ranges': 'bytes',
       'Content-Length': MAX_INITIAL,
-      'Content-Type': 'video/mp4',
+      'Content-Type': safeFilename.endsWith('.webm') ? 'video/webm' : 'video/mp4',
       'Cache-Control': 'public, max-age=31536000, immutable'
     };
     res.writeHead(206, head);
@@ -531,5 +946,5 @@ app.get('*', (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`CloudVTurb Server ativo na porta ${PORT}`);
+  console.log(`${APP_NAME} ativo na porta ${PORT}`);
 });
