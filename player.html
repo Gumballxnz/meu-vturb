@@ -573,6 +573,8 @@
 
       const vidId = params.get('id') || pathnameId || '';
       let videoSrc = params.get('v') || '';
+      let hlsSrc = '';
+      let smartAutoplaySrc = '';
       let dbSettings = {};
 
       if (vidId && !videoSrc) {
@@ -581,6 +583,8 @@
           if (res.ok) {
             const data = await res.json();
             videoSrc = data.video_url || '';
+            hlsSrc = data.hls_url || '';
+            smartAutoplaySrc = data.smartautoplay_url || '';
             dbSettings = data.settings || {};
             if (data.title) {
               document.title = data.title;
@@ -591,6 +595,12 @@
 
       if (videoSrc && videoSrc.startsWith('/videos/')) {
         videoSrc = `${window.location.origin}${videoSrc}`;
+      }
+      if (hlsSrc && hlsSrc.startsWith('/videos/')) {
+        hlsSrc = `${window.location.origin}${hlsSrc}`;
+      }
+      if (smartAutoplaySrc && smartAutoplaySrc.startsWith('/videos/')) {
+        smartAutoplaySrc = `${window.location.origin}${smartAutoplaySrc}`;
       }
 
       const barColor = params.get('bar_color') || dbSettings.barColor || '#2563EB';
@@ -831,28 +841,51 @@
 
       emitAnalyticsEvent('page_view', null, 0);
 
-      if (videoSrc) {
-        const isHls = videoSrc.includes('.m3u8');
-        if (isHls) {
-          const script = document.createElement('script');
-          script.src = 'https://cdn.jsdelivr.net/npm/hls.js@latest';
-          script.onload = function () {
-            if (window.Hls && window.Hls.isSupported()) {
-              const hls = new window.Hls();
-              hls.loadSource(videoSrc);
-              hls.attachMedia(video);
-              hls.on(window.Hls.Events.MANIFEST_PARSED, function () {
-                startPlayback();
-              });
-            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-              video.src = videoSrc;
-              startPlayback();
+      let hlsInstance = null;
+
+      function loadHlsStream(streamUrl, startTime, autoplayAudio) {
+        if (hlsInstance) {
+          try { hlsInstance.destroy(); } catch (e) {}
+          hlsInstance = null;
+        }
+
+        if (window.Hls && window.Hls.isSupported()) {
+          hlsInstance = new window.Hls({
+            enableWorker: true,
+            lowLatencyMode: false
+          });
+          hlsInstance.loadSource(streamUrl);
+          hlsInstance.attachMedia(video);
+          hlsInstance.on(window.Hls.Events.MANIFEST_PARSED, function () {
+            if (startTime > 0) video.currentTime = startTime;
+            if (autoplayAudio) {
+              video.muted = false;
+              video.volume = 1;
             }
-          };
-          document.head.appendChild(script);
-        } else {
+            video.play().catch(function () {});
+            registerPlay();
+          });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+          video.src = streamUrl;
+          video.addEventListener('loadedmetadata', function onMeta() {
+            video.removeEventListener('loadedmetadata', onMeta);
+            if (startTime > 0) video.currentTime = startTime;
+            if (autoplayAudio) {
+              video.muted = false;
+              video.volume = 1;
+            }
+            video.play().catch(function () {});
+            registerPlay();
+          });
+        } else if (videoSrc) {
           video.src = videoSrc;
-          startPlayback();
+          if (startTime > 0) video.currentTime = startTime;
+          if (autoplayAudio) {
+            video.muted = false;
+            video.volume = 1;
+          }
+          video.play().catch(function () {});
+          registerPlay();
         }
       }
 
@@ -886,16 +919,52 @@
         }
       }
 
+      const primaryStream = hlsSrc || videoSrc;
+      const shouldUseTeaser = smartAutoplay && smartAutoplaySrc && !hasUserUnmuted;
+
+      if (shouldUseTeaser) {
+        video.src = smartAutoplaySrc;
+        video.loop = true;
+        video.muted = true;
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+          playPromise.then(function () {
+            registerPlay();
+          }).catch(function () {});
+        }
+      } else if (primaryStream) {
+        if (primaryStream.includes('.m3u8')) {
+          loadHlsStream(primaryStream, 0, !smartAutoplay);
+        } else {
+          video.src = primaryStream;
+          startPlayback();
+        }
+      }
+
       smartOverlay.addEventListener('click', unmuteAndRestart);
 
       function unmuteAndRestart() {
         hasUserUnmuted = true;
         smartOverlay.classList.add('hidden');
-        video.muted = false;
-        if (video.currentTime > 2) {
-          video.currentTime = 0;
+        video.loop = false;
+
+        const cur = video.currentTime || 0;
+        const targetTime = cur > 2 ? 0 : cur;
+
+        if (hlsSrc) {
+          loadHlsStream(hlsSrc, targetTime, true);
+        } else if (videoSrc && video.src !== videoSrc) {
+          video.src = videoSrc;
+          video.currentTime = targetTime;
+          video.muted = false;
+          video.volume = 1;
+          video.play().catch(function () {});
+        } else {
+          video.muted = false;
+          video.volume = 1;
+          if (targetTime === 0) video.currentTime = 0;
+          video.play().catch(function () {});
         }
-        video.play().catch(function () {});
       }
 
       let indicatorTimeout;
