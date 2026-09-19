@@ -665,6 +665,57 @@ function ownerMiddleware(req, res, next) {
   }
 }
 
+const sseClients = new Map();
+
+function pushNotificationToUser(userId, notification) {
+  const client = sseClients.get(userId);
+  if (client && !client.writableEnded) {
+    client.write(`data: ${JSON.stringify(notification)}\n\n`);
+  }
+}
+
+async function sendUserActionEmail({ to, name, action, reason, adminName }) {
+  const apiKey = (process.env.RESEND_API_KEY || '').trim();
+  if (!apiKey) return;
+
+  let fromEmail = (process.env.RESEND_FROM_EMAIL || '').trim();
+  if (!fromEmail || fromEmail.includes('onboarding@resend.dev')) {
+    fromEmail = 'CloudVTurb <nao-responda@roleta-sorte.online>';
+  }
+
+  const labels = {
+    block: { subject: 'Sua conta foi bloqueada', title: 'Conta Bloqueada', color: '#ef4444', icon: 'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01', desc: 'O acesso à sua conta na plataforma CloudVTurb foi suspenso pelo administrador.' },
+    delete: { subject: 'Sua conta foi removida', title: 'Conta Removida', color: '#ef4444', icon: 'M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2', desc: 'Sua conta na plataforma CloudVTurb foi removida pelo administrador.' },
+    make_owner: { subject: 'Voce foi promovido a Administrador', title: 'Promovido a Administrador', color: '#2563eb', icon: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z', desc: 'Parabens! Voce foi promovido a Administrador (Owner) na plataforma CloudVTurb.' }
+  };
+
+  const info = labels[action];
+  if (!info) return;
+
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${info.title}</title></head>
+<body style="margin:0;padding:24px;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#18181b;">
+  <div style="max-width:480px;margin:0 auto;background:#ffffff;border-radius:12px;padding:32px;border:1px solid #e4e4e7;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+    <div style="font-size:22px;font-weight:800;color:#2563eb;margin-bottom:20px;letter-spacing:-0.5px;">CloudVTurb</div>
+    <h2 style="font-size:18px;font-weight:700;color:#09090b;margin:0 0 12px 0;">${info.title}</h2>
+    <p style="font-size:14px;line-height:1.6;color:#52525b;margin:0 0 16px 0;">Ola${name ? ` <strong>${escapeHtml(name)}</strong>` : ''},</p>
+    <p style="font-size:14px;line-height:1.6;color:#52525b;margin:0 0 24px 0;">${info.desc}</p>
+    ${reason ? `<div style="background:#f8fafc;border-left:3px solid ${info.color};border-radius:4px;padding:14px 16px;margin-bottom:24px;"><p style="font-size:13px;font-weight:600;color:#09090b;margin:0 0 6px 0;">Motivo informado pelo administrador:</p><p style="font-size:13px;color:#52525b;margin:0;">${escapeHtml(reason)}</p></div>` : ''}
+    <p style="font-size:13px;color:#71717a;margin:0 0 24px 0;">Esta acao foi executada por <strong>${escapeHtml(adminName || 'Administrador')}</strong>. Para duvidas, entre em contato com o suporte da plataforma.</p>
+    <div style="font-size:12px;color:#a1a1aa;border-top:1px solid #f4f4f5;padding-top:16px;">CloudVTurb - Plataforma de VSLs e Hospedagem de Alta Retencao</div>
+  </div>
+</body></html>`;
+
+  try {
+    await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: fromEmail, to: [to], subject: info.subject, html })
+    });
+  } catch (e) {
+    console.error('[CloudVTurb UserAction Email] Erro ao enviar:', e.message);
+  }
+}
+
 const ALLOWED_MIME_TYPES = ['video/mp4', 'video/webm'];
 const ALLOWED_EXTS = ['.mp4', '.webm'];
 
@@ -1481,13 +1532,19 @@ app.get('/api/admin/users', authMiddleware, ownerMiddleware, (req, res) => {
   }
 });
 
-app.post('/api/admin/users/:id/action', authMiddleware, ownerMiddleware, (req, res) => {
+app.post('/api/admin/users/:id/action', authMiddleware, ownerMiddleware, async (req, res) => {
   const targetId = parseInt(req.params.id, 10);
-  const { action } = req.body;
+  const { action, reason } = req.body;
 
   if (targetId === req.user.id && (action === 'block' || action === 'delete')) {
-    return res.status(400).json({ error: 'Você não pode alterar o status da sua própria conta.' });
+    return res.status(400).json({ error: 'Voce nao pode alterar o status da sua propria conta.' });
   }
+
+  if ((action === 'block' || action === 'delete' || action === 'make_owner') && (!reason || !String(reason).trim())) {
+    return res.status(400).json({ error: 'Informe o motivo da acao.' });
+  }
+
+  const target = db.prepare('SELECT id, name, email, role FROM users WHERE id = ?').get(targetId);
 
   if (action === 'approve') {
     db.prepare("UPDATE users SET status = 'approved' WHERE id = ?").run(targetId);
@@ -1497,6 +1554,88 @@ app.post('/api/admin/users/:id/action', authMiddleware, ownerMiddleware, (req, r
     db.prepare("UPDATE users SET role = 'owner', status = 'approved' WHERE id = ?").run(targetId);
   } else if (action === 'delete') {
     db.prepare('DELETE FROM users WHERE id = ?').run(targetId);
+  }
+
+  if (target && (action === 'block' || action === 'delete' || action === 'make_owner')) {
+    sendUserActionEmail({
+      to: target.email,
+      name: target.name,
+      action,
+      reason: String(reason).trim(),
+      adminName: req.user.name
+    }).catch(() => {});
+
+    if (action === 'make_owner') {
+      const notif = {
+        id: Date.now(),
+        type: 'promotion',
+        title: 'Voce foi promovido a Administrador',
+        message: String(reason).trim() || 'Parabens pela promocao!',
+        created_at: new Date().toISOString(),
+        read: 0
+      };
+      db.prepare(`INSERT INTO user_notifications (user_id, type, title, message) VALUES (?, ?, ?, ?)`)
+        .run(targetId, notif.type, notif.title, notif.message);
+      pushNotificationToUser(targetId, notif);
+    }
+  }
+
+  res.json({ success: true });
+});
+
+app.get('/api/user/notifications/stream', authMiddleware, (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+
+  const userId = req.user.id;
+  sseClients.set(userId, res);
+
+  const pending = db.prepare('SELECT * FROM user_notifications WHERE user_id = ? AND read = 0 ORDER BY created_at DESC LIMIT 20').all(userId);
+  if (pending.length > 0) {
+    pending.forEach(n => res.write(`data: ${JSON.stringify(n)}\n\n`));
+  }
+
+  res.write(': connected\n\n');
+
+  req.on('close', () => {
+    if (sseClients.get(userId) === res) sseClients.delete(userId);
+  });
+});
+
+app.get('/api/user/notifications', authMiddleware, (req, res) => {
+  const notifs = db.prepare('SELECT * FROM user_notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 30').all(req.user.id);
+  const unreadCount = db.prepare('SELECT COUNT(*) as c FROM user_notifications WHERE user_id = ? AND read = 0').get(req.user.id);
+  res.json({ notifications: notifs, unreadCount: unreadCount ? unreadCount.c : 0 });
+});
+
+app.post('/api/user/notifications/read-all', authMiddleware, (req, res) => {
+  db.prepare('UPDATE user_notifications SET read = 1 WHERE user_id = ?').run(req.user.id);
+  res.json({ success: true });
+});
+
+app.post('/api/user/password/verify-code', authMiddleware, (req, res) => {
+  const { code } = req.body || {};
+  if (!code) return res.status(400).json({ error: 'Informe o codigo de verificacao.' });
+
+  const cleanCode = String(code).trim().replace(/\D/g, '');
+  if (cleanCode.length !== 8) return res.status(400).json({ error: 'O codigo deve conter 8 digitos.' });
+
+  const user = req.user;
+  const record = db.prepare(`
+    SELECT * FROM verification_codes
+    WHERE email = ? AND type = 'change_password'
+    ORDER BY id DESC LIMIT 1
+  `).get(user.email);
+
+  if (!record || new Date(record.expires_at).getTime() < Date.now()) {
+    return res.status(400).json({ error: 'Codigo expirado ou invalido. Solicite um novo.' });
+  }
+
+  if (record.code !== cleanCode) {
+    return res.status(400).json({ error: 'Codigo incorreto. Verifique os 8 digitos recebidos por e-mail.' });
   }
 
   res.json({ success: true });

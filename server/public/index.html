@@ -5278,38 +5278,54 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       <div class="modal-body-clean" style="padding: 20px 24px;">
         <div id="changePwdStep1">
           <p style="font-size: 13.5px; color: var(--text-muted); line-height: 1.5; margin-bottom: 20px;">
-            Por motivos de segurança, enviaremos um código de verificação de 8 dígitos para o e-mail da sua conta (<strong id="changePwdEmailTarget" style="color: var(--text-main);"></strong>).
+            Por motivos de seguranca, enviaremos um codigo de verificacao de 8 digitos para o e-mail da sua conta (<strong id="changePwdEmailTarget" style="color: var(--text-main);"></strong>).
           </p>
           <div style="text-align: center; padding: 12px 0;">
             <button type="button" id="btnRequestPwdCode" class="btn-primary-action" style="width: 100%; justify-content: center; padding: 12px;" onclick="requestPasswordChangeCode(false)">
-              Enviar código de 8 dígitos
+              Enviar codigo de 8 digitos
             </button>
           </div>
         </div>
-        <div id="changePwdStep2" style="display: none;">
+        <div id="changePwdStep2A" style="display: none;">
           <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 16px;">
-            Digite o código de 8 dígitos enviado para <strong id="changePwdEmailTargetStep2" style="color: var(--text-main);"></strong> e defina sua nova senha.
+            Digite o codigo de 8 digitos enviado para <strong id="changePwdEmailTargetStep2" style="color: var(--text-main);"></strong>.
+          </p>
+          <div class="form-row" style="margin-bottom: 18px;">
+            <label class="form-label">Codigo de 8 digitos</label>
+            <input type="text" id="inputPwdCode" class="form-input-text" placeholder="00000000" maxlength="8" inputmode="numeric" style="font-family: monospace; letter-spacing: 4px; font-size: 18px; text-align: center; font-weight: 700;">
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; margin-bottom: 4px;">
+            <span style="color: var(--text-muted);">Nao recebeu o codigo?</span>
+            <button type="button" id="btnResendPwdCode" class="btn-clean-secondary" style="font-size: 12px; padding: 4px 10px;" onclick="requestPasswordChangeCode(true)">Reenviar codigo</button>
+          </div>
+        </div>
+        <div id="changePwdStep2B" style="display: none;">
+          <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 16px;">
+            Codigo verificado. Agora defina sua nova senha.
           </p>
           <div class="form-row">
-            <label class="form-label">Código de 8 dígitos</label>
-            <input type="text" id="inputPwdCode" class="form-input-text" placeholder="00000000" maxlength="8" style="font-family: monospace; letter-spacing: 4px; font-size: 18px; text-align: center; font-weight: 700;">
-          </div>
-          <div class="form-row">
             <label class="form-label">Nova senha</label>
-            <input type="password" id="inputNewPassword" class="form-input-text" placeholder="Mínimo de 6 caracteres">
+            <div style="position: relative;">
+              <input type="password" id="inputNewPassword" class="form-input-text" placeholder="Minimo de 6 caracteres" style="padding-right: 42px;">
+              <button type="button" onclick="togglePwdVisibility('inputNewPassword', 'eyeIconNew')" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-dim); padding: 4px; display: flex; align-items: center;">
+                <svg id="eyeIconNew" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
           </div>
-          <div class="form-row" style="margin-bottom: 14px;">
+          <div class="form-row" style="margin-bottom: 4px;">
             <label class="form-label">Confirmar nova senha</label>
-            <input type="password" id="inputConfirmPassword" class="form-input-text" placeholder="Repita a nova senha">
-          </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12.5px;">
-            <span style="color: var(--text-muted);">Não recebeu o código?</span>
-            <button type="button" id="btnResendPwdCode" class="btn-clean-secondary" style="font-size: 12px; padding: 4px 10px;" onclick="requestPasswordChangeCode(true)">Reenviar código</button>
+            <div style="position: relative;">
+              <input type="password" id="inputConfirmPassword" class="form-input-text" placeholder="Repita a nova senha" style="padding-right: 42px;">
+              <button type="button" onclick="togglePwdVisibility('inputConfirmPassword', 'eyeIconConfirm')" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-dim); padding: 4px; display: flex; align-items: center;">
+                <svg id="eyeIconConfirm" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
       <div class="modal-footer-clean">
         <button class="btn-clean-secondary" onclick="closeChangePasswordModal()">Cancelar</button>
+        <button class="btn-primary-action" id="btnVerifyPwdCode" style="display: none;" onclick="verifyPasswordCode()">Verificar Codigo</button>
         <button class="btn-primary-action" id="btnSubmitChangePassword" style="display: none;" onclick="submitChangePassword()">Salvar Nova Senha</button>
       </div>
     </div>
@@ -5736,6 +5752,22 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           <div style="position: relative;">
             <input type="password" id="regPassword" class="form-input-text" required placeholder="••••••••" minlength="6" style="padding-right: 38px;">
             <button type="button" class="btn-toggle-pw" onclick="togglePasswordVisibility('regPassword', this)" title="Visualizar senha" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 4px; display: flex; align-items: center; justify-content: center;">
+              <svg class="icon-eye" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg class="icon-eye-off" style="display: none;" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="form-row">
+          <label class="form-label">Confirmar Senha</label>
+          <div style="position: relative;">
+            <input type="password" id="regPasswordConfirm" class="form-input-text" required placeholder="••••••••" minlength="6" style="padding-right: 38px;">
+            <button type="button" class="btn-toggle-pw" onclick="togglePasswordVisibility('regPasswordConfirm', this)" title="Visualizar senha" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 4px; display: flex; align-items: center; justify-content: center;">
               <svg class="icon-eye" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                 <circle cx="12" cy="12" r="3"></circle>
@@ -6505,6 +6537,16 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       const name = document.getElementById('regName').value.trim();
       const email = document.getElementById('regEmail').value.trim().toLowerCase();
       const password = document.getElementById('regPassword').value;
+      const confirmPassword = document.getElementById('regPasswordConfirm').value;
+
+      if (password !== confirmPassword) {
+        alert.style.display = 'block';
+        alert.style.background = 'var(--danger-light)';
+        alert.style.color = '#f87171';
+        alert.textContent = 'As senhas não coincidem.';
+        document.getElementById('regPasswordConfirm').focus();
+        return;
+      }
 
       setButtonLoading(submitBtn, true, 'Enviando código...');
       try {
