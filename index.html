@@ -1523,6 +1523,10 @@
       padding: 60px 20px;
     }
 
+    .settings-empty-state .btn-primary-action {
+      margin-top: 20px;
+    }
+
     .vturb-api-card {
       background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
@@ -1941,17 +1945,16 @@
       bottom: calc(100% + 8px);
       left: 50%;
       transform: translateX(-50%) translateY(4px);
-      background: #18181b;
-      border: 1px solid #27272a;
-      color: #e4e4e7;
+      background: var(--color-text, #0f172a);
+      color: #ffffff;
       padding: 8px 12px;
-      border-radius: 8px;
+      border-radius: 6px;
       font-size: 12px;
-      font-weight: 400;
+      font-weight: 500;
       line-height: 1.4;
       white-space: normal;
-      width: 240px;
-      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      width: 250px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       pointer-events: none;
       opacity: 0;
       visibility: hidden;
@@ -1963,15 +1966,16 @@
     .webhook-secret-input-wrap {
       display: flex;
       align-items: center;
-      background: #18181b;
-      border: 1px solid #27272a;
-      border-radius: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
       padding: 2px 4px 2px 12px;
-      transition: border-color 0.15s ease;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
 
     .webhook-secret-input-wrap:focus-within {
-      border-color: #3b82f6;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
     }
 
     .webhook-secret-field {
@@ -1979,7 +1983,7 @@
       background: transparent;
       border: none;
       outline: none;
-      color: #f4f4f5;
+      color: var(--text-main);
       font-family: monospace;
       font-size: 13.5px;
       padding: 8px 0;
@@ -1988,7 +1992,7 @@
     .webhook-action-btn-sm {
       background: transparent;
       border: none;
-      color: #a1a1aa;
+      color: var(--text-muted);
       padding: 6px 8px;
       cursor: pointer;
       border-radius: 6px;
@@ -1999,8 +2003,8 @@
     }
 
     .webhook-action-btn-sm:hover {
-      color: #ffffff;
-      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+      background: var(--bg-card-hover);
     }
 
     .webhook-events-2col {
@@ -2015,7 +2019,7 @@
       align-items: center;
       gap: 10px;
       font-size: 13.5px;
-      color: #e4e4e7;
+      color: var(--text-main);
       cursor: pointer;
       user-select: none;
     }
@@ -2023,20 +2027,20 @@
     .webhook-checkbox-label input[type="checkbox"] {
       width: 16px;
       height: 16px;
-      accent-color: #2563eb;
+      accent-color: var(--primary);
       cursor: pointer;
       border-radius: 4px;
     }
 
     .webhook-doc-code {
-      background: #09090b;
-      border: 1px solid #27272a;
-      border-radius: 8px;
+      background: var(--color-surface-muted, #f1f5f9);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
       padding: 14px 16px;
       font-family: monospace;
       font-size: 12.5px;
       line-height: 1.5;
-      color: #e4e4e7;
+      color: var(--text-main);
       overflow-x: auto;
       margin: 8px 0 16px;
     }
@@ -2083,6 +2087,14 @@
       max-width: 420px;
       padding: 32px;
       box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+    }
+
+    .btn-toggle-pw {
+      transition: color 0.15s ease;
+    }
+
+    .btn-toggle-pw:hover {
+      color: var(--text-main) !important;
     }
 
     .toast-msg {
@@ -3577,7 +3589,7 @@
                 </div>
                 <div class="settings-empty-title">Nenhum webhook ainda</div>
                 <div class="settings-empty-sub">Adicione um webhook para começar a receber os eventos da sua conta.</div>
-                <button type="button" class="btn-primary-action" onclick="openNewWebhookModal()">+ Novo webhook</button>
+                <button type="button" class="btn-primary-action" onclick="openNewWebhookModal()" style="margin-top: 20px;">+ Novo webhook</button>
               </div>
 
               <div id="webhooksTableWrapper" style="display: none;">
@@ -4282,26 +4294,26 @@
   </div>
 
   <div class="modal-overlay" id="newWebhookModal">
-    <div class="modal-box" style="max-width: 520px; background: #18181b; border: 1px solid #27272a; border-radius: 14px;">
-      <div class="modal-header-clean" style="border-bottom: 1px solid #27272a; padding: 18px 24px;">
-        <div class="modal-title-clean" style="font-size: 16px; font-weight: 700; color: #f4f4f5;">Novo webhook</div>
+    <div class="modal-box" style="max-width: 520px;">
+      <div class="modal-header-clean">
+        <div class="modal-title-clean">Novo webhook</div>
         <button class="btn-icon" onclick="closeNewWebhookModal()">&times;</button>
       </div>
       <div class="modal-body-clean" style="padding: 20px 24px;">
         <div class="form-row" style="margin-bottom: 18px;">
           <div style="display: flex; align-items: center; margin-bottom: 6px;">
-            <label class="form-label" style="margin-bottom: 0; font-size: 13.5px; font-weight: 600; color: #e4e4e7;">URL do webhook</label>
+            <label class="form-label" style="margin-bottom: 0;">URL do webhook</label>
             <span class="webhook-info-tip">?
               <span class="webhook-tooltip-box">Para onde os eventos são enviados. Precisa ser um endereço HTTPS que responda com status 2xx.</span>
             </span>
           </div>
-          <input type="url" id="inputWebhookUrl" class="form-input-text" placeholder="https://example.com/api/pbd/?u=5df7741ff..." style="background: #18181b; border: 1px solid #27272a; border-radius: 8px; color: #f4f4f5; padding: 10px 14px; font-size: 13.5px;" oninput="validateWebhookUrlInput(this)">
-          <div id="webhookUrlErrorMsg" style="color: #ef4444; font-size: 12px; margin-top: 6px; display: none;">Campo obrigatório</div>
+          <input type="url" id="inputWebhookUrl" class="form-input-text" placeholder="https://example.com/api/pbd/?u=5df7741ff..." oninput="validateWebhookUrlInput(this)">
+          <div id="webhookUrlErrorMsg" style="color: var(--danger); font-size: 12px; margin-top: 6px; display: none;">Campo obrigatório</div>
         </div>
 
         <div class="form-row" style="margin-bottom: 22px;">
           <div style="display: flex; align-items: center; margin-bottom: 6px;">
-            <label class="form-label" style="margin-bottom: 0; font-size: 13.5px; font-weight: 600; color: #e4e4e7;">Secret de assinatura</label>
+            <label class="form-label" style="margin-bottom: 0;">Secret de assinatura</label>
             <span class="webhook-info-tip">?
               <span class="webhook-tooltip-box">Usado para validar a integridade no header webhook-signature da sua requisição.</span>
             </span>
@@ -4318,7 +4330,7 @@
         </div>
 
         <div class="form-row" style="margin-bottom: 8px;">
-          <label class="form-label" style="font-size: 13.5px; font-weight: 600; color: #e4e4e7; margin-bottom: 4px;">Eventos de mídia</label>
+          <label class="form-label" style="margin-bottom: 6px;">Eventos de mídia</label>
           <div class="webhook-events-2col">
             <div style="display: flex; flex-direction: column; gap: 12px;">
               <label class="webhook-checkbox-label">
@@ -4355,31 +4367,31 @@
           </div>
         </div>
       </div>
-      <div class="modal-footer-clean" style="border-top: 1px solid #27272a; padding: 16px 24px; display: flex; justify-content: flex-end; gap: 12px;">
-        <button type="button" class="btn-clean-secondary" onclick="closeNewWebhookModal()" style="border-radius: 8px; padding: 9px 18px;">Cancelar</button>
-        <button type="button" class="btn-primary-action" id="btnSubmitWebhook" onclick="submitNewWebhook()" style="border-radius: 8px; padding: 9px 20px;">Adicionar webhook</button>
+      <div class="modal-footer-clean">
+        <button type="button" class="btn-clean-secondary" onclick="closeNewWebhookModal()">Cancelar</button>
+        <button type="button" class="btn-primary-action" id="btnSubmitWebhook" onclick="submitNewWebhook()">Adicionar webhook</button>
       </div>
     </div>
   </div>
 
   <div class="modal-overlay" id="webhookDocModal">
-    <div class="modal-box" style="max-width: 580px; background: #18181b; border: 1px solid #27272a; border-radius: 14px;">
-      <div class="modal-header-clean" style="border-bottom: 1px solid #27272a; padding: 18px 24px;">
-        <div class="modal-title-clean" style="font-size: 16px; font-weight: 700; color: #f4f4f5;">O que seu endpoint recebe</div>
+    <div class="modal-box" style="max-width: 580px;">
+      <div class="modal-header-clean">
+        <div class="modal-title-clean">O que seu endpoint recebe</div>
         <button class="btn-icon" onclick="closeWebhookDocModal()">&times;</button>
       </div>
       <div class="modal-body-clean" style="padding: 20px 24px; max-height: 75vh; overflow-y: auto;">
-        <p style="font-size: 13.5px; color: #a1a1aa; line-height: 1.5; margin-bottom: 16px;">
+        <p style="font-size: 13.5px; color: var(--text-muted); line-height: 1.5; margin-bottom: 16px;">
           Cada entrega é um POST com estes headers e um corpo JSON.
         </p>
 
-        <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: #71717a; letter-spacing: 0.5px;">Headers</span>
+        <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.5px;">Headers</span>
         <pre class="webhook-doc-code">content-type: application/json
 user-agent: VTurb-Webhooks/1.0
 webhook-id: evt_01m0ddbgsya6f5ne8nk6fmvm5a
 webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
 
-        <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: #71717a; letter-spacing: 0.5px;">Corpo</span>
+        <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.5px;">Corpo</span>
         <pre class="webhook-doc-code">{
   "event_id": "evt_01m0ddbgsya6f5ne8nk6fmvm5a",
   "event_type": "video.upload.completed",
@@ -4394,12 +4406,12 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
   }
 }</pre>
 
-        <p style="font-size: 13px; color: #a1a1aa; line-height: 1.5; margin-top: 14px; background: rgba(37, 99, 235, 0.08); border: 1px solid rgba(37, 99, 235, 0.2); padding: 12px 14px; border-radius: 8px;">
-          Seu endpoint precisa responder 2xx. Entregas com falha são reenviadas automaticamente e o mesmo evento pode chegar mais de uma vez, então faça a deduplicação por <code style="color: #60a5fa; font-family: monospace;">event_id</code>.
+        <p style="font-size: 13px; color: var(--text-main); line-height: 1.5; margin-top: 14px; background: var(--primary-light); border: 1px solid var(--color-primary-border); padding: 12px 14px; border-radius: 8px;">
+          Seu endpoint precisa responder 2xx. Entregas com falha são reenviadas automaticamente e o mesmo evento pode chegar mais de uma vez, então faça a deduplicação por <code style="color: var(--primary); font-family: monospace; font-weight: 600;">event_id</code>.
         </p>
       </div>
-      <div class="modal-footer-clean" style="border-top: 1px solid #27272a; padding: 14px 24px; display: flex; justify-content: flex-end;">
-        <button type="button" class="btn-primary-action" onclick="closeWebhookDocModal()" style="border-radius: 8px; padding: 8px 20px;">Entendido</button>
+      <div class="modal-footer-clean">
+        <button type="button" class="btn-primary-action" onclick="closeWebhookDocModal()">Entendido</button>
       </div>
     </div>
   </div>
@@ -4712,7 +4724,19 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
         </div>
         <div class="form-row">
           <label class="form-label">Senha</label>
-          <input type="password" id="loginPassword" class="form-input-text" required placeholder="••••••••">
+          <div style="position: relative;">
+            <input type="password" id="loginPassword" class="form-input-text" required placeholder="••••••••" style="padding-right: 38px;">
+            <button type="button" class="btn-toggle-pw" onclick="togglePasswordVisibility('loginPassword', this)" title="Visualizar senha" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 4px; display: flex; align-items: center; justify-content: center;">
+              <svg class="icon-eye" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg class="icon-eye-off" style="display: none;" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            </button>
+          </div>
         </div>
         <button type="submit" class="btn-primary-action" style="width: 100%; justify-content: center; padding: 11px; margin-top: 8px;">Entrar no Dashboard</button>
         <p style="text-align: center; font-size: 12.5px; color: var(--text-muted); margin-top: 16px;">
@@ -4731,7 +4755,19 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
         </div>
         <div class="form-row">
           <label class="form-label">Senha</label>
-          <input type="password" id="regPassword" class="form-input-text" required placeholder="••••••••" minlength="6">
+          <div style="position: relative;">
+            <input type="password" id="regPassword" class="form-input-text" required placeholder="••••••••" minlength="6" style="padding-right: 38px;">
+            <button type="button" class="btn-toggle-pw" onclick="togglePasswordVisibility('regPassword', this)" title="Visualizar senha" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: var(--text-muted); padding: 4px; display: flex; align-items: center; justify-content: center;">
+              <svg class="icon-eye" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg class="icon-eye-off" style="display: none;" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            </button>
+          </div>
         </div>
         <button type="submit" class="btn-primary-action" style="width: 100%; justify-content: center; padding: 11px; margin-top: 8px;">Criar Minha Conta</button>
         <p style="text-align: center; font-size: 12.5px; color: var(--text-muted); margin-top: 16px;">
@@ -4768,11 +4804,13 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
       const headers = Object.assign({}, options.headers);
       if (token) headers['Authorization'] = `Bearer ${token}`;
       const fetchOpts = { ...options };
-      if (fetchOpts.body && typeof fetchOpts.body === 'object' && !(fetchOpts.body instanceof FormData)) {
-        headers['Content-Type'] = 'application/json';
-        fetchOpts.body = JSON.stringify(fetchOpts.body);
-      } else if (!fetchOpts.body) {
-        delete headers['Content-Type'];
+      if (fetchOpts.body) {
+        if (!(fetchOpts.body instanceof FormData)) {
+          if (!headers['Content-Type']) headers['Content-Type'] = 'application/json';
+          if (typeof fetchOpts.body === 'object') {
+            fetchOpts.body = JSON.stringify(fetchOpts.body);
+          }
+        }
       }
       fetchOpts.headers = headers;
 
@@ -5022,6 +5060,19 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
         if (window.location.pathname !== '/login') {
           history.pushState(null, '', '/login');
         }
+      }
+    }
+
+    function togglePasswordVisibility(inputId, btn) {
+      const input = document.getElementById(inputId);
+      if (!input) return;
+      const isPassword = input.type === 'password';
+      input.type = isPassword ? 'text' : 'password';
+      const iconEye = btn.querySelector('.icon-eye');
+      const iconEyeOff = btn.querySelector('.icon-eye-off');
+      if (iconEye && iconEyeOff) {
+        iconEye.style.display = isPassword ? 'none' : 'block';
+        iconEyeOff.style.display = isPassword ? 'block' : 'none';
       }
     }
 
@@ -7547,7 +7598,7 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
         const tbody = document.getElementById('webhooksTableBody');
 
         if (!hooks.length) {
-          emptyState.style.display = 'block';
+          emptyState.style.display = 'flex';
           tableWrapper.style.display = 'none';
           return;
         }
