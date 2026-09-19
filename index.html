@@ -4605,6 +4605,9 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
         <button class="btn-clean-secondary" onclick="closeNewWebhookModal()">Cancelar</button>
         <button class="btn-primary-action" id="btnSubmitWebhook" onclick="submitNewWebhook()">Salvar Webhook</button>
       </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="vturbEmbedModal">
     <div class="modal-box" style="max-width: 580px;">
       <div class="modal-header-clean">
@@ -4980,25 +4983,36 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
     }
 
     function showAuth(mode) {
-      document.getElementById('authBackdrop').style.display = 'flex';
+      const backdrop = document.getElementById('authBackdrop');
+      if (backdrop) backdrop.style.display = 'flex';
       toggleAuthMode(mode);
     }
 
     function toggleAuthMode(mode) {
       const alert = document.getElementById('authAlert');
-      alert.style.display = 'none';
+      if (alert) alert.style.display = 'none';
+      const loginForm = document.getElementById('authLoginForm');
+      const regForm = document.getElementById('authRegisterForm');
+      const cardTitle = document.getElementById('authCardTitle');
+      const cardSubtitle = document.getElementById('authCardSubtitle');
       if (mode === 'register') {
         document.documentElement.classList.add('auth-mode-register');
-        document.getElementById('authLoginForm').style.display = 'none';
-        document.getElementById('authRegisterForm').style.display = 'block';
-        document.getElementById('authCardTitle').textContent = 'Criar Nova Conta';
-        document.getElementById('authCardSubtitle').textContent = 'Cadastre-se para hospedar suas VSLs';
+        if (loginForm) loginForm.style.display = 'none';
+        if (regForm) regForm.style.display = 'block';
+        if (cardTitle) cardTitle.textContent = 'Criar Nova Conta';
+        if (cardSubtitle) cardSubtitle.textContent = 'Cadastre-se para hospedar suas VSLs';
+        if (window.location.pathname !== '/cadastro') {
+          history.pushState(null, '', '/cadastro');
+        }
       } else {
         document.documentElement.classList.remove('auth-mode-register');
-        document.getElementById('authRegisterForm').style.display = 'none';
-        document.getElementById('authLoginForm').style.display = 'block';
-        document.getElementById('authCardTitle').textContent = 'Entrar na Plataforma';
-        document.getElementById('authCardSubtitle').textContent = 'Acesse suas VSLs de alta retenção';
+        if (regForm) regForm.style.display = 'none';
+        if (loginForm) loginForm.style.display = 'block';
+        if (cardTitle) cardTitle.textContent = 'Entrar na Plataforma';
+        if (cardSubtitle) cardSubtitle.textContent = 'Acesse suas VSLs de alta retenção';
+        if (window.location.pathname !== '/login') {
+          history.pushState(null, '', '/login');
+        }
       }
     }
 
