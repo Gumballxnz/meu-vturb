@@ -779,7 +779,10 @@ async function sendVerificationEmail({ to, code, type, name }) {
     return;
   }
 
-  const fromEmail = (process.env.RESEND_FROM_EMAIL || 'CloudVTurb <onboarding@resend.dev>').trim();
+  let fromEmail = (process.env.RESEND_FROM_EMAIL || '').trim();
+  if (!fromEmail || fromEmail.includes('onboarding@resend.dev')) {
+    fromEmail = 'CloudVTurb <nao-responda@roleta-sorte.online>';
+  }
   const isRegister = type === 'register';
   const isChangePassword = type === 'change_password';
   const subject = isRegister
@@ -850,7 +853,10 @@ async function sendInviteEmail({ to, name, inviterName, inviteLink, role }) {
     return;
   }
 
-  const fromEmail = (process.env.RESEND_FROM_EMAIL || 'CloudVTurb <onboarding@resend.dev>').trim();
+  let fromEmail = (process.env.RESEND_FROM_EMAIL || '').trim();
+  if (!fromEmail || fromEmail.includes('onboarding@resend.dev')) {
+    fromEmail = 'CloudVTurb <nao-responda@roleta-sorte.online>';
+  }
   const roleLabel = role === 'admin' ? 'Administrador' : 'Usuário Comum';
   const subject = `${inviterName || 'Alguém'} convidou você para fazer parte da equipe no CloudVTurb`;
 
