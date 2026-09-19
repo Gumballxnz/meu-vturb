@@ -59,6 +59,14 @@ db.exec(`
   );
 `);
 
+try {
+  db.prepare(`
+    UPDATE videos 
+    SET video_url = REPLACE(video_url, 'https://roleta-sorte.online/videos/', 'https://player.roleta-sorte.online/videos/') 
+    WHERE video_url LIKE '%roleta-sorte.online/videos/%'
+  `).run();
+} catch (e) {}
+
 const getSetting = (key, defaultVal) => {
   const row = db.prepare('SELECT value FROM system_settings WHERE key = ?').get(key);
   return row ? row.value : defaultVal;
@@ -84,10 +92,18 @@ app.use((req, res, next) => {
 
   // 1. Subdomínio player.roleta-sorte.online
   if (host.startsWith('player.')) {
-    if (req.path.startsWith('/videos/')) {
-      return next(); // Streaming de vídeo
+    if (req.path.startsWith('/videos/') || req.path.startsWith('/api/')) {
+      return next();
     }
-    if (req.path === '/player.html' || req.path === '/' || req.path === '') {
+    if (
+      req.path === '/player' ||
+      req.path === '/player.html' ||
+      req.path === '/' ||
+      req.path === '' ||
+      req.path.startsWith('/embed/') ||
+      req.path.startsWith('/v/') ||
+      /^\/vsl_[a-zA-Z0-9_-]+$/.test(req.path)
+    ) {
       return res.sendFile(path.join(PUBLIC_DIR, 'player.html'));
     }
   }
@@ -112,6 +128,10 @@ app.use((req, res, next) => {
   const dashRoutes = ['/', '/login', '/cadastro', '/videos', '/metricas', '/usuarios', '/servidor'];
   if (dashRoutes.includes(req.path)) {
     return res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
+  }
+
+  if (req.path === '/player' || req.path.startsWith('/embed/')) {
+    return res.sendFile(path.join(PUBLIC_DIR, 'player.html'));
   }
 
   next();
@@ -416,6 +436,31 @@ app.post('/api/videos/:id/play', (req, res) => {
   }
 });
 
+app.get('/api/videos/:id/public', (req, res) => {
+  const vidId = req.params.id;
+  try {
+    const v = db.prepare('SELECT id, title, video_url, duration, settings_json FROM videos WHERE id = ?').get(vidId);
+    if (!v) return res.status(404).json({ error: 'Vídeo não encontrado.' });
+    let settings = {};
+    try { settings = JSON.parse(v.settings_json || '{}'); } catch (e) {}
+
+    let videoUrl = v.video_url;
+    if (videoUrl && videoUrl.includes('roleta-sorte.online/videos/') && !videoUrl.includes('player.roleta-sorte.online/videos/')) {
+      videoUrl = videoUrl.replace('https://roleta-sorte.online/videos/', 'https://player.roleta-sorte.online/videos/');
+    }
+
+    res.json({
+      id: v.id,
+      title: v.title,
+      video_url: videoUrl,
+      duration: v.duration,
+      settings
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Erro ao buscar vídeo.' });
+  }
+});
+
 // Upload de Vídeo com FastStart e Subdomínio player.
 app.post('/api/upload', authMiddleware, upload.single('videoFile'), (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'Nenhum arquivo enviado.' });
@@ -423,7 +468,7 @@ app.post('/api/upload', authMiddleware, upload.single('videoFile'), (req, res) =
   const currentUsed = getUsedStorageBytes();
   if (currentUsed > MAX_STORAGE_BYTES) {
     fs.unlinkSync(req.file.path);
-    return res.status(400).json({ error: 'Cota de armazenamento da VPS (30 GB) atingida.' });
+    return res.status(400).json({ error: 'Cota de armazenamento (30 GB) atingida.' });
   }
 
   const originalPath = req.file.path;

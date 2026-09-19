@@ -347,25 +347,53 @@
   </div>
 
   <script>
-(function () {
+    (async function () {
       'use strict';
 
       const params = new URLSearchParams(window.location.search);
-      const videoSrc = params.get('v') || '';
-      const barColor = params.get('bar_color') || '#2563eb';
-      const borderRadius = params.get('border_radius') || '0px';
-      const smartAutoplay = params.get('smart_autoplay') !== '0';
-      const overlayCustomText = params.get('autoplay_text');
-      const fakeProgress = params.get('fake_progress') === '1';
-      const blockSeek = params.get('block_seek') !== '0';
-      const resumeEnabled = params.get('resume') === '1';
-      const ctaTime = parseFloat(params.get('cta_time')) || 0;
-      const ctaUrl = params.get('cta_url') || '';
-      const ctaText = params.get('cta_text') || 'QUERO GARANTIR MINHA VAGA AGORA';
-      const ctaColor = params.get('cta_color') || '#10b981';
-      const ctaSub = params.get('cta_subtext') || 'Compra 100% Segura • Acesso Imediato';
-      const pixelsEnabled = params.get('pixels') === '1';
-      const vidId = params.get('id') || btoa(videoSrc).substring(0, 16);
+      let pathnameId = '';
+      const pathParts = window.location.pathname.split('/').filter(Boolean);
+      if (pathParts.length > 0) {
+        const lastPart = pathParts[pathParts.length - 1];
+        if (lastPart !== 'player' && lastPart !== 'player.html') {
+          pathnameId = lastPart;
+        }
+      }
+
+      const vidId = params.get('id') || pathnameId || '';
+      let videoSrc = params.get('v') || '';
+      let dbSettings = {};
+
+      if (vidId && !videoSrc) {
+        try {
+          const res = await fetch(`/api/videos/${encodeURIComponent(vidId)}/public`);
+          if (res.ok) {
+            const data = await res.json();
+            videoSrc = data.video_url || '';
+            dbSettings = data.settings || {};
+          }
+        } catch (e) {}
+      }
+
+      if (videoSrc && videoSrc.startsWith('/videos/')) {
+        videoSrc = `${window.location.origin}${videoSrc}`;
+      } else if (videoSrc && videoSrc.includes('roleta-sorte.online/videos/') && !videoSrc.includes('player.roleta-sorte.online/videos/')) {
+        videoSrc = videoSrc.replace('https://roleta-sorte.online/videos/', 'https://player.roleta-sorte.online/videos/');
+      }
+
+      const barColor = params.get('bar_color') || dbSettings.barColor || '#2563eb';
+      const borderRadius = params.get('border_radius') || dbSettings.borderRadius || '0px';
+      const smartAutoplay = params.has('smart_autoplay') ? params.get('smart_autoplay') !== '0' : (dbSettings.smartAutoplay !== false);
+      const overlayCustomText = params.get('autoplay_text') || dbSettings.autoplayText;
+      const fakeProgress = params.has('fake_progress') ? params.get('fake_progress') === '1' : (dbSettings.fakeProgress === true);
+      const blockSeek = params.has('block_seek') ? params.get('block_seek') !== '0' : (dbSettings.blockSeek !== false);
+      const resumeEnabled = params.has('resume') ? params.get('resume') === '1' : (dbSettings.resume === true);
+      const ctaTime = params.has('cta_time') ? parseFloat(params.get('cta_time')) : (dbSettings.ctaTime || 0);
+      const ctaUrl = params.get('cta_url') || dbSettings.ctaUrl || '';
+      const ctaText = params.get('cta_text') || dbSettings.ctaText || 'QUERO GARANTIR MINHA VAGA AGORA';
+      const ctaColor = params.get('cta_color') || dbSettings.ctaColor || '#10b981';
+      const ctaSub = params.get('cta_subtext') || dbSettings.ctaSubtext || 'Compra 100% Segura • Acesso Imediato';
+      const pixelsEnabled = params.has('pixels') ? params.get('pixels') === '1' : (dbSettings.pixels === true);
 
       const playerWrapper = document.getElementById('playerWrapper');
       const video = document.getElementById('videoElement');

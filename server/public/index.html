@@ -783,7 +783,7 @@
 
         <div class="badge-r2">
           <span class="indicator-dot"></span>
-          <span>VPS Storage: <strong id="vpsUsageBadge">30 GB Alocados</strong></span>
+          <span>Armazenamento: <strong id="storageUsageBadge">30 GB</strong></span>
         </div>
       </div>
 
@@ -845,31 +845,6 @@
   </div>
 
   <main>
-    <div class="savings-banner">
-      <div class="savings-info">
-        <h3>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
-            <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
-            <line x1="6" y1="6" x2="6.01" y2="6"></line>
-            <line x1="6" y1="18" x2="6.01" y2="18"></line>
-          </svg>
-          Servidor VPS Contabo + Cloudflare CDN
-        </h3>
-        <p>Vídeos hospedados com streaming ultra-rápido (Range Requests 206) e banco SQLite WAL de alto desempenho.</p>
-      </div>
-      <div class="savings-stat">
-        <div class="stat-box">
-          <div class="stat-label">Espaço Alocado VPS</div>
-          <div class="stat-val" id="bannerStorageVal">0.0 MB / 30 GB</div>
-        </div>
-        <div class="stat-box">
-          <div class="stat-label">Uso de Cota</div>
-          <div class="stat-val" style="color: #60a5fa;" id="bannerStoragePercent">0%</div>
-        </div>
-      </div>
-    </div>
-
     <!-- ABA 1: BIBLIOTECA DE VÍDEOS (/videos) -->
     <div class="tab-content active" id="viewLibrary">
       <div class="section-header">
@@ -939,9 +914,9 @@
     <!-- ABA 4: SERVIDOR & ARMAZENAMENTO (/servidor) -->
     <div class="tab-content" id="viewSettings">
       <div style="background: white; border: 1px solid var(--border-color); border-radius: var(--radius); padding: 32px; max-width: 800px; margin: 0 auto;">
-        <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 12px;">Infraestrutura da VPS</h2>
+        <h2 style="font-size: 22px; font-weight: 800; margin-bottom: 12px;">Servidor & Armazenamento</h2>
         <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 24px;">
-          Seu sistema está rodando nativamente na VPS Contabo conectada aos subdomínios oficiais:
+          Visão geral da infraestrutura e subdomínios oficiais:
         </p>
 
         <div style="margin-bottom: 20px;">
@@ -1243,22 +1218,22 @@
 
         <label class="form-label">Origem do Vídeo</label>
         <div class="source-selector-tabs">
-          <button class="source-btn active" id="btnSourceVps" onclick="switchVideoSourceMode('vps')">
-            Upload no Servidor VPS (30 GB)
+          <button class="source-btn active" id="btnSourceDirect" onclick="switchVideoSourceMode('direct')">
+            Upload no Servidor (30 GB)
           </button>
           <button class="source-btn" id="btnSourceR2" onclick="switchVideoSourceMode('r2')">
             Cloudflare R2 / URL Externa
           </button>
         </div>
 
-        <div id="sourceVpsGroup" class="form-group">
+        <div id="sourceDirectGroup" class="form-group">
           <label class="form-label">Arquivo de Vídeo (.mp4)</label>
           <input type="file" id="newVideoUploadFile" class="form-input" accept="video/mp4,video/webm">
-          <div class="form-help">Hospedado na VPS e servido via subdomínio player.roleta-sorte.online.</div>
+          <div class="form-help">Hospedado no servidor e servido via subdomínio player.roleta-sorte.online.</div>
 
           <div class="upload-progress-box" id="uploadProgressBox">
             <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
-              <span>Enviando vídeo para a VPS...</span>
+              <span>Enviando vídeo para o servidor...</span>
               <span id="uploadPercentLabel">0%</span>
             </div>
             <div class="upload-progress-bar-bg">
@@ -1312,7 +1287,7 @@
     let authToken = localStorage.getItem('cloudvturb_token') || '';
     let videos = [];
     let currentEditingId = null;
-    let newVideoSourceType = 'vps';
+    let newVideoSourceType = 'direct';
 
     const API_BASE = window.location.origin;
 
@@ -1536,11 +1511,12 @@
         const setRes = await apiRequest('/api/admin/settings');
         if (setRes.storage) {
           const displayUsage = setRes.storage.formattedUsage || `${setRes.storage.usedMB} MB`;
-          document.getElementById('bannerStorageVal').textContent = `${displayUsage} / ${setRes.storage.totalGB} GB`;
-          document.getElementById('bannerStoragePercent').textContent = `${setRes.storage.usagePercent}%`;
-          document.getElementById('settingsStorageFill').style.width = `${Math.max(1, parseFloat(setRes.storage.usagePercent))}%`;
-          document.getElementById('settingsStorageUsed').textContent = `${displayUsage} usados`;
-          document.getElementById('vpsUsageBadge').textContent = `${displayUsage} / 30 GB`;
+          const sFill = document.getElementById('settingsStorageFill');
+          if (sFill) sFill.style.width = `${Math.max(1, parseFloat(setRes.storage.usagePercent))}%`;
+          const sUsed = document.getElementById('settingsStorageUsed');
+          if (sUsed) sUsed.textContent = `${displayUsage} usados`;
+          const vBadge = document.getElementById('storageUsageBadge');
+          if (vBadge) vBadge.textContent = `${displayUsage} / 30 GB`;
         }
         if (currentUser && currentUser.role === 'owner') {
           document.getElementById('cfgRequireApprovalSwitch').checked = setRes.requireApproval;
@@ -1707,7 +1683,7 @@
                 </svg>
               </div>
             </div>
-            <div class="thumb-badge">${isLocal ? 'VPS 30GB' : 'Cloudflare R2'}</div>
+            <div class="thumb-badge">${isLocal ? 'Hospedado' : 'Cloudflare R2'}</div>
             <div class="thumb-duration">${v.duration || '05:00'}</div>
           </div>
           <div class="video-info">
@@ -1771,7 +1747,7 @@
       document.getElementById('uploadProgressBox').style.display = 'none';
       document.getElementById('uploadProgressBarFill').style.width = '0%';
       document.getElementById('uploadPercentLabel').textContent = '0%';
-      switchVideoSourceMode('vps');
+      switchVideoSourceMode('direct');
       document.getElementById('newVideoModal').classList.add('active');
     }
 
@@ -1781,15 +1757,15 @@
 
     function switchVideoSourceMode(mode) {
       newVideoSourceType = mode;
-      if (mode === 'vps') {
-        document.getElementById('btnSourceVps').classList.add('active');
+      if (mode === 'direct') {
+        document.getElementById('btnSourceDirect').classList.add('active');
         document.getElementById('btnSourceR2').classList.remove('active');
-        document.getElementById('sourceVpsGroup').style.display = 'block';
+        document.getElementById('sourceDirectGroup').style.display = 'block';
         document.getElementById('sourceR2Group').style.display = 'none';
       } else {
-        document.getElementById('btnSourceVps').classList.remove('active');
+        document.getElementById('btnSourceDirect').classList.remove('active');
         document.getElementById('btnSourceR2').classList.add('active');
-        document.getElementById('sourceVpsGroup').style.display = 'none';
+        document.getElementById('sourceDirectGroup').style.display = 'none';
         document.getElementById('sourceR2Group').style.display = 'block';
       }
     }
@@ -1802,7 +1778,7 @@
       let sourceType = 'remote';
       let filePath = null;
 
-      if (newVideoSourceType === 'vps') {
+      if (newVideoSourceType === 'direct') {
         const fileInput = document.getElementById('newVideoUploadFile');
         if (fileInput.files.length === 0) {
           showToast('Por favor, selecione um arquivo de vídeo.', 'error');
@@ -2006,7 +1982,7 @@
 
     function buildPlayerUrl(videoId, currentSettings) {
       const v = videos.find(x => x.id === videoId);
-      if (!v) return 'player.html';
+      if (!v) return 'player';
 
       const s = currentSettings;
       const p = new URLSearchParams();
@@ -2031,7 +2007,7 @@
         p.set('cta_time', '999999');
       }
 
-      return 'player.html?' + p.toString();
+      return 'player?' + p.toString();
     }
 
     function getCurrentSettingsFromForm() {
@@ -2095,11 +2071,10 @@
       const v = videos.find(x => x.id === videoId);
       if (!v) return;
 
-      const playerUrl = buildPlayerUrl(v.id, v.settings);
       const isProd = window.location.hostname.includes('roleta-sorte.online');
       const playerDomain = isProd ? 'https://player.roleta-sorte.online' : window.location.origin;
 
-      const fullUrl = playerDomain + '/' + playerUrl;
+      const fullUrl = `${playerDomain}/player?id=${encodeURIComponent(v.id)}`;
       const isVertical = v.settings && v.settings.aspectRatio === '9:16';
       const aspectPadding = isVertical ? '177.77%' : '56.25%';
 
