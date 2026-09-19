@@ -1,0 +1,26 @@
+services:
+  cloudvturb:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: cloudvturb
+    restart: unless-stopped
+    ports:
+      - "4000:4000"
+    environment:
+      - PORT=4000
+      - NODE_ENV=production
+      - JWT_SECRET=${JWT_SECRET:-cloudvturb_altere_esta_chave_jwt_secreta_2026}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+      - BASE_DOMAIN=${BASE_DOMAIN:-}
+      - PLAYER_DOMAIN=${PLAYER_DOMAIN:-}
+      - DASH_DOMAIN=${DASH_DOMAIN:-}
+      - APP_NAME=${APP_NAME:-CloudVTurb}
+      - DATA_DIR=/app/data
+      - VIDEOS_DIR=/app/videos
+      - PUBLIC_DIR=/app/public
+      - RESEND_API_KEY=${RESEND_API_KEY:-}
+      - RESEND_FROM_EMAIL=${RESEND_FROM_EMAIL:-CloudVTurb <onboarding@resend.dev>}
+    volumes:
+      - ./data:/app/data
+      - ./videos:/app/videos

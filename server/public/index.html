@@ -5,12 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#F8FAFC">
   <meta name="description" content="Plataforma SaaS premium para hospedagem e entrega de VSLs de alta conversão.">
-  <meta name="google-site-verification" content="p3o_NCI1wR15lwk81V_4mWPGcddUp5FG1x6pYrd0-Q0">
   <title>CloudVTurb — Plataforma de Hospedagem VSL</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="alternate icon" href="/favicon.ico">
   <script>
     (function() {
+      try {
+        var t = localStorage.getItem('cloudvturb_theme') || 'light';
+        document.documentElement.setAttribute('data-theme', t);
+      } catch (e) {}
       var p = window.location.pathname.replace(/\/$/, '') || '/';
       var hasToken = false;
       try { hasToken = !!localStorage.getItem('cloudvturb_token'); } catch (e) {}
@@ -76,7 +79,7 @@
         document.head.appendChild(st);
       }
     })();
-  </script>
+</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -127,6 +130,19 @@
       --radius-lg: 16px;
       --sidebar-width: 260px;
       --header-height: 64px;
+    }
+
+    html[data-theme="dark"] {
+      --color-page: #0B0F19;
+      --color-surface: #111827;
+      --color-surface-muted: #1F2937;
+      --color-border: #1F2937;
+      --color-text: #F9FAFB;
+      --color-text-muted: #9CA3AF;
+      --color-primary-soft: rgba(37, 99, 235, 0.15);
+      --color-primary-border: rgba(37, 99, 235, 0.3);
+      --border-hover: #374151;
+      --text-dim: #6B7280;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -300,6 +316,11 @@
       justify-content: space-between;
     }
 
+    html[data-theme="dark"] .topbar {
+      background: rgba(17, 24, 39, 0.9);
+      border-bottom-color: var(--border-subtle);
+    }
+
     .topbar-left {
       display: flex;
       align-items: center;
@@ -326,7 +347,159 @@
     .topbar-right {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 10px;
+    }
+
+    .topbar-icon-btn {
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      border-radius: var(--radius-sm);
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      transition: all 0.15s ease;
+    }
+
+    .topbar-icon-btn:hover {
+      background: var(--bg-card-hover);
+      color: var(--text-main);
+      border-color: var(--border-hover);
+    }
+
+    .notif-badge-dot {
+      position: absolute;
+      top: 7px;
+      right: 7px;
+      width: 7px;
+      height: 7px;
+      background: #ef4444;
+      border-radius: 50%;
+      border: 1.5px solid var(--bg-surface);
+    }
+
+    .notif-dropdown {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 8px);
+      width: 320px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+      display: none;
+      flex-direction: column;
+      z-index: 1000;
+      overflow: hidden;
+      animation: dropdownFadeIn 0.12s ease;
+    }
+
+    .notif-dropdown.active {
+      display: flex;
+    }
+
+    .notif-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .notif-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .notif-mark-all {
+      background: none;
+      border: none;
+      color: var(--color-primary);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .notif-mark-all:hover {
+      text-decoration: underline;
+    }
+
+    .notif-list {
+      max-height: 280px;
+      overflow-y: auto;
+      padding: 8px 0;
+    }
+
+    .notif-empty {
+      padding: 32px 16px;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .notif-item {
+      padding: 10px 16px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      border-bottom: 1px solid var(--border-subtle);
+      transition: background 0.15s ease;
+      cursor: pointer;
+    }
+
+    .notif-item:last-child {
+      border-bottom: none;
+    }
+
+    .notif-item:hover {
+      background: var(--bg-card-hover);
+    }
+
+    .notif-item.unread {
+      background: var(--color-primary-soft);
+    }
+
+    .notif-item-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      background: var(--color-primary-soft);
+      color: var(--color-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .notif-item-content {
+      flex: 1;
+      font-size: 12.5px;
+      line-height: 1.4;
+    }
+
+    .notif-item-title {
+      font-weight: 600;
+      color: var(--text-main);
+    }
+
+    .notif-item-desc {
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .notif-item-time {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 4px;
     }
 
     .btn-primary-action {
@@ -3217,10 +3390,40 @@
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
         </button>
         <div class="page-title" id="pageTitleLabel">Visão Geral</div>
-        <script>if (window.__initialRoute && document.getElementById('pageTitleLabel')) document.getElementById('pageTitleLabel').textContent = window.__initialRoute.title;</script>
+        <script>
+if (window.__initialRoute && document.getElementById('pageTitleLabel')) document.getElementById('pageTitleLabel').textContent = window.__initialRoute.title;
+</script>
       </div>
 
       <div class="topbar-right">
+        <button class="topbar-icon-btn" id="themeToggleBtn" title="Alternar tema" onclick="toggleAppTheme()">
+          <svg id="topbarMoonIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+          <svg id="topbarSunIcon" style="display:none" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path></svg>
+        </button>
+
+        <div style="position: relative;">
+          <button class="topbar-icon-btn" id="notifBellBtn" title="Notificações" onclick="toggleNotificationsMenu(event)">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+            <span class="notif-badge-dot" id="notifBadgeDot" style="display: none;"></span>
+          </button>
+          <div class="notif-dropdown" id="notifDropdown">
+            <div class="notif-header">
+              <span class="notif-title">Notificações</span>
+              <button class="notif-mark-all" onclick="markAllNotifsRead()">Marcar como lidas</button>
+            </div>
+            <div class="notif-list" id="notifList">
+              <div class="notif-empty">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-dim); margin-bottom: 6px;"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                <span>Nenhuma notificação nova</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn-primary-action" id="btnTopNewVsl" onclick="openNewVideoModal()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          <span>Nova VSL</span>
+        </button>
       </div>
     </header>
 
@@ -4634,7 +4837,7 @@
         <pre class="webhook-doc-code">content-type: application/json
 user-agent: VTurb-Webhooks/1.0
 webhook-id: evt_01m0ddbgsya6f5ne8nk6fmvm5a
-webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
+webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
 
         <span style="font-size: 12px; font-weight: 700; text-transform: uppercase; color: var(--text-dim); letter-spacing: 0.5px;">Corpo</span>
         <pre class="webhook-doc-code">{
@@ -5111,8 +5314,55 @@ webhook-signature: whsec_3e62227cfb20fc054bdc0d40dfc624d4</pre>
       if (bd) bd.classList.toggle('active', willOpen);
     }
 
+    function applyAppTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      try { localStorage.setItem('cloudvturb_theme', theme); } catch (e) {}
+      const moon = document.getElementById('topbarMoonIcon');
+      const sun = document.getElementById('topbarSunIcon');
+      if (moon && sun) {
+        if (theme === 'dark') {
+          moon.style.display = 'none';
+          sun.style.display = 'block';
+        } else {
+          moon.style.display = 'block';
+          sun.style.display = 'none';
+        }
+      }
+    }
+
+    function toggleAppTheme() {
+      const cur = document.documentElement.getAttribute('data-theme') || 'light';
+      applyAppTheme(cur === 'dark' ? 'light' : 'dark');
+    }
+
+    function toggleNotificationsMenu(event) {
+      if (event) event.stopPropagation();
+      const dropdown = document.getElementById('notifDropdown');
+      if (!dropdown) return;
+      dropdown.classList.toggle('active');
+    }
+
+    function markAllNotifsRead() {
+      const dot = document.getElementById('notifBadgeDot');
+      if (dot) dot.style.display = 'none';
+      const items = document.querySelectorAll('.notif-item.unread');
+      items.forEach(el => el.classList.remove('unread'));
+    }
+
+    document.addEventListener('click', (e) => {
+      const dropdown = document.getElementById('notifDropdown');
+      const btn = document.getElementById('notifBellBtn');
+      if (dropdown && dropdown.classList.contains('active')) {
+        if (!dropdown.contains(e.target) && (!btn || !btn.contains(e.target))) {
+          dropdown.classList.remove('active');
+        }
+      }
+    });
+
     function hydrateCachedSession() {
       try {
+        const cachedTheme = localStorage.getItem('cloudvturb_theme') || 'light';
+        applyAppTheme(cachedTheme);
         const cachedUser = localStorage.getItem('cloudvturb_user');
         if (cachedUser) {
           currentUser = JSON.parse(cachedUser);

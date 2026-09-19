@@ -7,6 +7,7 @@ const { execSync, execFileSync, spawn } = require('child_process');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
+const QRCode = require('qrcode');
 const Database = require('better-sqlite3');
 const { Readable } = require('stream');
 const { finished } = require('stream/promises');
@@ -244,6 +245,19 @@ for (const col of userCols) {
   try { db.exec(`ALTER TABLE users ADD COLUMN ${col} TEXT`); } catch (e) {}
 }
 try { db.exec('ALTER TABLE users ADD COLUMN owner_id INTEGER DEFAULT NULL'); } catch (e) {}
+
+const securityCols = [
+  'google_connected INTEGER DEFAULT 0',
+  'google_email TEXT DEFAULT NULL',
+  'two_factor_enabled INTEGER DEFAULT 0',
+  'two_factor_secret TEXT DEFAULT NULL',
+  'two_factor_temp_secret TEXT DEFAULT NULL',
+  'require_member_2fa INTEGER DEFAULT 0',
+  'token_version INTEGER DEFAULT 1'
+];
+for (const colDef of securityCols) {
+  try { db.exec(`ALTER TABLE users ADD COLUMN ${colDef}`); } catch (e) {}
+}
 
 const analyticsCols = [
   'device TEXT DEFAULT "desktop"',
@@ -583,9 +597,15 @@ function authMiddleware(req, res, next) {
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
-    const user = db.prepare('SELECT id, name, email, role, status, full_name, country, phone, address_street, postal_code, state_province, onboarding_completed, avatar_url, owner_id FROM users WHERE id = ?').get(decoded.id);
+    if (decoded.isTemp2FA || decoded.isTempSetup2FA) {
+      return res.status(401).json({ error: 'Autenticação de dois fatores pendente.' });
+    }
+    const user = db.prepare('SELECT id, name, email, role, status, full_name, country, phone, address_street, postal_code, state_province, onboarding_completed, avatar_url, owner_id, token_version, two_factor_enabled, require_member_2fa, google_connected, google_email FROM users WHERE id = ?').get(decoded.id);
     if (!user) return res.status(401).json({ error: 'Usuário não encontrado.' });
     if (user.status !== 'approved') return res.status(403).json({ error: 'Acesso bloqueado ou pendente de aprovação.' });
+    if (decoded.token_version !== undefined && user.token_version && decoded.token_version !== user.token_version) {
+      return res.status(401).json({ error: 'Sessão expirada ou encerrada em outro dispositivo.' });
+    }
     req.user = user;
     next();
   } catch (err) {
@@ -660,6 +680,59 @@ function generate8DigitCode() {
   return crypto.randomInt(10000000, 100000000).toString();
 }
 
+const BASE32_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+
+function base32Encode(buffer) {
+  let bits = 0;
+  let value = 0;
+  let output = '';
+  for (let i = 0; i < buffer.length; i++) {
+    value = (value << 8) | buffer[i];
+    bits += 8;
+    while (bits >= 5) {
+      output += BASE32_ALPHABET[(value >>> (bits - 5)) & 31];
+      bits -= 5;
+    }
+  }
+  if (bits > 0) output += BASE32_ALPHABET[(value << (5 - bits)) & 31];
+  return output;
+}
+
+function base32Decode(str) {
+  const clean = String(str || '').toUpperCase().replace(/[^A-Z2-7]/g, '');
+  let bits = 0;
+  let value = 0;
+  const bytes = [];
+  for (let i = 0; i < clean.length; i++) {
+    const idx = BASE32_ALPHABET.indexOf(clean[i]);
+    if (idx === -1) continue;
+    value = (value << 5) | idx;
+    bits += 5;
+    if (bits >= 8) {
+      bytes.push((value >>> (bits - 8)) & 255);
+      bits -= 8;
+    }
+  }
+  return Buffer.from(bytes);
+}
+
+function verifyTOTP(token, secretBase32) {
+  if (!token || !secretBase32) return false;
+  const cleanToken = String(token).trim();
+  const epoch = Math.floor(Date.now() / 1000);
+  const secretBytes = base32Decode(secretBase32);
+  for (let offset = -1; offset <= 1; offset++) {
+    const counter = Math.floor(epoch / 30) + offset;
+    const buf = Buffer.alloc(8);
+    buf.writeBigUInt64BE(BigInt(counter));
+    const hmac = crypto.createHmac('sha1', secretBytes).update(buf).digest();
+    const o = hmac[hmac.length - 1] & 0x0f;
+    const code = ((hmac.readUInt32BE(o) & 0x7fffffff) % 1000000).toString().padStart(6, '0');
+    if (code === cleanToken) return true;
+  }
+  return false;
+}
+
 function escapeHtml(str) {
   if (!str) return '';
   return String(str).replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
@@ -668,19 +741,30 @@ function escapeHtml(str) {
 async function sendVerificationEmail({ to, code, type, name }) {
   const apiKey = (process.env.RESEND_API_KEY || '').trim();
   if (!apiKey) {
-    throw new Error('Chave RESEND_API_KEY não configurada no servidor (.env). Configure a chave da Resend para o envio de e-mails.');
+    console.log(`[CloudVTurb Auth] Codigo de verificacao para ${to} (${type}): ${code}`);
+    if (process.env.NODE_ENV === 'production' && process.env.REQUIRE_RESEND === 'true') {
+      throw new Error('Chave RESEND_API_KEY não configurada no servidor (.env). Configure a chave da Resend para o envio de e-mails.');
+    }
+    return;
   }
 
   const fromEmail = (process.env.RESEND_FROM_EMAIL || 'CloudVTurb <onboarding@resend.dev>').trim();
   const isRegister = type === 'register';
+  const isChangePassword = type === 'change_password';
   const subject = isRegister
     ? `${code} é seu código de verificação - CloudVTurb`
-    : `${code} é seu código de recuperação de senha - CloudVTurb`;
+    : (isChangePassword
+      ? `${code} é seu código para alterar sua senha - CloudVTurb`
+      : `${code} é seu código de recuperação de senha - CloudVTurb`);
 
-  const title = isRegister ? 'Confirme seu Cadastro' : 'Recuperação de Senha';
+  const title = isRegister
+    ? 'Confirme seu Cadastro'
+    : (isChangePassword ? 'Alteração de Senha' : 'Recuperação de Senha');
   const description = isRegister
     ? 'Use o código de 8 dígitos abaixo para confirmar seu e-mail e concluir o cadastro no CloudVTurb:'
-    : 'Recebemos uma solicitação de redefinição de senha para sua conta. Use o código de 8 dígitos abaixo:';
+    : (isChangePassword
+      ? 'Recebemos uma solicitação para alterar a senha da sua conta CloudVTurb. Use o código de 8 dígitos abaixo para validar a operação:'
+      : 'Recebemos uma solicitação de redefinição de senha para sua conta. Use o código de 8 dígitos abaixo:');
 
   const html = `<!DOCTYPE html>
 <html lang="pt-BR">
@@ -832,7 +916,7 @@ app.post('/api/auth/verify-register', (req, res) => {
       VALUES (?, ?, ?, 'owner', 'approved')
     `).run(payload.name, cleanEmail, payload.passwordHash);
 
-    const token = jwt.sign({ id: info.lastInsertRowid, email: cleanEmail, role: 'owner' }, JWT_SECRET, { expiresIn: '30d' });
+    const token = jwt.sign({ id: info.lastInsertRowid, email: cleanEmail, role: 'owner', token_version: 1 }, JWT_SECRET, { expiresIn: '30d' });
     return res.json({
       success: true,
       message: 'Conta de Administrador criada e verificada com sucesso!',
@@ -856,7 +940,7 @@ app.post('/api/auth/verify-register', (req, res) => {
       message: 'Cadastro confirmado! Aguarde a aprovação do Administrador para acessar a plataforma.'
     });
   } else {
-    const token = jwt.sign({ id: info.lastInsertRowid, email: cleanEmail, role: 'member' }, JWT_SECRET, { expiresIn: '30d' });
+    const token = jwt.sign({ id: info.lastInsertRowid, email: cleanEmail, role: 'member', token_version: 1 }, JWT_SECRET, { expiresIn: '30d' });
     return res.json({
       success: true,
       pendingApproval: false,
@@ -1040,7 +1124,156 @@ app.post('/api/auth/login', (req, res) => {
     return res.status(403).json({ error: 'Sua conta foi desativada pelo Administrador.' });
   }
 
-  const token = jwt.sign({ id: user.id, email: user.email, role: user.role }, JWT_SECRET, { expiresIn: '30d' });
+  if (user.two_factor_enabled) {
+    const tempToken = jwt.sign({ id: user.id, isTemp2FA: true }, JWT_SECRET, { expiresIn: '10m' });
+    return res.json({
+      requires2FA: true,
+      tempToken,
+      message: 'Digite o código de 6 dígitos do seu aplicativo autenticador.'
+    });
+  }
+
+  if (user.owner_id) {
+    const owner = db.prepare('SELECT require_member_2fa FROM users WHERE id = ?').get(user.owner_id);
+    if (owner && owner.require_member_2fa && !user.two_factor_enabled) {
+      const tempToken = jwt.sign({ id: user.id, isTempSetup2FA: true }, JWT_SECRET, { expiresIn: '15m' });
+      return res.json({
+        requiresSetup2FA: true,
+        tempToken,
+        email: user.email,
+        message: 'Sua organização exige que você ative a autenticação de dois fatores antes de acessar.'
+      });
+    }
+  }
+
+  const token = jwt.sign({ id: user.id, email: user.email, role: user.role, token_version: user.token_version || 1 }, JWT_SECRET, { expiresIn: '30d' });
+  res.json({
+    success: true,
+    token,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      full_name: user.full_name,
+      country: user.country,
+      phone: user.phone,
+      address_street: user.address_street,
+      postal_code: user.postal_code,
+      state_province: user.state_province,
+      onboarding_completed: Boolean(user.onboarding_completed)
+    }
+  });
+});
+
+app.post('/api/auth/verify-2fa', (req, res) => {
+  const { tempToken, code } = req.body || {};
+  if (!tempToken || !code) {
+    return res.status(400).json({ error: 'Parâmetros insuficientes.' });
+  }
+
+  let decoded;
+  try {
+    decoded = jwt.verify(tempToken, JWT_SECRET);
+  } catch (e) {
+    return res.status(401).json({ error: 'Sessão temporária expirada. Faça login novamente.' });
+  }
+
+  if (!decoded.isTemp2FA) {
+    return res.status(400).json({ error: 'Token inválido para verificação de 2FA.' });
+  }
+
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(decoded.id);
+  if (!user || !user.two_factor_secret) {
+    return res.status(400).json({ error: 'Configuração de 2FA não encontrada.' });
+  }
+
+  const isValid = verifyTOTP(code, user.two_factor_secret);
+  if (!isValid) {
+    return res.status(400).json({ error: 'Código de 6 dígitos incorreto ou expirado.' });
+  }
+
+  const token = jwt.sign({ id: user.id, email: user.email, role: user.role, token_version: user.token_version || 1 }, JWT_SECRET, { expiresIn: '30d' });
+
+  res.json({
+    success: true,
+    token,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      full_name: user.full_name,
+      country: user.country,
+      phone: user.phone,
+      address_street: user.address_street,
+      postal_code: user.postal_code,
+      state_province: user.state_province,
+      onboarding_completed: Boolean(user.onboarding_completed)
+    }
+  });
+});
+
+app.post('/api/auth/setup-member-2fa', async (req, res) => {
+  const { tempToken } = req.body || {};
+  if (!tempToken) return res.status(400).json({ error: 'Token temporário ausente.' });
+
+  let decoded;
+  try {
+    decoded = jwt.verify(tempToken, JWT_SECRET);
+  } catch (e) {
+    return res.status(401).json({ error: 'Sessão temporária expirada.' });
+  }
+
+  const user = db.prepare('SELECT id, email FROM users WHERE id = ?').get(decoded.id);
+  if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+
+  const secretBytes = crypto.randomBytes(20);
+  const secretBase32 = base32Encode(secretBytes);
+  db.prepare('UPDATE users SET two_factor_temp_secret = ? WHERE id = ?').run(secretBase32, user.id);
+
+  const issuer = 'CloudVTurb';
+  const otpauthUrl = `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(user.email)}?secret=${secretBase32}&issuer=${encodeURIComponent(issuer)}`;
+  const qrCodeDataUrl = await QRCode.toDataURL(otpauthUrl, { width: 220, margin: 1 });
+
+  res.json({
+    success: true,
+    secret: secretBase32,
+    qrCode: qrCodeDataUrl
+  });
+});
+
+app.post('/api/auth/confirm-member-2fa', (req, res) => {
+  const { tempToken, code } = req.body || {};
+  if (!tempToken || !code) return res.status(400).json({ error: 'Parâmetros insuficientes.' });
+
+  let decoded;
+  try {
+    decoded = jwt.verify(tempToken, JWT_SECRET);
+  } catch (e) {
+    return res.status(401).json({ error: 'Sessão temporária expirada.' });
+  }
+
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(decoded.id);
+  if (!user || !user.two_factor_temp_secret) {
+    return res.status(400).json({ error: 'Configuração de 2FA não iniciada.' });
+  }
+
+  const isValid = verifyTOTP(code, user.two_factor_temp_secret);
+  if (!isValid) {
+    return res.status(400).json({ error: 'Código de 6 dígitos incorreto ou expirado.' });
+  }
+
+  db.prepare(`
+    UPDATE users
+    SET two_factor_enabled = 1, two_factor_secret = two_factor_temp_secret, two_factor_temp_secret = NULL
+    WHERE id = ?
+  `).run(user.id);
+
+  const token = jwt.sign({ id: user.id, email: user.email, role: user.role, token_version: user.token_version || 1 }, JWT_SECRET, { expiresIn: '30d' });
+
   res.json({
     success: true,
     token,
@@ -1283,25 +1516,217 @@ app.post('/api/user/avatar', authMiddleware, (req, res) => {
   });
 });
 
+app.post('/api/user/password/request-code', authMiddleware, async (req, res) => {
+  const user = db.prepare('SELECT id, email, name FROM users WHERE id = ?').get(req.user.id);
+  if (!user || !user.email) {
+    return res.status(400).json({ error: 'E-mail do usuário não localizado.' });
+  }
+
+  const existing = db.prepare(`
+    SELECT * FROM verification_codes
+    WHERE email = ? AND type = 'change_password' AND expires_at > datetime('now')
+    ORDER BY id DESC LIMIT 1
+  `).get(user.email);
+
+  if (existing) {
+    const elapsed = Date.now() - new Date(existing.created_at).getTime();
+    if (elapsed < 45000) {
+      const waitSec = Math.ceil((45000 - elapsed) / 1000);
+      return res.status(429).json({ error: `Aguarde ${waitSec} segundos antes de solicitar um novo código.` });
+    }
+  }
+
+  const code = generate8DigitCode();
+  const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+
+  db.prepare(`
+    INSERT INTO verification_codes (email, code, type, payload, expires_at)
+    VALUES (?, ?, 'change_password', ?, ?)
+  `).run(user.email, code, JSON.stringify({ userId: user.id }), expiresAt);
+
+  try {
+    await sendVerificationEmail({ to: user.email, code, type: 'change_password', name: user.name });
+    res.json({ success: true, message: `Código de verificação enviado para ${user.email}.` });
+  } catch (err) {
+    res.status(500).json({ error: err.message || 'Erro ao enviar e-mail via Resend.' });
+  }
+});
+
 app.post('/api/user/password', authMiddleware, (req, res) => {
-  const { currentPassword, newPassword } = req.body || {};
+  const { code, newPassword } = req.body || {};
+  if (!code || String(code).trim().length !== 8) {
+    return res.status(400).json({ error: 'Informe o código de verificação de 8 dígitos.' });
+  }
   if (!newPassword || newPassword.length < 6) {
     return res.status(400).json({ error: 'A nova senha deve ter no mínimo 6 caracteres.' });
   }
 
-  const user = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(req.user.id);
-  if (currentPassword) {
-    const valid = bcrypt.compareSync(currentPassword, user.password_hash);
-    if (!valid) return res.status(400).json({ error: 'Senha atual incorreta.' });
+  const user = db.prepare('SELECT id, email FROM users WHERE id = ?').get(req.user.id);
+  const cleanCode = String(code).trim();
+
+  const record = db.prepare(`
+    SELECT * FROM verification_codes
+    WHERE email = ? AND type = 'change_password' AND expires_at > datetime('now')
+    ORDER BY id DESC LIMIT 1
+  `).get(user.email);
+
+  if (!record) {
+    return res.status(400).json({ error: 'Código de verificação expirado ou inválido. Solicite um novo.' });
+  }
+
+  if (record.attempts >= 5) {
+    db.prepare('DELETE FROM verification_codes WHERE id = ?').run(record.id);
+    return res.status(429).json({ error: 'Limite de tentativas excedido. Solicite um novo código.' });
+  }
+
+  if (record.code !== cleanCode) {
+    db.prepare('UPDATE verification_codes SET attempts = attempts + 1 WHERE id = ?').run(record.id);
+    return res.status(400).json({ error: 'Código de verificação incorreto.' });
   }
 
   const newHash = bcrypt.hashSync(newPassword, 10);
   db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, req.user.id);
-  res.json({ success: true, message: 'Senha atualizada com sucesso!' });
+  db.prepare('DELETE FROM verification_codes WHERE id = ?').run(record.id);
+
+  res.json({ success: true, message: 'Senha alterada com sucesso!' });
 });
 
 app.post('/api/user/logout-all', authMiddleware, (req, res) => {
-  res.json({ success: true, message: 'Sessões ativas encerradas.' });
+  const newVersion = (req.user.token_version || 1) + 1;
+  db.prepare('UPDATE users SET token_version = ? WHERE id = ?').run(newVersion, req.user.id);
+
+  const newToken = jwt.sign({
+    id: req.user.id,
+    email: req.user.email,
+    role: req.user.role,
+    token_version: newVersion
+  }, JWT_SECRET, { expiresIn: '30d' });
+
+  res.json({
+    success: true,
+    token: newToken,
+    message: 'Todas as outras sessões foram encerradas com sucesso.'
+  });
+});
+
+app.get('/api/user/google/status', authMiddleware, (req, res) => {
+  const user = db.prepare('SELECT google_connected, google_email FROM users WHERE id = ?').get(req.user.id);
+  res.json({
+    connected: Boolean(user && user.google_connected),
+    email: (user && user.google_email) || null
+  });
+});
+
+app.post('/api/user/google/connect', authMiddleware, async (req, res) => {
+  const { accessToken } = req.body || {};
+  let email = null;
+  if (accessToken) {
+    try {
+      const userInfoRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      if (userInfoRes.ok) {
+        const data = await userInfoRes.json();
+        email = data.email || null;
+      }
+    } catch (e) {}
+  }
+  db.prepare('UPDATE users SET google_connected = 1, google_email = ? WHERE id = ?').run(email, req.user.id);
+  res.json({ success: true, connected: true, email });
+});
+
+app.post('/api/user/google/disconnect', authMiddleware, (req, res) => {
+  db.prepare('UPDATE users SET google_connected = 0, google_email = NULL WHERE id = ?').run(req.user.id);
+  res.json({ success: true, connected: false, message: 'Conta do Google Drive desconectada.' });
+});
+
+app.get('/api/user/2fa/status', authMiddleware, (req, res) => {
+  const user = db.prepare('SELECT two_factor_enabled FROM users WHERE id = ?').get(req.user.id);
+  res.json({ enabled: Boolean(user && user.two_factor_enabled) });
+});
+
+app.post('/api/user/2fa/setup', authMiddleware, async (req, res) => {
+  const secretBytes = crypto.randomBytes(20);
+  const secretBase32 = base32Encode(secretBytes);
+  db.prepare('UPDATE users SET two_factor_temp_secret = ? WHERE id = ?').run(secretBase32, req.user.id);
+
+  const issuer = 'CloudVTurb';
+  const otpauthUrl = `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(req.user.email)}?secret=${secretBase32}&issuer=${encodeURIComponent(issuer)}`;
+  const qrCodeDataUrl = await QRCode.toDataURL(otpauthUrl, { width: 220, margin: 1 });
+
+  res.json({
+    success: true,
+    secret: secretBase32,
+    qrCode: qrCodeDataUrl
+  });
+});
+
+app.post('/api/user/2fa/enable', authMiddleware, (req, res) => {
+  const { code } = req.body || {};
+  if (!code || String(code).trim().length !== 6) {
+    return res.status(400).json({ error: 'Informe o código de 6 dígitos do autenticador.' });
+  }
+
+  const user = db.prepare('SELECT two_factor_temp_secret FROM users WHERE id = ?').get(req.user.id);
+  if (!user || !user.two_factor_temp_secret) {
+    return res.status(400).json({ error: 'Configuração de 2FA não iniciada. Tente novamente.' });
+  }
+
+  const isValid = verifyTOTP(code, user.two_factor_temp_secret);
+  if (!isValid) {
+    return res.status(400).json({ error: 'Código de 6 dígitos incorreto ou expirado.' });
+  }
+
+  db.prepare(`
+    UPDATE users
+    SET two_factor_enabled = 1, two_factor_secret = two_factor_temp_secret, two_factor_temp_secret = NULL
+    WHERE id = ?
+  `).run(req.user.id);
+
+  res.json({ success: true, message: 'Autenticação de dois fatores ativada com sucesso!' });
+});
+
+app.post('/api/user/2fa/disable', authMiddleware, (req, res) => {
+  const { code } = req.body || {};
+  const user = db.prepare('SELECT two_factor_secret, two_factor_enabled FROM users WHERE id = ?').get(req.user.id);
+  if (!user || !user.two_factor_enabled) {
+    return res.status(400).json({ error: '2FA não está ativado nesta conta.' });
+  }
+
+  if (code) {
+    const isValid = verifyTOTP(code, user.two_factor_secret);
+    if (!isValid) {
+      return res.status(400).json({ error: 'Código de 6 dígitos incorreto.' });
+    }
+  }
+
+  db.prepare(`
+    UPDATE users
+    SET two_factor_enabled = 0, two_factor_secret = NULL, two_factor_temp_secret = NULL
+    WHERE id = ?
+  `).run(req.user.id);
+
+  res.json({ success: true, message: 'Autenticação de dois fatores desativada com sucesso.' });
+});
+
+app.get('/api/user/organization/settings', authMiddleware, (req, res) => {
+  const accountOwnerId = req.user.owner_id || req.user.id;
+  const owner = db.prepare('SELECT require_member_2fa FROM users WHERE id = ?').get(accountOwnerId);
+  res.json({
+    require_member_2fa: Boolean(owner && owner.require_member_2fa),
+    isOwnerOrAdmin: !req.user.owner_id || req.user.role === 'owner' || req.user.role === 'admin'
+  });
+});
+
+app.post('/api/user/organization/require-2fa', authMiddleware, (req, res) => {
+  if (req.user.owner_id && req.user.role !== 'admin' && req.user.role !== 'owner') {
+    return res.status(403).json({ error: 'Apenas Administradores podem alterar esta configuração.' });
+  }
+  const accountOwnerId = req.user.owner_id || req.user.id;
+  const { enabled } = req.body || {};
+  const val = enabled ? 1 : 0;
+  db.prepare('UPDATE users SET require_member_2fa = ? WHERE id = ?').run(val, accountOwnerId);
+  res.json({ success: true, require_member_2fa: Boolean(val) });
 });
 
 app.get('/api/members', authMiddleware, (req, res) => {
