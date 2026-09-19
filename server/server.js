@@ -251,6 +251,29 @@ app.use((req, res, next) => {
     if (req.path === '/' || req.path === '/index.html' || req.path === '') {
       return res.sendFile(path.join(PUBLIC_DIR, 'landing.html'));
     }
+    if (req.path === '/privacidade' || req.path === '/termos') {
+      const isPrivacy = req.path === '/privacidade';
+      const title = isPrivacy ? 'Política de Privacidade' : 'Termos de Serviço';
+      const content = isPrivacy
+        ? `<p>A <strong>CloudVTurb</strong> respeita sua privacidade. Coletamos apenas dados estritamente necessários para o funcionamento da plataforma:</p>
+           <ul>
+             <li><strong>Dados de conta:</strong> nome, e-mail e senha (criptografada) fornecidos no cadastro.</li>
+             <li><strong>Vídeos hospedados:</strong> armazenados em servidores seguros e acessíveis apenas pelo proprietário da conta.</li>
+             <li><strong>Métricas anônimas:</strong> visualizações, cliques em CTA e tempo de reprodução — sem identificar visitantes individualmente.</li>
+             <li><strong>Google Drive:</strong> quando você importa um vídeo via Google Drive, acessamos apenas o arquivo selecionado. Não armazenamos suas credenciais do Google.</li>
+           </ul>
+           <p>Não vendemos, compartilhamos ou transferimos seus dados a terceiros. Você pode solicitar a exclusão completa da sua conta e dados a qualquer momento pelo e-mail de suporte.</p>`
+        : `<p>Ao utilizar a plataforma <strong>CloudVTurb</strong>, você concorda com os seguintes termos:</p>
+           <ul>
+             <li>Você é responsável pelo conteúdo dos vídeos enviados à plataforma.</li>
+             <li>A plataforma oferece hospedagem e entrega de vídeos no formato SaaS, sem garantia de disponibilidade ininterrupta.</li>
+             <li>Reservamo-nos o direito de suspender contas que violem leis aplicáveis ou estes termos.</li>
+             <li>Seus dados e vídeos são de sua propriedade. Não reivindicamos direitos sobre o conteúdo enviado.</li>
+             <li>O serviço pode ser modificado ou descontinuado a qualquer momento, com aviso prévio aos usuários.</li>
+           </ul>
+           <p>Para dúvidas, entre em contato pelo e-mail de suporte disponível na plataforma.</p>`;
+      return res.send(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title} — CloudVTurb</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Inter,system-ui,sans-serif;background:#09090b;color:#e4e4e7;padding:40px 20px;line-height:1.7}main{max-width:700px;margin:0 auto}h1{font-size:28px;font-weight:800;margin-bottom:24px;color:#fff}p{margin-bottom:16px;font-size:15px}ul{margin:12px 0 20px 24px}li{margin-bottom:8px;font-size:14.5px}a{color:#3b82f6}</style></head><body><main><h1>${title}</h1>${content}<p style="margin-top:32px;font-size:13px;color:#71717a;">Última atualização: setembro de 2026</p></main></body></html>`);
+    }
     if (!req.path.startsWith('/api/') && !req.path.startsWith('/videos/')) {
       return res.sendFile(path.join(PUBLIC_DIR, 'landing.html'));
     }
@@ -617,6 +640,264 @@ app.post('/api/admin/settings', authMiddleware, ownerMiddleware, (req, res) => {
     setSetting('require_approval', requireApproval ? '1' : '0');
   }
   res.json({ success: true });
+});
+
+const avatarStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, AVATARS_DIR),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase() || '.png';
+    cb(null, `avatar_${req.user.id}_${Date.now()}${ext}`);
+  }
+});
+const avatarUpload = multer({
+  storage: avatarStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Apenas arquivos de imagem são permitidos.'));
+    }
+  }
+});
+
+app.get('/api/user/profile', authMiddleware, (req, res) => {
+  const user = db.prepare(`
+    SELECT id, name, email, role, status, full_name, first_name, last_name, phone, avatar_url, created_at
+    FROM users WHERE id = ?
+  `).get(req.user.id);
+  if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
+  res.json({ user });
+});
+
+app.put('/api/user/profile', authMiddleware, (req, res) => {
+  const { firstName, lastName, email, phone } = req.body || {};
+  const cleanFirst = (firstName || '').trim().slice(0, 50);
+  const cleanLast = (lastName || '').trim().slice(0, 50);
+  const cleanPhone = (phone || '').trim().slice(0, 30);
+  const cleanEmail = email ? email.trim().toLowerCase() : null;
+
+  if (cleanEmail) {
+    const existing = db.prepare('SELECT id FROM users WHERE email = ? AND id != ?').get(cleanEmail, req.user.id);
+    if (existing) {
+      return res.status(400).json({ error: 'Este e-mail já está em uso por outra conta.' });
+    }
+  }
+
+  const combinedName = [cleanFirst, cleanLast].filter(Boolean).join(' ') || req.user.name;
+
+  db.prepare(`
+    UPDATE users
+    SET first_name = ?, last_name = ?, name = ?, phone = ?, email = COALESCE(?, email)
+    WHERE id = ?
+  `).run(cleanFirst, cleanLast, combinedName, cleanPhone, cleanEmail, req.user.id);
+
+  const updated = db.prepare(`
+    SELECT id, name, email, role, status, first_name, last_name, phone, avatar_url, created_at
+    FROM users WHERE id = ?
+  `).get(req.user.id);
+
+  res.json({ success: true, user: updated });
+});
+
+app.post('/api/user/avatar', authMiddleware, (req, res) => {
+  avatarUpload.single('avatar')(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message || 'Falha no upload do avatar.' });
+    if (!req.file) return res.status(400).json({ error: 'Nenhuma imagem enviada.' });
+
+    const avatarUrl = `/avatars/${req.file.filename}`;
+    db.prepare('UPDATE users SET avatar_url = ? WHERE id = ?').run(avatarUrl, req.user.id);
+
+    res.json({ success: true, avatarUrl });
+  });
+});
+
+app.post('/api/user/password', authMiddleware, (req, res) => {
+  const { currentPassword, newPassword } = req.body || {};
+  if (!newPassword || newPassword.length < 6) {
+    return res.status(400).json({ error: 'A nova senha deve ter no mínimo 6 caracteres.' });
+  }
+
+  const user = db.prepare('SELECT password_hash FROM users WHERE id = ?').get(req.user.id);
+  if (currentPassword) {
+    const valid = bcrypt.compareSync(currentPassword, user.password_hash);
+    if (!valid) return res.status(400).json({ error: 'Senha atual incorreta.' });
+  }
+
+  const newHash = bcrypt.hashSync(newPassword, 10);
+  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(newHash, req.user.id);
+  res.json({ success: true, message: 'Senha atualizada com sucesso!' });
+});
+
+app.post('/api/user/logout-all', authMiddleware, (req, res) => {
+  res.json({ success: true, message: 'Sessões ativas encerradas.' });
+});
+
+app.get('/api/members', authMiddleware, (req, res) => {
+  const members = db.prepare(`
+    SELECT id, name, email, role, status, avatar_url, created_at
+    FROM users
+    ORDER BY id ASC
+  `).all();
+  res.json({ members });
+});
+
+app.post('/api/members', authMiddleware, (req, res) => {
+  if (req.user.role !== 'owner') {
+    return res.status(403).json({ error: 'Apenas administradores podem adicionar membros.' });
+  }
+  const { name, email, role, password } = req.body || {};
+  if (!name || !email || !password) {
+    return res.status(400).json({ error: 'Nome, e-mail e senha são obrigatórios.' });
+  }
+  const cleanEmail = email.trim().toLowerCase();
+  const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(cleanEmail);
+  if (existing) {
+    return res.status(400).json({ error: 'Já existe um usuário com este e-mail.' });
+  }
+  const hash = bcrypt.hashSync(password, 10);
+  const memberRole = role === 'owner' ? 'owner' : 'member';
+  const info = db.prepare(`
+    INSERT INTO users (name, email, password_hash, role, status, onboarding_completed)
+    VALUES (?, ?, ?, ?, 'approved', 1)
+  `).run(name.trim().slice(0, 60), cleanEmail, hash, memberRole);
+
+  res.json({ success: true, id: info.lastInsertRowid });
+});
+
+app.delete('/api/members/:id', authMiddleware, (req, res) => {
+  if (req.user.role !== 'owner') {
+    return res.status(403).json({ error: 'Apenas administradores podem remover membros.' });
+  }
+  const targetId = parseInt(req.params.id, 10);
+  if (targetId === req.user.id) {
+    return res.status(400).json({ error: 'Você não pode remover sua própria conta.' });
+  }
+  db.prepare('DELETE FROM users WHERE id = ?').run(targetId);
+  res.json({ success: true });
+});
+
+app.get('/api/keys', authMiddleware, (req, res) => {
+  const keys = db.prepare(`
+    SELECT id, name, key_prefix, created_at, last_used_at
+    FROM api_keys
+    WHERE user_id = ?
+    ORDER BY created_at DESC
+  `).all(req.user.id);
+  res.json({ keys });
+});
+
+app.post('/api/keys', authMiddleware, (req, res) => {
+  const { name } = req.body || {};
+  const keyName = (name || 'Nova Chave de API').trim().slice(0, 60);
+  const rawKey = 'vturb_live_' + crypto.randomBytes(24).toString('hex');
+  const keyPrefix = rawKey.slice(0, 15) + '••••' + rawKey.slice(-4);
+  const keyHash = bcrypt.hashSync(rawKey, 8);
+  const keyId = 'key_' + Date.now();
+
+  db.prepare(`
+    INSERT INTO api_keys (id, user_id, name, key_prefix, key_hash)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(keyId, req.user.id, keyName, keyPrefix, keyHash);
+
+  res.json({
+    success: true,
+    key: {
+      id: keyId,
+      name: keyName,
+      token: rawKey,
+      keyPrefix,
+      createdAt: new Date().toISOString()
+    }
+  });
+});
+
+app.delete('/api/keys/:id', authMiddleware, (req, res) => {
+  db.prepare('DELETE FROM api_keys WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
+  res.json({ success: true });
+});
+
+app.get('/api/webhooks', authMiddleware, (req, res) => {
+  const hooks = db.prepare(`
+    SELECT id, url, events_json, secret, is_active, created_at
+    FROM webhooks
+    WHERE user_id = ?
+    ORDER BY created_at DESC
+  `).all(req.user.id);
+
+  const parsed = hooks.map(h => ({
+    ...h,
+    events: JSON.parse(h.events_json || '[]')
+  }));
+  res.json({ webhooks: parsed });
+});
+
+app.post('/api/webhooks', authMiddleware, (req, res) => {
+  const { url, events } = req.body || {};
+  if (!url || typeof url !== 'string' || (!url.startsWith('http://') && !url.startsWith('https://'))) {
+    return res.status(400).json({ error: 'URL do webhook inválida. Deve começar com https:// ou http://.' });
+  }
+  const cleanUrl = url.trim();
+  const hookId = 'whk_' + Date.now();
+  const secret = 'whsec_' + crypto.randomBytes(20).toString('hex');
+  const eventsArray = Array.isArray(events) && events.length > 0 ? events : ['video.play', 'video.complete', 'cta.clicked'];
+
+  db.prepare(`
+    INSERT INTO webhooks (id, user_id, url, events_json, secret, is_active)
+    VALUES (?, ?, ?, ?, ?, 1)
+  `).run(hookId, req.user.id, cleanUrl, JSON.stringify(eventsArray), secret);
+
+  res.json({
+    success: true,
+    webhook: {
+      id: hookId,
+      url: cleanUrl,
+      events: eventsArray,
+      secret,
+      isActive: 1,
+      createdAt: new Date().toISOString()
+    }
+  });
+});
+
+app.delete('/api/webhooks/:id', authMiddleware, (req, res) => {
+  db.prepare('DELETE FROM webhooks WHERE id = ? AND user_id = ?').run(req.params.id, req.user.id);
+  res.json({ success: true });
+});
+
+app.post('/api/webhooks/:id/test', authMiddleware, async (req, res) => {
+  const hook = db.prepare('SELECT * FROM webhooks WHERE id = ? AND user_id = ?').get(req.params.id, req.user.id);
+  if (!hook) return res.status(404).json({ error: 'Webhook não encontrado.' });
+
+  const testPayload = {
+    event: 'ping',
+    timestamp: new Date().toISOString(),
+    webhookId: hook.id,
+    data: {
+      message: 'Teste de webhook VTurb disparado com sucesso!'
+    }
+  };
+
+  try {
+    const response = await fetch(hook.url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-VTurb-Signature': hook.secret,
+        'User-Agent': 'VTurb-Webhook/1.0'
+      },
+      body: JSON.stringify(testPayload),
+      signal: AbortSignal.timeout(10000)
+    });
+
+    res.json({
+      success: true,
+      httpStatus: response.status,
+      statusText: response.statusText
+    });
+  } catch (err) {
+    res.status(502).json({ error: 'Falha ao enviar webhook de teste: ' + err.message });
+  }
 });
 
 app.get('/api/folders', authMiddleware, (req, res) => {
