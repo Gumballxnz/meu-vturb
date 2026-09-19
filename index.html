@@ -8293,57 +8293,60 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
 
       const s = v.settings || {};
 
-      document.getElementById('edBarColor').value = s.barColor || '#2563EB';
-      document.getElementById('edBarColorHex').value = s.barColor || '#2563EB';
-      document.getElementById('edBorderRadius').value = s.borderRadius || '16px';
-      document.getElementById('edAspectRatio').value = s.aspectRatio || '16:9';
+      const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+      const setChecked = (id, val) => { const el = document.getElementById(id); if (el) el.checked = !!val; };
+
+      setVal('edBarColor', s.barColor || '#2563EB');
+      setVal('edBarColorHex', s.barColor || '#2563EB');
+      setVal('edBorderRadius', s.borderRadius || '16px');
+      setVal('edAspectRatio', s.aspectRatio || '16:9');
 
       const noticeEnabled = s.audioNoticeEnabled !== undefined ? s.audioNoticeEnabled !== false : (s.smartAutoplay !== false);
-      document.getElementById('edAudioNoticeEnabled').checked = noticeEnabled;
-      document.getElementById('edAudioNoticeText').value = s.audioNoticeText || s.autoplayText || 'Seu vídeo ja iniciou\nClique para escutar';
-      document.getElementById('edAudioNoticeStyle').value = s.audioNoticeStyle || 'square';
-      document.getElementById('edAudioNoticeSize').value = s.audioNoticeSize || 'medium';
-      document.getElementById('edAudioNoticePosition').value = s.audioNoticePosition || 'center';
-      document.getElementById('edAudioNoticeAnimation').value = s.audioNoticeAnimation || 'none';
+      setChecked('edAudioNoticeEnabled', noticeEnabled);
+      setVal('edAudioNoticeText', s.audioNoticeText || s.autoplayText || 'Seu vídeo ja iniciou\nClique para escutar');
+      setVal('edAudioNoticeStyle', s.audioNoticeStyle || 'square');
+      setVal('edAudioNoticeSize', s.audioNoticeSize || 'medium');
+      setVal('edAudioNoticePosition', s.audioNoticePosition || 'center');
+      setVal('edAudioNoticeAnimation', s.audioNoticeAnimation || 'none');
       const iconKey = s.audioNoticeIcon || 'volume-muted';
-      selectAudioIcon(iconKey);
+      selectAudioIcon(iconKey, false);
 
-      document.getElementById('edAudioNoticeBgColor').value = s.audioNoticeBgColor || '#2563EB';
-      document.getElementById('edAudioNoticeBgColorHex').value = s.audioNoticeBgColor || '#2563EB';
-      document.getElementById('edAudioNoticeTextColor').value = s.audioNoticeTextColor || '#FFFFFF';
-      document.getElementById('edAudioNoticeTextColorHex').value = s.audioNoticeTextColor || '#FFFFFF';
-      document.getElementById('edAudioNoticeIconBgColor').value = s.audioNoticeIconBgColor || '#2563EB';
-      document.getElementById('edAudioNoticeIconBgColorHex').value = s.audioNoticeIconBgColor || '#2563EB';
-      document.getElementById('edAudioNoticeIconColor').value = s.audioNoticeIconColor || '#FFFFFF';
-      document.getElementById('edAudioNoticeIconColorHex').value = s.audioNoticeIconColor || '#FFFFFF';
-      document.getElementById('edAudioNoticeBorderColor').value = s.audioNoticeBorderColor || '#1D4ED8';
-      document.getElementById('edAudioNoticeBorderColorHex').value = s.audioNoticeBorderColor || '#1D4ED8';
-      document.getElementById('edAudioNoticeBorderWidth').value = s.audioNoticeBorderWidth || '0px';
-      document.getElementById('edAudioNoticeBorderRadius').value = s.audioNoticeBorderRadius || '8px';
-      document.getElementById('edAudioNoticeGlow').value = s.audioNoticeGlow || 'subtle';
+      setVal('edAudioNoticeBgColor', s.audioNoticeBgColor || '#2563EB');
+      setVal('edAudioNoticeBgColorHex', s.audioNoticeBgColor || '#2563EB');
+      setVal('edAudioNoticeTextColor', s.audioNoticeTextColor || '#FFFFFF');
+      setVal('edAudioNoticeTextColorHex', s.audioNoticeTextColor || '#FFFFFF');
+      setVal('edAudioNoticeIconBgColor', s.audioNoticeIconBgColor || '#2563EB');
+      setVal('edAudioNoticeIconBgColorHex', s.audioNoticeIconBgColor || '#2563EB');
+      setVal('edAudioNoticeIconColor', s.audioNoticeIconColor || '#FFFFFF');
+      setVal('edAudioNoticeIconColorHex', s.audioNoticeIconColor || '#FFFFFF');
+      setVal('edAudioNoticeBorderColor', s.audioNoticeBorderColor || '#1D4ED8');
+      setVal('edAudioNoticeBorderColorHex', s.audioNoticeBorderColor || '#1D4ED8');
+      setVal('edAudioNoticeBorderWidth', s.audioNoticeBorderWidth || '0px');
+      setVal('edAudioNoticeBorderRadius', s.audioNoticeBorderRadius || '8px');
+      setVal('edAudioNoticeGlow', s.audioNoticeGlow || 'subtle');
 
-      document.getElementById('edCtaEnabled').checked = s.ctaEnabled !== false;
-      document.getElementById('edCtaTime').value = s.ctaTime !== undefined ? s.ctaTime : 10;
-      document.getElementById('edCtaText').value = s.ctaText || 'QUERO GARANTIR MINHA VAGA';
-      document.getElementById('edCtaUrl').value = s.ctaUrl || 'https://seusite.com/checkout';
-      document.getElementById('edCtaColor').value = s.ctaColor || '#2563EB';
-      document.getElementById('edCtaColorHex').value = s.ctaColor || '#2563EB';
-      document.getElementById('edCtaSubtext').value = s.ctaSubtext || 'Compra 100% Segura • Acesso Imediato';
+      setChecked('edCtaEnabled', s.ctaEnabled !== false);
+      setVal('edCtaTime', s.ctaTime !== undefined ? s.ctaTime : 10);
+      setVal('edCtaText', s.ctaText || 'QUERO GARANTIR MINHA VAGA');
+      setVal('edCtaUrl', s.ctaUrl || 'https://seusite.com/checkout');
+      setVal('edCtaColor', s.ctaColor || '#2563EB');
+      setVal('edCtaColorHex', s.ctaColor || '#2563EB');
+      setVal('edCtaSubtext', s.ctaSubtext || 'Compra 100% Segura • Acesso Imediato');
 
-      document.getElementById('edFakeProgress').checked = s.fakeProgress !== false;
-      document.getElementById('edBlockSeek').checked = s.blockSeek !== false;
-      document.getElementById('edResume').checked = s.resume !== false;
-      document.getElementById('edPixels').checked = s.pixels !== false;
+      setChecked('edFakeProgress', s.fakeProgress !== false);
+      setChecked('edBlockSeek', s.blockSeek !== false);
+      setChecked('edResume', s.resume !== false);
+      setChecked('edPixels', s.pixels !== false);
 
-      if (document.getElementById('edTurboEnabled')) document.getElementById('edTurboEnabled').checked = !!s.turbo;
-      if (document.getElementById('edHeadlineEnabled')) document.getElementById('edHeadlineEnabled').checked = !!s.headlines;
-      if (document.getElementById('edHeadlineText')) document.getElementById('edHeadlineText').value = s.headlineText || '';
-      if (document.getElementById('edTrafficFilterEnabled')) document.getElementById('edTrafficFilterEnabled').checked = !!s.trafficFilter;
-      if (document.getElementById('edThumbSniperEnabled')) document.getElementById('edThumbSniperEnabled').checked = !!s.thumbSniper;
-      if (document.getElementById('edMiniHooksEnabled')) document.getElementById('edMiniHooksEnabled').checked = !!s.miniGanchos;
-      if (document.getElementById('edCaptionsEnabled')) document.getElementById('edCaptionsEnabled').checked = !!s.subtitles;
-      if (document.getElementById('edPlaybackRate')) document.getElementById('edPlaybackRate').value = s.playbackRate || '1.0';
-      if (document.getElementById('edVideoLoop')) document.getElementById('edVideoLoop').checked = !!s.loop;
+      setChecked('edTurboEnabled', !!s.turbo);
+      setChecked('edHeadlineEnabled', !!s.headlines);
+      setVal('edHeadlineText', s.headlineText || '');
+      setChecked('edTrafficFilterEnabled', !!s.trafficFilter);
+      setChecked('edThumbSniperEnabled', !!s.thumbSniper);
+      setChecked('edMiniHooksEnabled', !!s.miniGanchos);
+      setChecked('edCaptionsEnabled', !!s.subtitles);
+      setVal('edPlaybackRate', s.playbackRate || '1.0');
+      setChecked('edVideoLoop', !!s.loop);
 
       updatePitchFormattedLabel();
       onAspectRatioChange(s.aspectRatio || '16:9');
@@ -8447,8 +8450,9 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       setBadge('badgeLegendas', !!s.subtitles);
     }
 
-    function selectAudioIcon(iconKey) {
-      document.getElementById('edAudioNoticeIcon').value = iconKey;
+    function selectAudioIcon(iconKey, triggerUpdate = true) {
+      const el = document.getElementById('edAudioNoticeIcon');
+      if (el) el.value = iconKey;
       const map = {
         'volume-muted': 'btnIconVolumeMuted',
         'speaker-high': 'btnIconSpeakerHigh',
@@ -8460,28 +8464,33 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         const btn = document.getElementById(map[k]);
         if (btn) btn.classList.toggle('active', k === iconKey);
       });
-      liveUpdateSettings();
+      if (triggerUpdate) liveUpdateSettings();
     }
 
     function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
     function syncColor(fromId, toId) {
-      const val = document.getElementById(fromId).value;
+      const elFrom = document.getElementById(fromId);
+      if (!elFrom) return;
+      const val = elFrom.value;
       if (/^#[0-9A-F]{6}$/i.test(val)) {
-        document.getElementById(toId).value = val;
+        const elTo = document.getElementById(toId);
+        if (elTo) elTo.value = val;
         liveUpdateSettings();
       }
     }
 
     function updatePitchFormattedLabel() {
-      const sec = parseInt(document.getElementById('edCtaTime').value, 10) || 0;
+      const sec = parseInt(document.getElementById('edCtaTime')?.value, 10) || 0;
       const m = Math.floor(sec / 60).toString().padStart(2, '0');
       const s = (sec % 60).toString().padStart(2, '0');
-      document.getElementById('edCtaFormattedTime').textContent = `${m}:${s}`;
+      const lbl = document.getElementById('edCtaFormattedTime');
+      if (lbl) lbl.textContent = `${m}:${s}`;
     }
 
     function onAspectRatioChange(ratio) {
       const wrapper = document.getElementById('previewWrapper');
+      if (!wrapper) return;
       if (ratio === '9:16') {
         wrapper.style.aspectRatio = '9 / 16';
         wrapper.style.maxWidth = '320px';
@@ -8512,46 +8521,49 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
     }
 
     function getEditorSettings() {
+      const getVal = (id, def = '') => document.getElementById(id)?.value ?? def;
+      const getChecked = (id, def = false) => document.getElementById(id)?.checked ?? def;
+
       return {
-        barColor: document.getElementById('edBarColor').value,
-        borderRadius: document.getElementById('edBorderRadius').value,
-        aspectRatio: document.getElementById('edAspectRatio').value,
-        smartAutoplay: document.getElementById('edAudioNoticeEnabled').checked,
-        autoplayText: document.getElementById('edAudioNoticeText').value,
-        audioNoticeEnabled: document.getElementById('edAudioNoticeEnabled').checked,
-        audioNoticeText: document.getElementById('edAudioNoticeText').value,
-        audioNoticeStyle: document.getElementById('edAudioNoticeStyle').value,
-        audioNoticeSize: document.getElementById('edAudioNoticeSize').value,
-        audioNoticePosition: document.getElementById('edAudioNoticePosition').value,
-        audioNoticeAnimation: document.getElementById('edAudioNoticeAnimation').value,
-        audioNoticeIcon: document.getElementById('edAudioNoticeIcon').value,
-        audioNoticeBgColor: document.getElementById('edAudioNoticeBgColor').value,
-        audioNoticeTextColor: document.getElementById('edAudioNoticeTextColor').value,
-        audioNoticeIconBgColor: document.getElementById('edAudioNoticeIconBgColor').value,
-        audioNoticeIconColor: document.getElementById('edAudioNoticeIconColor').value,
-        audioNoticeBorderColor: document.getElementById('edAudioNoticeBorderColor').value,
-        audioNoticeBorderWidth: document.getElementById('edAudioNoticeBorderWidth').value,
-        audioNoticeBorderRadius: document.getElementById('edAudioNoticeBorderRadius').value,
-        audioNoticeGlow: document.getElementById('edAudioNoticeGlow').value,
-        fakeProgress: document.getElementById('edFakeProgress').checked,
-        blockSeek: document.getElementById('edBlockSeek').checked,
-        ctaEnabled: document.getElementById('edCtaEnabled').checked,
-        ctaTime: parseInt(document.getElementById('edCtaTime').value, 10) || 0,
-        ctaText: document.getElementById('edCtaText').value,
-        ctaUrl: document.getElementById('edCtaUrl').value,
-        ctaColor: document.getElementById('edCtaColor').value,
-        ctaSubtext: document.getElementById('edCtaSubtext').value,
-        resume: document.getElementById('edResume').checked,
-        pixels: document.getElementById('edPixels').checked,
-        turbo: document.getElementById('edTurboEnabled') ? document.getElementById('edTurboEnabled').checked : false,
-        headlines: document.getElementById('edHeadlineEnabled') ? document.getElementById('edHeadlineEnabled').checked : false,
-        headlineText: document.getElementById('edHeadlineText') ? document.getElementById('edHeadlineText').value : '',
-        trafficFilter: document.getElementById('edTrafficFilterEnabled') ? document.getElementById('edTrafficFilterEnabled').checked : false,
-        thumbSniper: document.getElementById('edThumbSniperEnabled') ? document.getElementById('edThumbSniperEnabled').checked : false,
-        miniGanchos: document.getElementById('edMiniHooksEnabled') ? document.getElementById('edMiniHooksEnabled').checked : false,
-        subtitles: document.getElementById('edCaptionsEnabled') ? document.getElementById('edCaptionsEnabled').checked : false,
-        playbackRate: document.getElementById('edPlaybackRate') ? document.getElementById('edPlaybackRate').value : '1.0',
-        loop: document.getElementById('edVideoLoop') ? document.getElementById('edVideoLoop').checked : false
+        barColor: getVal('edBarColor', '#2563EB'),
+        borderRadius: getVal('edBorderRadius', '16px'),
+        aspectRatio: getVal('edAspectRatio', '16:9'),
+        smartAutoplay: getChecked('edAudioNoticeEnabled', true),
+        autoplayText: getVal('edAudioNoticeText', 'Seu vídeo ja iniciou\nClique para escutar'),
+        audioNoticeEnabled: getChecked('edAudioNoticeEnabled', true),
+        audioNoticeText: getVal('edAudioNoticeText', 'Seu vídeo ja iniciou\nClique para escutar'),
+        audioNoticeStyle: getVal('edAudioNoticeStyle', 'square'),
+        audioNoticeSize: getVal('edAudioNoticeSize', 'medium'),
+        audioNoticePosition: getVal('edAudioNoticePosition', 'center'),
+        audioNoticeAnimation: getVal('edAudioNoticeAnimation', 'none'),
+        audioNoticeIcon: getVal('edAudioNoticeIcon', 'volume-muted'),
+        audioNoticeBgColor: getVal('edAudioNoticeBgColor', '#dc2626'),
+        audioNoticeTextColor: getVal('edAudioNoticeTextColor', '#ffffff'),
+        audioNoticeIconBgColor: getVal('edAudioNoticeIconBgColor', '#2563EB'),
+        audioNoticeIconColor: getVal('edAudioNoticeIconColor', '#FFFFFF'),
+        audioNoticeBorderColor: getVal('edAudioNoticeBorderColor', '#1D4ED8'),
+        audioNoticeBorderWidth: getVal('edAudioNoticeBorderWidth', '0px'),
+        audioNoticeBorderRadius: getVal('edAudioNoticeBorderRadius', '8px'),
+        audioNoticeGlow: getVal('edAudioNoticeGlow', 'subtle'),
+        fakeProgress: getChecked('edFakeProgress', true),
+        blockSeek: getChecked('edBlockSeek', true),
+        ctaEnabled: getChecked('edCtaEnabled', true),
+        ctaTime: parseInt(getVal('edCtaTime', '10'), 10) || 0,
+        ctaText: getVal('edCtaText', 'QUERO GARANTIR MINHA VAGA'),
+        ctaUrl: getVal('edCtaUrl', 'https://seusite.com/checkout'),
+        ctaColor: getVal('edCtaColor', '#2563EB'),
+        ctaSubtext: getVal('edCtaSubtext', 'Compra 100% Segura • Acesso Imediato'),
+        resume: getChecked('edResume', true),
+        pixels: getChecked('edPixels', true),
+        turbo: getChecked('edTurboEnabled', false),
+        headlines: getChecked('edHeadlineEnabled', false),
+        headlineText: getVal('edHeadlineText', ''),
+        trafficFilter: getChecked('edTrafficFilterEnabled', false),
+        thumbSniper: getChecked('edThumbSniperEnabled', false),
+        miniGanchos: getChecked('edMiniHooksEnabled', false),
+        subtitles: getChecked('edCaptionsEnabled', false),
+        playbackRate: getVal('edPlaybackRate', '1.0'),
+        loop: getChecked('edVideoLoop', false)
       };
     }
 
