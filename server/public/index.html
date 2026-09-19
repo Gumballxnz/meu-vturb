@@ -6606,6 +6606,9 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       }
 
       if (p === '/analytics' || p === '/metricas') navigateTo('analytics', false);
+      else if (p === '/account/settings' || p === '/account/settings/' || p === '/seguranca' || p.startsWith('/account/settings')) {
+        navigateTo('security', false);
+      }
       else if (p === '/usuarios') {
         if (currentUser && currentUser.role !== 'owner' && currentUser.role !== 'admin') {
           navigateTo('overview', true);
@@ -6669,6 +6672,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         analytics: { tab: 'viewAnalytics', nav: 'navAnalytics', title: 'Analytics Real', url: '/analytics' },
         users: { tab: 'viewUsers', nav: 'navUsers', title: 'Gestão de Usuários', url: '/usuarios' },
         storage: { tab: 'viewStorage', nav: 'navStorage', title: 'Armazenamento', url: '/servidor' },
+        security: { tab: 'viewSecurity', nav: 'navSecurity', title: 'Segurança', url: '/account/settings' },
         settings: { tab: 'viewSettings', nav: 'navSettings', title: 'Configurações', url: '/settings/profile' },
         editor: { tab: 'viewEditor', nav: 'navVideos', title: 'Configurações de Vídeo', url: '/editor' }
       };
@@ -6693,6 +6697,8 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         renderVideosGrid();
       } else if (tabName === 'settings') {
         switchSettingsTab('account', false);
+      } else if (tabName === 'security') {
+        loadSecurityDomains();
       }
 
       if (updateUrl && window.location.pathname !== target.url) {

@@ -943,7 +943,7 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     await sendVerificationEmail({ to: cleanEmail, code, type: 'register', name: cleanName });
   } catch (err) {
-    return res.status(502).json({ error: err.message || 'Erro ao enviar código de verificação por e-mail.' });
+    return res.status(400).json({ error: err.message || 'Erro ao enviar código de verificação por e-mail.' });
   }
 
   db.prepare(`DELETE FROM verification_codes WHERE email = ? AND type = 'register'`).run(cleanEmail);
@@ -1077,7 +1077,7 @@ app.post('/api/auth/forgot-password', async (req, res) => {
   try {
     await sendVerificationEmail({ to: cleanEmail, code, type: 'reset_password', name: user.name });
   } catch (err) {
-    return res.status(502).json({ error: err.message || 'Erro ao enviar código de recuperação por e-mail.' });
+    return res.status(400).json({ error: err.message || 'Erro ao enviar código de recuperação por e-mail.' });
   }
 
   db.prepare(`DELETE FROM verification_codes WHERE email = ? AND type = 'reset_password'`).run(cleanEmail);
@@ -1189,7 +1189,7 @@ app.post('/api/auth/resend-code', async (req, res) => {
   try {
     await sendVerificationEmail({ to: cleanEmail, code: newCode, type, name: userName });
   } catch (err) {
-    return res.status(502).json({ error: err.message || 'Erro ao enviar código por e-mail.' });
+    return res.status(400).json({ error: err.message || 'Erro ao enviar código por e-mail.' });
   }
 
   db.prepare(`
@@ -1648,7 +1648,7 @@ app.post('/api/user/password/request-code', authMiddleware, async (req, res) => 
     await sendVerificationEmail({ to: user.email, code, type: 'change_password', name: user.name });
   } catch (err) {
     console.error('[CloudVTurb Password Code] Erro ao enviar e-mail:', err.message);
-    return res.status(502).json({ error: err.message || 'Erro ao enviar e-mail de verificação.' });
+    return res.status(400).json({ error: err.message || 'Erro ao enviar e-mail de verificação.' });
   }
 
   db.prepare(`DELETE FROM verification_codes WHERE email = ? AND type = 'change_password'`).run(user.email);
