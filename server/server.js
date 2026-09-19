@@ -335,13 +335,19 @@ try {
 } catch (e) {}
 
 try {
-  const localVids = db.prepare("SELECT id, file_path, file_size FROM videos WHERE source_type = 'local'").all();
+  const localVids = db.prepare("SELECT id, file_path, file_size, duration FROM videos WHERE source_type = 'local'").all();
   for (const v of localVids) {
     if (v.file_path && fs.existsSync(v.file_path)) {
       try {
         const realSize = fs.statSync(v.file_path).size;
         if (!v.file_size || v.file_size !== realSize) {
           db.prepare("UPDATE videos SET file_size = ? WHERE id = ?").run(realSize, v.id);
+        }
+        if (!v.duration || v.duration === '10:00' || v.duration === '05:00') {
+          const realDur = getVideoDurationFormatted(v.file_path);
+          if (realDur) {
+            db.prepare("UPDATE videos SET duration = ? WHERE id = ?").run(realDur, v.id);
+          }
         }
       } catch (err) {}
     }
@@ -434,6 +440,9 @@ app.use((req, res, next) => {
     if (req.path === '/cadastro') {
       return res.redirect(301, `https://${DASH_DOMAIN}/cadastro`);
     }
+    if (req.path === '/verificar-cadastro') {
+      return res.redirect(301, `https://${DASH_DOMAIN}/verificar-cadastro`);
+    }
     if (req.path === '/' || req.path === '/index.html' || req.path === '') {
       return res.sendFile(path.join(PUBLIC_DIR, 'landing.html'));
     }
@@ -465,7 +474,7 @@ app.use((req, res, next) => {
     }
   }
 
-  const dashRoutes = ['/', '/login', '/cadastro', '/recuperar-senha', '/videos', '/metricas', '/usuarios', '/servidor', '/analytics', '/configuracoes', '/settings'];
+  const dashRoutes = ['/', '/login', '/cadastro', '/verificar-cadastro', '/recuperar-senha', '/videos', '/metricas', '/usuarios', '/servidor', '/analytics', '/configuracoes', '/settings'];
   const isPlayerEditRoute = /^\/players\/[^/]+\/edit\/?$/.test(req.path);
   if (dashRoutes.includes(req.path) || isPlayerEditRoute || req.path.startsWith('/settings/') || req.path.startsWith('/configuracoes/') || req.path.startsWith('/folders/')) {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
@@ -524,9 +533,38 @@ function formatStorage(bytes) {
   return `${mb.toFixed(0)} MB`;
 }
 
+function getVideoDurationFormatted(filePath) {
+  if (!filePath || !fs.existsSync(filePath)) return null;
+  try {
+    const probe = execFileSync('ffprobe', [
+      '-v', 'error',
+      '-show_entries', 'format=duration',
+      '-of', 'default=noprint_wrappers=1:nokey=1',
+      filePath
+    ], { timeout: 10000 });
+    const sec = parseFloat(probe.toString().trim());
+    if (!isNaN(sec) && sec > 0) {
+      const totalSec = Math.round(sec);
+      const h = Math.floor(totalSec / 3600);
+      const m = Math.floor((totalSec % 3600) / 60);
+      const s = totalSec % 60;
+      if (h > 0) {
+        return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+      }
+      return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    }
+  } catch (e) {}
+  return null;
+}
+
 function processVideoHLS(vidId) {
   const v = db.prepare('SELECT * FROM videos WHERE id = ?').get(vidId);
   if (!v || !v.file_path || !fs.existsSync(v.file_path)) return;
+
+  const realDuration = getVideoDurationFormatted(v.file_path);
+  if (realDuration && (v.duration === '10:00' || v.duration === '05:00' || !v.duration)) {
+    try { db.prepare('UPDATE videos SET duration = ? WHERE id = ?').run(realDuration, vidId); } catch (e) {}
+  }
 
   dispatchWebhookEvent(v.user_id, 'video.processing', {
     video_id: vidId,
@@ -634,11 +672,16 @@ function processVideoHLS(vidId) {
 
 function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Não autorizado. Faça login.' });
+  let token = null;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
+  } else if (req.query && req.query.token) {
+    token = req.query.token;
   }
 
-  const token = authHeader.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ error: 'Não autorizado. Faça login.' });
+  }
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     if (decoded.isTemp2FA || decoded.isTempSetup2FA) {
@@ -2366,8 +2409,8 @@ app.get('/api/storage/details', authMiddleware, (req, res) => {
 
   try {
     const localVideos = isOwner
-      ? db.prepare("SELECT id, file_path, file_size FROM videos WHERE source_type = 'local'").all()
-      : db.prepare("SELECT id, file_path, file_size FROM videos WHERE user_id = ? AND source_type = 'local'").all(req.user.id);
+      ? db.prepare("SELECT id, file_path, file_size, duration FROM videos WHERE source_type = 'local'").all()
+      : db.prepare("SELECT id, file_path, file_size, duration FROM videos WHERE user_id = ? AND source_type = 'local'").all(req.user.id);
     for (const lv of localVideos) {
       if (lv.file_path && fs.existsSync(lv.file_path)) {
         try {
@@ -2375,6 +2418,13 @@ app.get('/api/storage/details', authMiddleware, (req, res) => {
           if (lv.file_size !== currentSize) {
             db.prepare('UPDATE videos SET file_size = ? WHERE id = ?').run(currentSize, lv.id);
             lv.file_size = currentSize;
+          }
+          if (!lv.duration || lv.duration === '10:00' || lv.duration === '05:00') {
+            const realDur = getVideoDurationFormatted(lv.file_path);
+            if (realDur) {
+              db.prepare('UPDATE videos SET duration = ? WHERE id = ?').run(realDur, lv.id);
+              lv.duration = realDur;
+            }
           }
         } catch (e) {}
       }
@@ -2791,16 +2841,8 @@ app.get('/api/videos', authMiddleware, (req, res) => {
 });
 
 app.get('/api/videos/top', authMiddleware, (req, res) => {
-  const isOwner = req.user.role === 'owner';
-  let videosQuery = 'SELECT id, title, video_url, duration, plays, settings_json, created_at FROM videos WHERE deleted_at IS NULL ';
-  const params = [];
-  if (!isOwner) {
-    videosQuery += 'AND user_id = ? ';
-    params.push(req.user.id);
-  }
-  videosQuery += 'ORDER BY plays DESC LIMIT 20';
-
-  const rows = db.prepare(videosQuery).all(...params);
+  const videosQuery = 'SELECT id, title, video_url, duration, plays, settings_json, created_at FROM videos WHERE deleted_at IS NULL AND user_id = ? ORDER BY plays DESC LIMIT 20';
+  const rows = db.prepare(videosQuery).all(req.user.id);
   const topVideos = rows.map(v => {
     let settings = {};
     try { if (v.settings_json) settings = JSON.parse(v.settings_json); } catch (e) {}
@@ -2859,6 +2901,11 @@ app.post('/api/videos', authMiddleware, (req, res) => {
     }
   }
 
+  let resolvedDuration = duration;
+  if ((!resolvedDuration || resolvedDuration === '10:00' || resolvedDuration === '05:00') && filePath) {
+    resolvedDuration = getVideoDurationFormatted(filePath);
+  }
+
   db.prepare(`
     INSERT INTO videos (id, user_id, folder_id, title, source_type, file_path, file_size, video_url, duration, settings_json)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -2871,7 +2918,7 @@ app.post('/api/videos', authMiddleware, (req, res) => {
     filePath || null,
     resolvedSize,
     cleanUrl,
-    duration || '10:00',
+    resolvedDuration || null,
     JSON.stringify(settings || {})
   );
 
@@ -3371,11 +3418,14 @@ app.post('/api/upload', authMiddleware, checkStorageQuotaPre, (req, res) => {
     const videoDomain = isProd ? `https://${PLAYER_DOMAIN}` : `${req.protocol}://${host}`;
     const videoUrl = `${videoDomain}/videos/${req.file.filename}`;
 
+    const probedDuration = getVideoDurationFormatted(originalPath);
+
     res.json({
       success: true,
       filename: req.file.filename,
       filePath: originalPath,
       fileSize: finalStat.size,
+      duration: probedDuration || null,
       videoUrl: videoUrl
     });
   });
@@ -3489,6 +3539,8 @@ app.post('/api/upload/google-drive', authMiddleware, checkStorageQuotaPre, async
       pixels: true
     };
 
+    const realDuration = getVideoDurationFormatted(targetPath);
+
     db.prepare(`
       INSERT INTO videos (id, user_id, folder_id, title, source_type, file_path, file_size, video_url, duration, settings_json)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -3501,7 +3553,7 @@ app.post('/api/upload/google-drive', authMiddleware, checkStorageQuotaPre, async
       targetPath,
       finalStat.size,
       videoUrl,
-      '10:00',
+      realDuration || null,
       JSON.stringify(defaultSettings)
     );
 

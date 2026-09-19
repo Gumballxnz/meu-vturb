@@ -18,7 +18,7 @@
       var hasToken = false;
       try { hasToken = !!localStorage.getItem('cloudvturb_token'); } catch (e) {}
 
-      if (p === '/login' || p === '/cadastro') {
+      if (p === '/login' || p === '/cadastro' || p === '/verificar-cadastro') {
         try {
           localStorage.removeItem('cloudvturb_token');
           localStorage.removeItem('cloudvturb_user');
@@ -5113,6 +5113,29 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
     </div>
   </div>
 
+  <div class="modal-overlay" id="userActionModal">
+    <div class="modal-box" style="max-width: 460px;">
+      <div class="modal-header-clean">
+        <div class="modal-title-clean" id="userActionModalTitle">Gestão de Usuários</div>
+        <button type="button" class="btn-icon" onclick="closeUserActionModal()">&times;</button>
+      </div>
+      <div class="modal-body-clean" style="padding: 20px 24px;">
+        <input type="hidden" id="userActionTargetId">
+        <input type="hidden" id="userActionType">
+        <p id="userActionModalDesc" style="font-size: 13.5px; color: var(--text-muted); line-height: 1.5; margin-bottom: 16px;"></p>
+        <div class="form-row" id="userActionReasonGroup">
+          <label class="form-label" style="font-weight: 600;">Motivo da ação (obrigatório)</label>
+          <textarea id="userActionReasonInput" class="form-input-text" rows="3" placeholder="Explique o motivo para registro e notificação..." style="resize: vertical; font-family: inherit; font-size: 13px;"></textarea>
+          <span id="userActionReasonError" style="display: none; color: #ef4444; font-size: 12px; font-weight: 500; margin-top: 4px;">Por favor, informe o motivo antes de confirmar.</span>
+        </div>
+      </div>
+      <div class="modal-footer-clean">
+        <button type="button" class="btn-clean-secondary" onclick="closeUserActionModal()">Cancelar</button>
+        <button type="button" class="btn-primary-action" id="btnConfirmUserAction" onclick="submitUserAction()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-overlay" id="newWebhookModal">
     <div class="modal-box" style="max-width: 520px;">
       <div class="modal-header-clean">
@@ -5787,20 +5810,20 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
 
       <form id="authVerifyRegisterForm" onsubmit="handleVerifyRegister(event)" style="display: none;">
         <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 18px;">
-          Enviamos um código numérico de 8 dígitos para o e-mail informado. Insira-o abaixo para ativar sua conta:
+          Enviamos um código numérico de 8 dígitos para o e-mail <strong id="verifyRegisterEmailDisplay" style="color: var(--text-main);"></strong>. Insira-o abaixo para ativar sua conta:
         </p>
         <div class="form-row">
           <label class="form-label">Código de 8 dígitos</label>
-          <input type="text" id="verifyRegisterCode" class="form-input-text" required placeholder="00000000" maxlength="8" style="font-family: monospace; letter-spacing: 4px; font-size: 18px; text-align: center; font-weight: 700;">
+          <input type="text" id="regVerifyCode" class="form-input-text" required placeholder="00000000" maxlength="8" style="font-family: monospace; letter-spacing: 4px; font-size: 18px; text-align: center; font-weight: 700;">
         </div>
         <button type="submit" class="btn-primary-action" style="width: 100%; justify-content: center; padding: 11px; margin-top: 8px;">Confirmar e Entrar</button>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; font-size: 12.5px;">
           <a href="#" onclick="toggleAuthMode('register'); return false;" style="color: var(--text-muted); text-decoration: none;">Voltar</a>
-          <button type="button" id="btnResendRegisterCode" class="btn-clean-secondary" style="font-size: 12px; padding: 4px 10px;" onclick="resendVerificationCode('register')">Reenviar código</button>
+          <button type="button" id="btnResendRegCode" class="btn-clean-secondary" style="font-size: 12px; padding: 4px 10px;" onclick="handleResendCode('register')">Reenviar código</button>
         </div>
       </form>
 
-      <form id="authForgotForm" onsubmit="handleForgotPassword(event)" style="display: none;">
+      <form id="authForgotForm" onsubmit="handleForgot(event)" style="display: none;">
         <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 18px;">
           Digite seu e-mail cadastrado. Enviaremos um código de 8 dígitos para redefinir sua senha.
         </p>
@@ -5816,7 +5839,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
 
       <form id="authResetPassForm" onsubmit="handleResetPassword(event)" style="display: none;">
         <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 18px;">
-          Digite o código de 8 dígitos que enviamos ao seu e-mail e escolha uma nova senha:
+          Digite o código de 8 dígitos que enviamos para <strong id="resetPassEmailDisplay" style="color: var(--text-main);"></strong> e escolha uma nova senha:
         </p>
         <div class="form-row">
           <label class="form-label">Código de 8 dígitos</label>
@@ -5833,7 +5856,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         <button type="submit" class="btn-primary-action" style="width: 100%; justify-content: center; padding: 11px; margin-top: 8px;">Redefinir Senha e Entrar</button>
         <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px; font-size: 12.5px;">
           <a href="#" onclick="toggleAuthMode('login'); return false;" style="color: var(--text-muted); text-decoration: none;">Cancelar</a>
-          <button type="button" id="btnResendResetCode" class="btn-clean-secondary" style="font-size: 12px; padding: 4px 10px;" onclick="resendVerificationCode('reset_password')">Reenviar código</button>
+          <button type="button" id="btnResendResetCode" class="btn-clean-secondary" style="font-size: 12px; padding: 4px 10px;" onclick="handleResendCode('reset_password')">Reenviar código</button>
         </div>
       </form>
 
@@ -6009,11 +6032,103 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       dropdown.classList.toggle('active');
     }
 
-    function markAllNotifsRead() {
+    let notifEventSource = null;
+
+    function renderNotificationItem(n) {
+      const isUnread = !n.read;
+      const timeStr = n.created_at ? new Date(n.created_at).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) : '';
+      return `
+        <div class="notif-item ${isUnread ? 'unread' : ''}" data-id="${n.id}">
+          <div class="notif-item-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          </div>
+          <div class="notif-item-content">
+            <div class="notif-item-title">${escapeHtml(n.title)}</div>
+            <div class="notif-item-desc">${escapeHtml(n.message)}</div>
+            <div class="notif-item-time">${timeStr}</div>
+          </div>
+        </div>
+      `;
+    }
+
+    async function loadUserNotifications() {
+      if (!token) return;
+      try {
+        const data = await api('/api/user/notifications');
+        const listEl = document.getElementById('notifList');
+        const dot = document.getElementById('notifBadgeDot');
+        if (!listEl) return;
+
+        if (data.unreadCount > 0 && dot) {
+          dot.style.display = 'block';
+        } else if (dot) {
+          dot.style.display = 'none';
+        }
+
+        if (data.notifications && data.notifications.length > 0) {
+          listEl.innerHTML = data.notifications.map(renderNotificationItem).join('');
+        } else {
+          listEl.innerHTML = `
+            <div class="notif-empty">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-dim); margin-bottom: 6px;"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+              <span>Nenhuma notificação nova</span>
+            </div>
+          `;
+        }
+      } catch (err) {}
+    }
+
+    function initNotificationSSE() {
+      if (!token || notifEventSource) return;
+      try {
+        notifEventSource = new EventSource(`/api/user/notifications/stream?token=${encodeURIComponent(token)}`);
+
+        notifEventSource.onmessage = (e) => {
+          try {
+            const notif = JSON.parse(e.data);
+            if (!notif || !notif.title) return;
+
+            const dot = document.getElementById('notifBadgeDot');
+            if (dot) dot.style.display = 'block';
+
+            const listEl = document.getElementById('notifList');
+            if (listEl) {
+              const empty = listEl.querySelector('.notif-empty');
+              if (empty) listEl.innerHTML = '';
+              listEl.insertAdjacentHTML('afterbegin', renderNotificationItem(notif));
+            }
+
+            showToast(`${notif.title}: ${notif.message}`);
+
+            if (notif.type === 'promotion') {
+              if (currentUser) {
+                currentUser.role = 'owner';
+                try { localStorage.setItem('cloudvturb_user', JSON.stringify(currentUser)); } catch (err) {}
+                setupUserHeader();
+              }
+            }
+          } catch (err) {}
+        };
+
+        notifEventSource.onerror = () => {
+          if (notifEventSource) {
+            notifEventSource.close();
+            notifEventSource = null;
+            setTimeout(initNotificationSSE, 10000);
+          }
+        };
+      } catch (err) {}
+    }
+
+    async function markAllNotifsRead() {
       const dot = document.getElementById('notifBadgeDot');
       if (dot) dot.style.display = 'none';
       const items = document.querySelectorAll('.notif-item.unread');
       items.forEach(el => el.classList.remove('unread'));
+
+      try {
+        await api('/api/user/notifications/read-all', { method: 'POST' });
+      } catch (err) {}
     }
 
     document.addEventListener('click', (e) => {
@@ -6052,7 +6167,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
 
     async function initSession() {
       const p = window.location.pathname.replace(/\/$/, '') || '/';
-      const isAuthRoute = p === '/login' || p === '/cadastro';
+      const isAuthRoute = p === '/login' || p === '/cadastro' || p === '/verificar-cadastro';
 
       if (isAuthRoute) {
         token = '';
@@ -6064,7 +6179,11 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           localStorage.removeItem('cloudvturb_top_videos');
         } catch (e) {}
         document.documentElement.classList.add('auth-pending');
-        showAuth(p === '/cadastro' ? 'register' : 'login');
+        if (p === '/verificar-cadastro') {
+          showAuth('verify_register');
+        } else {
+          showAuth(p === '/cadastro' ? 'register' : 'login');
+        }
         return;
       }
 
@@ -6100,6 +6219,8 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
 
         routeByUrl();
         loadAllDashboardData();
+        loadUserNotifications();
+        initNotificationSSE();
       } catch (err) {
         token = '';
         try {
@@ -6271,8 +6392,8 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       toggleAuthMode(mode);
     }
 
-    let pendingVerifyEmail = '';
-    let pendingResetEmail = '';
+    let pendingVerifyEmail = sessionStorage.getItem('cloudvturb_pending_verify_email') || '';
+    let pendingResetEmail = sessionStorage.getItem('cloudvturb_pending_reset_email') || '';
     const resendCooldownTimers = { register: null, reset_password: null };
 
     let pending2FATempToken = '';
@@ -6307,6 +6428,11 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         if (verifyRegForm) verifyRegForm.style.display = 'block';
         if (cardTitle) cardTitle.textContent = 'Verificar Cadastro';
         if (cardSubtitle) cardSubtitle.textContent = 'Digite o código de 8 dígitos enviado por e-mail';
+        if (window.location.pathname !== '/verificar-cadastro') {
+          history.pushState(null, '', '/verificar-cadastro');
+        }
+        const dispEl = document.getElementById('verifyRegisterEmailDisplay');
+        if (dispEl && pendingVerifyEmail) dispEl.textContent = pendingVerifyEmail;
         const codeInput = document.getElementById('regVerifyCode');
         if (codeInput) setTimeout(() => codeInput.focus(), 100);
       } else if (mode === 'forgot') {
@@ -6762,6 +6888,10 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           setButtonLoading(btn, true, 'Saindo...');
           try {
             await new Promise(r => setTimeout(r, 250));
+            if (notifEventSource) {
+              notifEventSource.close();
+              notifEventSource = null;
+            }
             token = '';
             currentUser = null;
             try {
@@ -7479,7 +7609,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
               </div>
             </div>
           </td>
-          <td>${v.duration || '10:00'}</td>
+          <td>${v.duration || '-'}</td>
           <td>${(v.plays || 0).toLocaleString()}</td>
           <td>${v.completionRate || '0.0'}%</td>
           <td>${(v.ctaClicks || 0).toLocaleString()}</td>
@@ -8109,7 +8239,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         <div class="video-thumb-stage">
           <video src="${v.video_url}#t=0.5" preload="metadata" muted playsinline></video>
           <div class="thumb-badge-source">${isLocal ? 'Hospedado' : 'Cloudflare R2'}</div>
-          <div class="thumb-badge-duration">${v.duration || '05:00'}</div>
+          ${v.duration ? `<div class="thumb-badge-duration">${escapeHtml(v.duration)}</div>` : ''}
           <div class="thumb-play-hover" onclick="openEditor('${v.id}')">
             <div class="play-circle-btn">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
@@ -8285,11 +8415,17 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       const inputTitle = document.getElementById('edTitle');
       if (inputTitle) inputTitle.value = v.title || '';
 
-      const durSec = Math.floor(v.duration || 0);
-      const durM = Math.floor(durSec / 60).toString().padStart(2, '0');
-      const durS = (durSec % 60).toString().padStart(2, '0');
+      let formattedDuration = '--:--';
+      if (typeof v.duration === 'string' && v.duration.includes(':')) {
+        formattedDuration = v.duration;
+      } else if (!isNaN(parseFloat(v.duration)) && parseFloat(v.duration) > 0) {
+        const durSec = Math.floor(parseFloat(v.duration));
+        const durM = Math.floor(durSec / 60).toString().padStart(2, '0');
+        const durS = (durSec % 60).toString().padStart(2, '0');
+        formattedDuration = `${durM}:${durS}`;
+      }
       const durEl = document.getElementById('vturbEditorDuration');
-      if (durEl) durEl.textContent = `${durM}:${durS}`;
+      if (durEl) durEl.textContent = formattedDuration;
 
       const s = v.settings || {};
 
@@ -9299,35 +9435,101 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
 
     function execUserAction(id, action) {
       closeAllUserMenus();
-      const actionLabels = {
-        approve: 'aprovar este usuário',
-        block: 'bloquear o acesso deste usuário',
-        make_owner: 'promover este usuário a Administrador (Owner)',
-        delete: 'excluir este usuário permanentemente'
-      };
-      const label = actionLabels[action] || `executar esta ação (${action})`;
-      showConfirmDialog({
-        title: 'Gestão de Usuários',
-        message: `Deseja realmente ${label}?`,
-        confirmText: action === 'delete' ? 'Excluir' : 'Confirmar',
-        isDanger: action === 'delete' || action === 'block',
-        onConfirm: async (btn) => {
-          setButtonLoading(btn, true, 'Executando...');
-          try {
-            await api(`/api/admin/users/${id}/action`, {
-              method: 'POST',
-              body: JSON.stringify({ action })
-            });
-            closeConfirmModal();
-            await loadUsersTable();
-            showToast('Ação executada com sucesso!');
-          } catch (err) {
-            showToast(err.message, true);
-          } finally {
-            setButtonLoading(btn, false);
-          }
+      const actionConfigs = {
+        approve: {
+          title: 'Aprovar Usuário',
+          desc: 'Deseja aprovar o cadastro deste usuário para que ele possa acessar a plataforma?',
+          btnText: 'Aprovar',
+          btnClass: 'btn-primary-action',
+          requireReason: false
+        },
+        block: {
+          title: 'Bloquear Usuário',
+          desc: 'O usuário perderá o acesso à plataforma e receberá um e-mail informando o motivo.',
+          btnText: 'Bloquear',
+          btnClass: 'btn-solid-danger',
+          requireReason: true
+        },
+        make_owner: {
+          title: 'Promover a Administrador',
+          desc: 'O usuário terá acesso total ao painel e receberá uma notificação em tempo real, além de um e-mail com o motivo.',
+          btnText: 'Tornar Owner',
+          btnClass: 'btn-primary-action',
+          requireReason: true
+        },
+        delete: {
+          title: 'Excluir Usuário',
+          desc: 'A conta do usuário será removida permanentemente. Um e-mail será enviado com o motivo informado.',
+          btnText: 'Excluir',
+          btnClass: 'btn-solid-danger',
+          requireReason: true
         }
-      });
+      };
+
+      const cfg = actionConfigs[action] || {
+        title: 'Gestão de Usuários',
+        desc: `Executar ação: ${action}`,
+        btnText: 'Confirmar',
+        btnClass: 'btn-primary-action',
+        requireReason: true
+      };
+
+      document.getElementById('userActionTargetId').value = id;
+      document.getElementById('userActionType').value = action;
+      document.getElementById('userActionModalTitle').textContent = cfg.title;
+      document.getElementById('userActionModalDesc').textContent = cfg.desc;
+
+      const reasonGroup = document.getElementById('userActionReasonGroup');
+      const reasonInput = document.getElementById('userActionReasonInput');
+      const reasonError = document.getElementById('userActionReasonError');
+      reasonInput.value = '';
+      if (reasonError) reasonError.style.display = 'none';
+
+      if (cfg.requireReason) {
+        reasonGroup.style.display = 'block';
+      } else {
+        reasonGroup.style.display = 'none';
+      }
+
+      const btn = document.getElementById('btnConfirmUserAction');
+      btn.textContent = cfg.btnText;
+      btn.className = cfg.btnClass;
+
+      document.getElementById('userActionModal').classList.add('active');
+    }
+
+    function closeUserActionModal() {
+      document.getElementById('userActionModal').classList.remove('active');
+    }
+
+    async function submitUserAction() {
+      const id = document.getElementById('userActionTargetId').value;
+      const action = document.getElementById('userActionType').value;
+      const reasonInput = document.getElementById('userActionReasonInput');
+      const reasonError = document.getElementById('userActionReasonError');
+      const reason = reasonInput.value.trim();
+
+      if (action !== 'approve' && !reason) {
+        if (reasonError) reasonError.style.display = 'block';
+        reasonInput.focus();
+        return;
+      }
+
+      const btn = document.getElementById('btnConfirmUserAction');
+      setButtonLoading(btn, true, 'Executando...');
+      try {
+        await api(`/api/admin/users/${id}/action`, {
+          method: 'POST',
+          body: JSON.stringify({ action, reason })
+        });
+        closeUserActionModal();
+        await loadUsersTable();
+        showToast('Ação executada com sucesso!');
+      } catch (err) {
+        showToast(err.message, true);
+      } finally {
+        setButtonLoading(btn, false);
+      }
     }
 
     async function updateApprovalSetting(requireApproval) {
@@ -9514,6 +9716,23 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       }
     }
 
+    function togglePwdVisibility(inputId, iconId) {
+      const input = document.getElementById(inputId);
+      const icon = document.getElementById(iconId);
+      if (!input) return;
+      if (input.type === 'password') {
+        input.type = 'text';
+        if (icon) {
+          icon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>';
+        }
+      } else {
+        input.type = 'password';
+        if (icon) {
+          icon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+        }
+      }
+    }
+
     function openChangePasswordModal() {
       const email = (currentUser && currentUser.email) || '';
       const targetEl = document.getElementById('changePwdEmailTarget');
@@ -9522,11 +9741,26 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       if (targetElStep2) targetElStep2.textContent = email;
 
       document.getElementById('changePwdStep1').style.display = 'block';
-      document.getElementById('changePwdStep2').style.display = 'none';
-      document.getElementById('btnSubmitChangePassword').style.display = 'none';
+      const step2A = document.getElementById('changePwdStep2A');
+      const step2B = document.getElementById('changePwdStep2B');
+      if (step2A) step2A.style.display = 'none';
+      if (step2B) step2B.style.display = 'none';
+
+      const btnVerify = document.getElementById('btnVerifyPwdCode');
+      const btnSubmit = document.getElementById('btnSubmitChangePassword');
+      if (btnVerify) btnVerify.style.display = 'none';
+      if (btnSubmit) btnSubmit.style.display = 'none';
+
       document.getElementById('inputPwdCode').value = '';
       document.getElementById('inputNewPassword').value = '';
       document.getElementById('inputConfirmPassword').value = '';
+      document.getElementById('inputNewPassword').type = 'password';
+      document.getElementById('inputConfirmPassword').type = 'password';
+
+      const eyeNew = document.getElementById('eyeIconNew');
+      const eyeConfirm = document.getElementById('eyeIconConfirm');
+      if (eyeNew) eyeNew.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
+      if (eyeConfirm) eyeConfirm.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
 
       document.getElementById('changePasswordModal').classList.add('active');
     }
@@ -9541,11 +9775,51 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       try {
         const res = await api('/api/user/password/request-code', { method: 'POST' });
         document.getElementById('changePwdStep1').style.display = 'none';
-        document.getElementById('changePwdStep2').style.display = 'block';
-        document.getElementById('btnSubmitChangePassword').style.display = 'inline-flex';
+        const step2A = document.getElementById('changePwdStep2A');
+        const step2B = document.getElementById('changePwdStep2B');
+        if (step2A) step2A.style.display = 'block';
+        if (step2B) step2B.style.display = 'none';
+
+        const btnVerify = document.getElementById('btnVerifyPwdCode');
+        const btnSubmit = document.getElementById('btnSubmitChangePassword');
+        if (btnVerify) btnVerify.style.display = 'inline-flex';
+        if (btnSubmit) btnSubmit.style.display = 'none';
+
         const codeInput = document.getElementById('inputPwdCode');
         if (codeInput) setTimeout(() => codeInput.focus(), 100);
         showToast(res.message || 'Código de 8 dígitos enviado para seu e-mail!');
+      } catch (err) {
+        showToast(err.message, true);
+      } finally {
+        setButtonLoading(btn, false);
+      }
+    }
+
+    async function verifyPasswordCode() {
+      const btn = document.getElementById('btnVerifyPwdCode');
+      const code = document.getElementById('inputPwdCode').value.trim().replace(/\D/g, '');
+      if (code.length !== 8) {
+        return showToast('Informe o código de verificação de 8 dígitos.', true);
+      }
+
+      setButtonLoading(btn, true, 'Verificando...');
+      try {
+        await api('/api/user/password/verify-code', {
+          method: 'POST',
+          body: JSON.stringify({ code })
+        });
+        const step2A = document.getElementById('changePwdStep2A');
+        const step2B = document.getElementById('changePwdStep2B');
+        if (step2A) step2A.style.display = 'none';
+        if (step2B) step2B.style.display = 'block';
+
+        btn.style.display = 'none';
+        const btnSubmit = document.getElementById('btnSubmitChangePassword');
+        if (btnSubmit) btnSubmit.style.display = 'inline-flex';
+
+        const pwdInput = document.getElementById('inputNewPassword');
+        if (pwdInput) setTimeout(() => pwdInput.focus(), 100);
+        showToast('Código validado com sucesso! Defina sua nova senha.');
       } catch (err) {
         showToast(err.message, true);
       } finally {
