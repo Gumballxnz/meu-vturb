@@ -56,6 +56,7 @@ const APP_NAME = process.env.APP_NAME || 'CloudVTurb';
 const BASE_DOMAIN = (process.env.BASE_DOMAIN || '').toLowerCase();
 const PLAYER_DOMAIN = (process.env.PLAYER_DOMAIN || (BASE_DOMAIN ? `player.${BASE_DOMAIN}` : '')).toLowerCase();
 const DASH_DOMAIN = (process.env.DASH_DOMAIN || (BASE_DOMAIN ? `dash.${BASE_DOMAIN}` : '')).toLowerCase();
+const HELP_DOMAIN = (process.env.HELP_DOMAIN || (BASE_DOMAIN ? `help.${BASE_DOMAIN}` : '')).toLowerCase();
 
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const VIDEOS_DIR = process.env.VIDEOS_DIR || path.join(__dirname, 'videos');
@@ -218,7 +219,22 @@ db.exec(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
 
+  CREATE TABLE IF NOT EXISTS team_invites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    owner_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL,
+    role TEXT DEFAULT 'member',
+    token TEXT UNIQUE NOT NULL,
+    expires_at DATETIME NOT NULL,
+    accepted_at DATETIME DEFAULT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(owner_id) REFERENCES users(id) ON DELETE CASCADE
+  );
+
   CREATE INDEX IF NOT EXISTS idx_verification_email_type ON verification_codes(email, type);
+  CREATE INDEX IF NOT EXISTS idx_team_invites_owner ON team_invites(owner_id);
+  CREATE INDEX IF NOT EXISTS idx_team_invites_token ON team_invites(token);
   CREATE INDEX IF NOT EXISTS idx_analytics_vid_event ON analytics_events(video_id, event_type);
   CREATE INDEX IF NOT EXISTS idx_analytics_vid_created ON analytics_events(video_id, created_at);
   CREATE INDEX IF NOT EXISTS idx_analytics_vid_visitor ON analytics_events(video_id, visitor_id);
@@ -806,6 +822,72 @@ async function sendVerificationEmail({ to, code, type, name }) {
     throw new Error(`Falha no envio via Resend: ${detail}`);
   }
 
+  return resJson;
+}
+
+async function sendInviteEmail({ to, name, inviterName, inviteLink, role }) {
+  const apiKey = (process.env.RESEND_API_KEY || '').trim();
+  if (!apiKey) {
+    console.log(`[CloudVTurb Invite] Link de convite para ${to}: ${inviteLink}`);
+    if (process.env.NODE_ENV === 'production' && process.env.REQUIRE_RESEND === 'true') {
+      throw new Error('Chave RESEND_API_KEY não configurada no servidor (.env). Configure a chave da Resend para o envio de e-mails.');
+    }
+    return;
+  }
+
+  const fromEmail = (process.env.RESEND_FROM_EMAIL || 'CloudVTurb <onboarding@resend.dev>').trim();
+  const roleLabel = role === 'admin' ? 'Administrador' : 'Usuário Comum';
+  const subject = `${inviterName || 'Alguém'} convidou você para fazer parte da equipe no CloudVTurb`;
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Convite para a equipe CloudVTurb</title>
+</head>
+<body style="margin:0;padding:24px;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#18181b;">
+  <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;padding:36px;border:1px solid #e4e4e7;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+    <div style="font-size:22px;font-weight:800;color:#2563eb;margin-bottom:24px;letter-spacing:-0.5px;">CloudVTurb</div>
+    <h2 style="font-size:19px;font-weight:700;color:#09090b;margin:0 0 14px 0;">Você recebeu um convite para a equipe</h2>
+    <p style="font-size:14px;line-height:1.6;color:#52525b;margin:0 0 16px 0;">Olá${name ? ` <strong>${escapeHtml(name)}</strong>` : ''},</p>
+    <p style="font-size:14px;line-height:1.6;color:#52525b;margin:0 0 20px 0;">
+      <strong>${escapeHtml(inviterName || 'Um administrador')}</strong> convidou você para fazer parte da equipe no <strong>CloudVTurb</strong> com o cargo de <strong>${roleLabel}</strong>.
+    </p>
+    <div style="text-align:center;margin:28px 0;">
+      <a href="${inviteLink}" style="display:inline-block;background-color:#2563eb;color:#ffffff;text-decoration:none;font-size:14.5px;font-weight:600;padding:12px 28px;border-radius:8px;box-shadow:0 1px 2px rgba(0,0,0,0.1);">Aceitar Convite</a>
+    </div>
+    <p style="font-size:13px;line-height:1.5;color:#71717a;margin:0 0 12px 0;">
+      Ou copie e cole o link direto no seu navegador:<br>
+      <a href="${inviteLink}" style="color:#2563eb;word-break:break-all;font-size:12px;">${inviteLink}</a>
+    </p>
+    <p style="font-size:13px;line-height:1.5;color:#71717a;margin:16px 0 24px 0;">
+      Este convite é de uso exclusivo e tem validade de <strong>24 horas</strong>. Se você não esperava este convite, pode ignorar este e-mail com segurança.
+    </p>
+    <div style="font-size:12px;color:#a1a1aa;border-top:1px solid #f4f4f5;padding-top:16px;">CloudVTurb — Plataforma de Hospedagem VSL de Alta Retenção</div>
+  </div>
+</body>
+</html>`;
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from: fromEmail,
+      to: [to],
+      subject: subject,
+      html: html
+    })
+  });
+
+  const resJson = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const detail = resJson.message || resJson.error || response.statusText || 'Erro desconhecido';
+    throw new Error(`Falha no envio via Resend: ${detail}`);
+  }
   return resJson;
 }
 
