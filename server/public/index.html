@@ -10286,38 +10286,139 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
     }
 
     async function loadVaRetention() {
-      const pane = document.getElementById('vaRetSubpane-general');
-      if (!pane) return;
-      pane.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:20px;">Carregando métricas...</div>';
+      const chartBox = document.getElementById('vaRetentionChartContainer');
+      const subArea = document.getElementById('vaRetentionSubContentArea');
+      if (!subArea) return;
+      subArea.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:20px;">Carregando métricas...</div>';
+
       try {
         const qs = getVaQueryStr();
         const res = await api(`/api/analytics/video/${currentVaVideoId}?${qs}`);
         const retRes = await api(`/api/analytics/video/${currentVaVideoId}/retention?${qs}`);
         currentVaData = { ...res, ...retRes };
 
-        const curve = res.retentionCurve || [];
-        const m = res.metrics || {};
-
-        let barsHtml = '';
-        if (!curve.length || curve.every(x => !x.sessions && !x.percent)) {
-          barsHtml = '<div style="color:var(--text-dim);font-size:13px;padding:40px;text-align:center;">Nenhuma reprodução registrada para o período selecionado.</div>';
-        } else {
-          barsHtml = `<div class="retention-bars-row" style="margin-bottom:28px;">` +
-            curve.map(pt => {
-              const h = Math.max(4, pt.percent || 0);
-              return `
-                <div class="retention-col">
-                  <div class="retention-col-bar" style="height:${h}%;">
-                    <span class="retention-val-tooltip">${pt.percent || 0}% (${pt.sessions || 0})</span>
-                  </div>
-                  <span class="retention-col-label">${pt.label}</span>
-                </div>
-              `;
-            }).join('') +
-          `</div>`;
+        const vidObj = (videos || []).find(x => x.id === currentVaVideoId) || (topVideos || []).find(x => x.id === currentVaVideoId);
+        const videoEl = document.getElementById('vaRetentionVideoBg');
+        if (videoEl && vidObj && vidObj.video_url) {
+          if (videoEl.src !== vidObj.video_url) {
+            videoEl.src = vidObj.video_url;
+            videoEl.currentTime = 0.5;
+          }
         }
 
-        const metricsGrid = `
+        renderVaRetentionOverlaySvg(res.retentionCurve || []);
+
+        const durSec = vidObj && vidObj.duration ? parseDurationToSeconds(vidObj.duration) : 60;
+        formatVaTimeAxis(durSec);
+
+        renderVaCurrentSubtabView();
+      } catch (e) {
+        subArea.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:20px;">Falha ao carregar dados de retenção.</div>';
+      }
+    }
+
+    function parseDurationToSeconds(durStr) {
+      if (!durStr) return 60;
+      const parts = String(durStr).split(':').map(Number);
+      if (parts.length === 2) return (parts[0] * 60) + parts[1];
+      if (parts.length === 3) return (parts[0] * 3600) + (parts[1] * 60) + parts[2];
+      return Number(durStr) || 60;
+    }
+
+    function formatVaTimeAxis(totalSec) {
+      const mid1 = Math.round(totalSec * 0.33);
+      const mid2 = Math.round(totalSec * 0.66);
+      const fmt = s => {
+        const m = Math.floor(s / 60).toString().padStart(2, '0');
+        const sec = Math.floor(s % 60).toString().padStart(2, '0');
+        return `${m}:${sec}`;
+      };
+      const el1 = document.getElementById('vaTimeAxisMid1');
+      const el2 = document.getElementById('vaTimeAxisMid2');
+      const elEnd = document.getElementById('vaTimeAxisEnd');
+      if (el1) el1.textContent = fmt(mid1);
+      if (el2) el2.textContent = fmt(mid2);
+      if (elEnd) elEnd.textContent = fmt(totalSec);
+    }
+
+    function renderVaRetentionOverlaySvg(curve) {
+      const svg = document.getElementById('vaRetentionSvg');
+      if (!svg) return;
+      if (!curve || !curve.length) {
+        svg.innerHTML = '';
+        return;
+      }
+
+      const pts = curve.map((pt, idx) => {
+        const x = 50 + ((idx / (curve.length - 1)) * (1000 - 86));
+        const pct = Math.min(100, Math.max(0, pt.percent || 0));
+        const y = 350 - ((pct / 100) * (350 - 30));
+        return { x, y, pt };
+      });
+
+      let pathD = `M ${pts[0].x} ${pts[0].y}`;
+      for (let i = 1; i < pts.length; i++) {
+        const prev = pts[i - 1];
+        const curr = pts[i];
+        const cpX = (prev.x + curr.x) / 2;
+        pathD += ` C ${cpX} ${prev.y}, ${cpX} ${curr.y}, ${curr.x} ${curr.y}`;
+      }
+
+      const areaD = `${pathD} L ${pts[pts.length - 1].x} 350 L ${pts[0].x} 350 Z`;
+
+      let svgInner = `
+        <defs>
+          <linearGradient id="vaRetentionGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#10b981" stop-opacity="0.35"/>
+            <stop offset="100%" stop-color="#10b981" stop-opacity="0.0"/>
+          </linearGradient>
+        </defs>
+        <path d="${areaD}" fill="url(#vaRetentionGrad)" />
+        <path d="${pathD}" fill="none" stroke="#10b981" stroke-width="3.5" stroke-linecap="round" />
+      `;
+
+      pts.forEach(p => {
+        svgInner += `
+          <circle cx="${p.x}" cy="${p.y}" r="5" fill="#10b981" stroke="#ffffff" stroke-width="2">
+            <title>${p.pt.label}: ${p.pt.percent}% (${p.pt.sessions} sessões)</title>
+          </circle>
+        `;
+      });
+
+      svg.innerHTML = svgInner;
+    }
+
+    function switchVaRetentionSubtab(sub) {
+      currentVaRetSubtab = sub;
+      const subs = ['general', 'countries', 'devices', 'os', 'browsers', 'traffic'];
+      const btns = document.querySelectorAll('#vaPane-retention .va-subtab-btn');
+      subs.forEach((s, idx) => {
+        if (btns[idx]) btns[idx].classList.toggle('active', s === sub);
+      });
+
+      const badge = document.getElementById('vaRetentionSubtabBadge');
+      if (badge) {
+        if (sub === 'general') {
+          badge.style.display = 'none';
+        } else {
+          const names = { countries: 'Países', devices: 'Dispositivos', os: 'Sistema Operacional', browsers: 'Navegadores', traffic: 'Origem do Tráfego' };
+          badge.textContent = names[sub] || sub;
+          badge.style.display = 'block';
+        }
+      }
+
+      renderVaCurrentSubtabView();
+    }
+
+    function renderVaCurrentSubtabView() {
+      const subArea = document.getElementById('vaRetentionSubContentArea');
+      if (!subArea || !currentVaData) return;
+
+      const sub = currentVaRetSubtab;
+      const m = currentVaData.metrics || {};
+
+      if (sub === 'general') {
+        subArea.innerHTML = `
           <div style="font-size:16px;font-weight:700;color:var(--text-main);margin-bottom:14px;">Métricas</div>
           <div class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 24px;">
             <div class="metric-card">
@@ -10362,52 +10463,60 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
             </div>
           </div>
         `;
-
-        pane.innerHTML = barsHtml + metricsGrid;
-        renderVaBreakdownList('vaRetSubpane-countries', retRes.countries || [], 'País');
-        renderVaBreakdownList('vaRetSubpane-devices', retRes.devices || [], 'Dispositivo');
-        renderVaBreakdownList('vaRetSubpane-os', retRes.os || [], 'Sistema Operacional');
-        renderVaBreakdownList('vaRetSubpane-browsers', retRes.browsers || [], 'Navegador');
-        renderVaBreakdownList('vaRetSubpane-traffic', retRes.traffic || [], 'Origem');
-      } catch (e) {
-        pane.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:20px;">Falha ao carregar dados de retenção.</div>';
-      }
-    }
-
-    function switchVaRetentionSubtab(sub) {
-      currentVaRetSubtab = sub;
-      const subs = ['general', 'countries', 'devices', 'os', 'browsers', 'traffic'];
-      const btns = document.querySelectorAll('#vaPane-retention .va-subtab-btn');
-      subs.forEach((s, idx) => {
-        const pane = document.getElementById(`vaRetSubpane-${s}`);
-        if (btns[idx]) btns[idx].classList.toggle('active', s === sub);
-        if (pane) pane.style.display = s === sub ? 'block' : 'none';
-      });
-    }
-
-    function renderVaBreakdownList(containerId, list, colLabel) {
-      const container = document.getElementById(containerId);
-      if (!container) return;
-      if (!list || list.length === 0) {
-        container.innerHTML = `<div style="color:var(--text-dim);font-size:13px;padding:40px;text-align:center;">Nenhum registro para ${colLabel} no período.</div>`;
         return;
       }
-      const max = Math.max(1, ...list.map(x => x.count));
-      container.innerHTML = `
-        <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:10px;padding:20px;max-width:680px;">
-          <div style="font-size:14px;font-weight:700;color:var(--text-main);margin-bottom:16px;">Top ${colLabel}</div>
-          ${list.map(item => {
-            const pct = Math.max(3, Math.round((item.count / max) * 100));
-            return `
-              <div class="va-breakdown-row">
-                <div class="va-breakdown-label" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>
-                <div class="va-breakdown-bar-track">
-                  <div class="va-breakdown-bar-fill" style="width:${pct}%;"></div>
-                </div>
-                <div class="va-breakdown-count">${item.count}</div>
-              </div>
-            `;
-          }).join('')}
+
+      const mapping = {
+        countries: { list: currentVaData.countries || [], title: 'País' },
+        devices: { list: currentVaData.devices || [], title: 'Dispositivo' },
+        os: { list: currentVaData.os || [], title: 'Sistema Operacional' },
+        browsers: { list: currentVaData.browsers || [], title: 'Navegador' },
+        traffic: { list: currentVaData.traffic || [], title: 'Origem do Tráfego' }
+      };
+
+      const itemData = mapping[sub] || { list: [], title: sub };
+      const list = itemData.list;
+      const totalPlays = currentVaData.totalPlays || (m.plays || 1);
+
+      if (!list || !list.length) {
+        subArea.innerHTML = `
+          <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:36px;text-align:center;">
+            <p style="font-size:13px;color:var(--text-dim);margin:0;">Nenhum dado disponível neste período para ${itemData.title}.</p>
+          </div>
+        `;
+        return;
+      }
+
+      subArea.innerHTML = `
+        <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow:hidden;">
+          <table class="va-data-table">
+            <thead>
+              <tr>
+                <th>${escapeHtml(itemData.title)}</th>
+                <th style="text-align:right;">Plays</th>
+                <th style="text-align:right;">% dos Plays</th>
+                <th style="width:200px;">Distribuição</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${list.map(it => {
+                const count = it.count || 0;
+                const pct = totalPlays > 0 ? ((count / totalPlays) * 100).toFixed(1) : '0.0';
+                return `
+                  <tr>
+                    <td style="font-weight:600;">${escapeHtml(it.name)}</td>
+                    <td style="text-align:right;font-weight:700;">${count.toLocaleString()}</td>
+                    <td style="text-align:right;color:var(--text-dim);">${pct}%</td>
+                    <td>
+                      <div style="height:6px;background:var(--border-subtle);border-radius:3px;overflow:hidden;">
+                        <div style="width:${Math.min(100, Math.max(3, parseFloat(pct)))}%;height:100%;background:var(--primary);border-radius:3px;"></div>
+                      </div>
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+            </tbody>
+          </table>
         </div>
       `;
     }
