@@ -679,6 +679,19 @@ function processVideoHLS(vidId) {
     hasAudio = probe.toString().trim() === 'audio';
   } catch (e) {}
 
+  const posterPath = path.join(videoDir, 'poster.jpg');
+  if (!fs.existsSync(posterPath)) {
+    try {
+      const pProc = spawn('ffmpeg', ['-y', '-ss', '0.5', '-i', inputPath, '-vframes', '1', '-q:v', '2', posterPath]);
+      pProc.on('close', (pCode) => {
+        if (pCode === 0 && fs.existsSync(posterPath)) {
+          const posterUrl = `/videos/${vidId}/poster.jpg`;
+          try { db.prepare('UPDATE videos SET thumbnail = ? WHERE id = ?').run(posterUrl, vidId); } catch (e) {}
+        }
+      });
+    } catch (e) {}
+  }
+
   const apArgs = [
     '-y',
     '-ss', '0',
