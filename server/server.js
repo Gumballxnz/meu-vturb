@@ -546,8 +546,14 @@ app.use('/', vturbAnalyticsRouter);
 app.use('/api/v1', vturbAnalyticsRouter);
 
 app.use('/avatars', express.static(AVATARS_DIR));
+app.use('/api/avatars', express.static(AVATARS_DIR));
 app.use('/avatars', express.static(path.join(PUBLIC_DIR, 'avatars')));
-app.use('/avatars', (req, res) => {
+app.get(['/avatars/:filename', '/api/avatars/:filename'], (req, res) => {
+  const safeName = path.basename(req.params.filename);
+  const p1 = path.join(AVATARS_DIR, safeName);
+  if (fs.existsSync(p1)) return res.sendFile(p1);
+  const p2 = path.join(PUBLIC_DIR, 'avatars', safeName);
+  if (fs.existsSync(p2)) return res.sendFile(p2);
   res.status(404).send('Avatar não encontrado');
 });
 app.use(express.static(PUBLIC_DIR));
@@ -1887,12 +1893,14 @@ const avatarStorage = multer.diskStorage({
 });
 const avatarUpload = multer({
   storage: avatarStorage,
-  limits: { fileSize: 5 * 1024 * 1024 },
+  limits: { fileSize: 25 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
+    const isImg = (file.mimetype && file.mimetype.startsWith('image/')) ||
+      /\.(jpe?g|png|webp|gif|bmp|svg|jfif|heic|avif)$/i.test(file.originalname);
+    if (isImg) {
       cb(null, true);
     } else {
-      cb(new Error('Apenas arquivos de imagem são permitidos.'));
+      cb(new Error('Apenas arquivos de imagem são permitidos (PNG, JPEG, WEBP, GIF, etc).'));
     }
   }
 });
@@ -1938,11 +1946,18 @@ app.put('/api/user/profile', authMiddleware, (req, res) => {
 
 app.post('/api/user/avatar', authMiddleware, (req, res) => {
   avatarUpload.single('avatar')(req, res, (err) => {
-    if (err) return res.status(400).json({ error: err.message || 'Falha no upload do avatar.' });
+    if (err) {
+      const msg = err.code === 'LIMIT_FILE_SIZE'
+        ? 'A imagem é muito grande. O limite máximo é de 25 MB.'
+        : (err.message || 'Falha no upload do avatar.');
+      return res.status(400).json({ error: msg });
+    }
     if (!req.file) return res.status(400).json({ error: 'Nenhuma imagem enviada.' });
 
     const avatarUrl = `/avatars/${req.file.filename}`;
     db.prepare('UPDATE users SET avatar_url = ? WHERE id = ?').run(avatarUrl, req.user.id);
+
+    console.log(`[AVATAR] Upload realizado pelo usuário #${req.user.id} (${req.user.email || req.user.name}): ${req.file.filename} (${(req.file.size / (1024 * 1024)).toFixed(2)} MB)`);
 
     res.json({ success: true, avatarUrl });
   });
