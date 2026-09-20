@@ -762,12 +762,14 @@
       const barColor = params.get('bar_color') || dbSettings.barColor || '#2563EB';
       const borderRadius = params.get('border_radius') || dbSettings.borderRadius || '0px';
       const smartAutoplay = params.has('smart_autoplay') ? params.get('smart_autoplay') !== '0' : (dbSettings.smartAutoplay !== false);
-      const fakeProgress = params.has('fake_progress') ? params.get('fake_progress') === '1' : (dbSettings.fakeProgress === true);
+      const fakeProgress = params.has('fake_progress') ? params.get('fake_progress') !== '0' : (dbSettings.fakeProgress !== false);
       const blockSeek = params.has('block_seek') ? params.get('block_seek') !== '0' : (dbSettings.blockSeek !== false);
-      const resumeEnabled = params.has('resume') ? params.get('resume') === '1' : (dbSettings.resume === true);
-      const ctaEnabled = params.has('cta') ? params.get('cta') === '1' : (dbSettings.ctaEnabled === true);
+      const resumeEnabled = params.has('resume') ? params.get('resume') !== '0' : (dbSettings.resume !== false);
+      const rawCtaUrl = params.get('cta_url') || dbSettings.ctaUrl || '';
+      const validCtaUrl = (rawCtaUrl && rawCtaUrl.trim() !== '' && rawCtaUrl !== 'https://seusite.com/checkout') ? rawCtaUrl.trim() : '';
+      const ctaEnabled = (params.has('cta') ? params.get('cta') === '1' : (dbSettings.ctaEnabled === true)) && Boolean(validCtaUrl);
       const ctaTime = params.has('cta_time') ? parseFloat(params.get('cta_time')) : (dbSettings.ctaTime || 0);
-      const ctaUrl = params.get('cta_url') || dbSettings.ctaUrl || '';
+      const ctaUrl = validCtaUrl;
       const ctaText = params.get('cta_text') || dbSettings.ctaText || '';
       const ctaColor = params.get('cta_color') || dbSettings.ctaColor || '#10b981';
       const ctaSub = params.get('cta_subtext') || dbSettings.ctaSubtext || '';
@@ -986,7 +988,7 @@
       });
 
       function emitAnalyticsEvent(eventType, milestone, watchTime) {
-        if (!vidId || isPreview || isOwnerPreview) return;
+        if (!vidId || isPreview) return;
         const payload = {
           videoId: vidId,
           visitorId: visitorId,
@@ -998,20 +1000,28 @@
         };
 
         const json = JSON.stringify(payload);
-        if (navigator.sendBeacon) {
+        const endpoint = `${window.location.origin}/api/analytics/event`;
+
+        if (navigator.sendBeacon && (eventType === 'pause' || eventType === 'complete')) {
           try {
-            navigator.sendBeacon('/api/analytics/event', new Blob([json], { type: 'application/json' }));
+            navigator.sendBeacon(endpoint, new Blob([json], { type: 'application/json' }));
             return;
           } catch (e) {}
         }
 
-        fetch('/api/analytics/event', {
+        fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: json,
           keepalive: true
         }).catch(function () {});
       }
+
+      setInterval(function () {
+        if (video && !video.paused && !video.ended) {
+          emitAnalyticsEvent('heartbeat', null, video.currentTime || 0);
+        }
+      }, 20000);
 
       emitAnalyticsEvent('page_view', null, 0);
 
@@ -1108,6 +1118,7 @@
         if (playRegistered) return;
         playRegistered = true;
         emitAnalyticsEvent('play', null, video.currentTime || 0);
+        emitAnalyticsEvent('heartbeat', null, video.currentTime || 0);
       }
 
       video.addEventListener('play', registerPlay);

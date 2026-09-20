@@ -406,12 +406,26 @@ try {
 } catch (e) {}
 
 try {
-  const vRows = db.prepare("SELECT id, settings_json FROM videos WHERE settings_json LIKE '%\"pixels\":true%'").all();
+  const vRows = db.prepare("SELECT id, settings_json FROM videos").all();
   for (const row of vRows) {
+    if (!row.settings_json) continue;
     try {
       const parsed = JSON.parse(row.settings_json || '{}');
+      let changed = false;
+      if (!parsed.ctaUrl || parsed.ctaUrl === 'https://seusite.com/checkout' || !parsed.ctaUrl.trim()) {
+        if (parsed.ctaEnabled || parsed.ctaUrl || parsed.ctaText || parsed.ctaSubtext) {
+          parsed.ctaEnabled = false;
+          parsed.ctaUrl = '';
+          parsed.ctaText = '';
+          parsed.ctaSubtext = '';
+          changed = true;
+        }
+      }
       if (parsed.pixels === true) {
         parsed.pixels = false;
+        changed = true;
+      }
+      if (changed) {
         db.prepare("UPDATE videos SET settings_json = ? WHERE id = ?").run(JSON.stringify(parsed), row.id);
       }
     } catch (err) {}
@@ -3639,7 +3653,8 @@ const ALLOWED_ANALYTICS_EVENTS = [
   'pitch_viewed',
   'cta_shown',
   'cta_clicked',
-  'complete'
+  'complete',
+  'heartbeat'
 ];
 
 app.post('/api/analytics/event', (req, res) => {
@@ -3662,6 +3677,22 @@ app.post('/api/analytics/event', (req, res) => {
   const video = db.prepare('SELECT id FROM videos WHERE id = ?').get(cleanVidId);
   if (!video) {
     return res.status(404).json({ error: 'Vídeo não cadastrado.' });
+  }
+
+  if (eventType === 'heartbeat') {
+    const lastHeartbeat = db.prepare(`
+      SELECT id FROM analytics_events
+      WHERE session_id = ? AND event_type = 'heartbeat'
+      ORDER BY id DESC LIMIT 1
+    `).get(cleanSessionId);
+    if (lastHeartbeat) {
+      db.prepare(`
+        UPDATE analytics_events
+        SET created_at = datetime('now'), watch_time = ?
+        WHERE id = ?
+      `).run(cleanWatchTime, lastHeartbeat.id);
+      return res.json({ success: true, updated: true });
+    }
   }
 
   if (eventType === 'progress' && cleanMilestone !== null) {
@@ -4027,7 +4058,7 @@ app.get('/api/analytics/video/:id', authMiddleware, (req, res) => {
   } catch (e) {}
 
   const actionButtons = [];
-  if (Boolean(videoSettings.ctaEnabled)) {
+  if (Boolean(videoSettings.ctaEnabled && videoSettings.ctaUrl && videoSettings.ctaUrl.trim() && videoSettings.ctaUrl !== 'https://seusite.com/checkout')) {
     const ctaSec = Number(videoSettings.ctaTime || 0);
     const m = Math.floor(ctaSec / 60).toString().padStart(2, '0');
     const s = (ctaSec % 60).toString().padStart(2, '0');

@@ -11299,6 +11299,10 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
 
     function switchVaTab(tab, updateUrl = true) {
       currentVaTab = tab;
+      if (tab !== 'live' && vaLivePollTimer) {
+        clearInterval(vaLivePollTimer);
+        vaLivePollTimer = null;
+      }
       const tabs = ['retention', 'summary', 'funnel', 'benchmark', 'best-times', 'live'];
       tabs.forEach(t => {
         const link = document.getElementById(`vaSidebar${t.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('')}`);
@@ -12755,6 +12759,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
     }
 
     let vaGlobeAnimId = null;
+    let vaLivePollTimer = null;
 
     async function loadVaLive() {
       const container = document.getElementById('vaLiveContent');
@@ -12763,27 +12768,65 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         cancelAnimationFrame(vaGlobeAnimId);
         vaGlobeAnimId = null;
       }
+      if (vaLivePollTimer) {
+        clearInterval(vaLivePollTimer);
+        vaLivePollTimer = null;
+      }
       container.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:20px;">Carregando visualização ao vivo...</div>';
       try {
         const data = await api(`/api/analytics/video/${currentVaVideoId}/live`);
-        const activeNow = data.activeNow || 0;
-        const activeViewers = data.activeViewers || [];
-        const recent = data.recent || [];
+        renderVaLiveContent(data);
+        startVaLivePolling();
+      } catch (e) {
+        container.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:20px;">Falha ao carregar dados ao vivo.</div>';
+      }
+    }
 
-        container.innerHTML = `
-          <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:14px;overflow:hidden;position:relative;max-width:860px;margin:0 auto;">
-            <div class="va-globe-container">
-              <div class="va-globe-header">
-                <span class="va-globe-dot"></span>
-                <span><strong>${activeNow}</strong> assistindo agora</span>
+    function renderVaLiveContent(data) {
+      const container = document.getElementById('vaLiveContent');
+      if (!container) return;
+      const activeNow = data.activeNow || 0;
+      const activeViewers = data.activeViewers || [];
+      const recent = data.recent || [];
+
+      const existingCanvas = document.getElementById('vaGlobeCanvas');
+      if (existingCanvas) {
+        const countHeader = container.querySelector('.va-globe-header strong');
+        if (countHeader) countHeader.textContent = activeNow;
+        const badgeEl = container.querySelector('.va-globe-badge');
+        if (badgeEl) badgeEl.textContent = activeNow === 0 ? 'Nenhum espectador ao vivo no momento' : `${activeNow} espectador${activeNow > 1 ? 'es' : ''} ao vivo no momento`;
+        const listEl = container.querySelector('#vaLiveRecentList');
+        if (listEl) {
+          listEl.innerHTML = !recent.length ? '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:12.5px;">Nenhum visitante nas últimas 2 horas.</div>' : recent.slice(0, 10).map(r => `
+            <div class="va-live-row">
+              <div style="font-family:monospace;font-size:11.5px;color:var(--text-dim);min-width:65px;">#${r.visitorShort}</div>
+              <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;font-weight:600;color:var(--text-main);">
+                <span>${escapeHtml(r.country || 'Moçambique')}</span>
+                ${r.city ? `<span style="font-size:11px;color:var(--text-dim);font-weight:400;">(${escapeHtml(r.city)})</span>` : ''}
               </div>
-              <div class="va-globe-badge">
-                ${activeNow === 0 ? 'Nenhum espectador ao vivo no momento' : `${activeNow} espectador${activeNow > 1 ? 'es' : ''} ao vivo no momento`}
-              </div>
-              <canvas id="vaGlobeCanvas" class="va-globe-canvas" width="420" height="420"></canvas>
+              <div style="font-size:11.5px;color:var(--text-muted);min-width:110px;">${escapeHtml(r.device)} • ${escapeHtml(r.browser || r.os || '')}</div>
+              <div style="font-size:11.5px;color:var(--primary);font-weight:600;min-width:85px;text-align:right;">${r.minutesAgo === 0 ? 'Agora mesmo' : `há ${r.minutesAgo} min`}</div>
             </div>
-            <div style="border-top:1px solid var(--border-subtle);padding:16px 22px;background:rgba(255,255,255,0.01);">
-              <div style="font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:12px;">Visitantes recentes (últimas 2 horas)</div>
+          `).join('');
+        }
+        return;
+      }
+
+      container.innerHTML = `
+        <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:14px;overflow:hidden;position:relative;max-width:860px;margin:0 auto;">
+          <div class="va-globe-container">
+            <div class="va-globe-header">
+              <span class="va-globe-dot"></span>
+              <span><strong>${activeNow}</strong> assistindo agora</span>
+            </div>
+            <div class="va-globe-badge">
+              ${activeNow === 0 ? 'Nenhum espectador ao vivo no momento' : `${activeNow} espectador${activeNow > 1 ? 'es' : ''} ao vivo no momento`}
+            </div>
+            <canvas id="vaGlobeCanvas" class="va-globe-canvas" width="420" height="420"></canvas>
+          </div>
+          <div style="border-top:1px solid var(--border-subtle);padding:16px 22px;background:rgba(255,255,255,0.01);">
+            <div style="font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:12px;">Visitantes recentes (últimas 2 horas)</div>
+            <div id="vaLiveRecentList">
               ${!recent.length ? '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:12.5px;">Nenhum visitante nas últimas 2 horas.</div>' : recent.slice(0, 10).map(r => `
                 <div class="va-live-row">
                   <div style="font-family:monospace;font-size:11.5px;color:var(--text-dim);min-width:65px;">#${r.visitorShort}</div>
@@ -12797,12 +12840,25 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
               `).join('')}
             </div>
           </div>
-        `;
+        </div>
+      `;
 
-        initVa3DGlobe(activeViewers);
-      } catch (e) {
-        container.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:20px;">Falha ao carregar dados ao vivo.</div>';
-      }
+      initVa3DGlobe(activeViewers);
+    }
+
+    function startVaLivePolling() {
+      if (vaLivePollTimer) clearInterval(vaLivePollTimer);
+      vaLivePollTimer = setInterval(async () => {
+        if (currentVaTab !== 'live' || !currentVaVideoId || !document.getElementById('vaLiveContent')) {
+          clearInterval(vaLivePollTimer);
+          vaLivePollTimer = null;
+          return;
+        }
+        try {
+          const data = await api(`/api/analytics/video/${currentVaVideoId}/live`);
+          renderVaLiveContent(data);
+        } catch (e) {}
+      }, 8000);
     }
 
     function initVa3DGlobe(viewers) {
