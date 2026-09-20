@@ -1,3 +1,10 @@
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err ? err.message : err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled Rejection:', reason);
+});
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -683,6 +690,7 @@ function processVideoHLS(vidId) {
   if (!fs.existsSync(posterPath)) {
     try {
       const pProc = spawn('ffmpeg', ['-y', '-ss', '0.5', '-i', inputPath, '-vframes', '1', '-q:v', '2', posterPath]);
+      pProc.on('error', () => {});
       pProc.on('close', (pCode) => {
         if (pCode === 0 && fs.existsSync(posterPath)) {
           const posterUrl = `/videos/${vidId}/poster.jpg`;
@@ -806,7 +814,8 @@ function autoCheckPendingHls() {
         }
         if (inputPath && fs.existsSync(inputPath)) {
           try {
-            spawn('ffmpeg', ['-y', '-ss', '0.5', '-i', inputPath, '-vframes', '1', '-q:v', '2', posterPath]);
+            const pProc2 = spawn('ffmpeg', ['-y', '-ss', '0.5', '-i', inputPath, '-vframes', '1', '-q:v', '2', posterPath]);
+            pProc2.on('error', () => {});
           } catch (e) {}
         }
       }
@@ -4822,6 +4831,8 @@ app.get('/videos/:id/:file', (req, res) => {
     res.setHeader('Accept-Ranges', 'bytes');
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     return fs.createReadStream(filePath).pipe(res);
+  }
+
   if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png') || fileName.endsWith('.webp')) {
     const cType = fileName.endsWith('.png') ? 'image/png' : (fileName.endsWith('.webp') ? 'image/webp' : 'image/jpeg');
     res.setHeader('Content-Type', cType);
