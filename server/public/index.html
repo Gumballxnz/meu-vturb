@@ -5766,26 +5766,26 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 16px;">
                 <div class="form-row" style="margin-bottom: 0;">
                   <label class="form-label">Nome</label>
-                  <input type="text" id="profFirstName" class="form-input-text" placeholder="Nome">
+                  <input type="text" id="profFirstName" class="form-input-text" placeholder="Nome" oninput="checkProfileChanges()">
                 </div>
                 <div class="form-row" style="margin-bottom: 0;">
                   <label class="form-label">Sobrenome</label>
-                  <input type="text" id="profLastName" class="form-input-text" placeholder="Sobrenome">
+                  <input type="text" id="profLastName" class="form-input-text" placeholder="Sobrenome" oninput="checkProfileChanges()">
                 </div>
               </div>
 
               <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 24px;">
                 <div class="form-row" style="margin-bottom: 0;">
                   <label class="form-label">Email</label>
-                  <input type="email" id="profEmail" class="form-input-text" placeholder="email@exemplo.com">
+                  <input type="email" id="profEmail" class="form-input-text" placeholder="email@exemplo.com" oninput="checkProfileChanges()">
                 </div>
                 <div class="form-row" style="margin-bottom: 0;">
                   <label class="form-label">Telefone</label>
-                  <input type="tel" id="profPhone" class="form-input-text" placeholder="+55 11 99999-9999">
+                  <input type="tel" id="profPhone" class="form-input-text" placeholder="+55 11 99999-9999" oninput="checkProfileChanges()">
                 </div>
               </div>
 
-              <button type="button" class="btn-primary-action" id="btnSaveProfileInfo" onclick="saveProfileInfo()">Salvar Informações</button>
+              <button type="button" class="btn-primary-action" id="btnSaveProfileInfo" disabled style="opacity: 0.45; cursor: not-allowed; pointer-events: none; transition: all 0.2s ease;" onclick="saveProfileInfo()">Salvar Informações</button>
             </div>
 
             <div class="card-panel">
@@ -14296,12 +14296,36 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         if (elEmail) elEmail.value = user.email || '';
         if (elPhone) elPhone.value = user.phone || '';
 
+        window._profileSnapshot = {
+          firstName: elFirst ? elFirst.value : '',
+          lastName: elLast ? elLast.value : '',
+          email: elEmail ? elEmail.value : '',
+          phone: elPhone ? elPhone.value : ''
+        };
+        checkProfileChanges();
+
         updateAvatarDisplay(user.avatar_url, user.name);
         setupUserHeader();
         setupAvatarDragAndDrop();
       } catch (err) {
         showToast(err.message, true);
       }
+    }
+
+    function checkProfileChanges() {
+      const s = window._profileSnapshot;
+      if (!s) return;
+      const btn = document.getElementById('btnSaveProfileInfo');
+      if (!btn) return;
+      const hasChange =
+        (document.getElementById('profFirstName')?.value.trim() || '') !== s.firstName ||
+        (document.getElementById('profLastName')?.value.trim() || '') !== s.lastName ||
+        (document.getElementById('profEmail')?.value.trim() || '') !== s.email ||
+        (document.getElementById('profPhone')?.value.trim() || '') !== s.phone;
+      btn.disabled = !hasChange;
+      btn.style.opacity = hasChange ? '' : '0.45';
+      btn.style.cursor = hasChange ? '' : 'not-allowed';
+      btn.style.pointerEvents = hasChange ? '' : 'none';
     }
 
     function updateAvatarDisplay(avatarUrl, name) {
@@ -14376,6 +14400,8 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           setupUserHeader();
         }
         showToast('Informações salvas com sucesso!');
+        window._profileSnapshot = { firstName, lastName, email, phone };
+        checkProfileChanges();
       } catch (err) {
         showToast(err.message, true);
       } finally {
