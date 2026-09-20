@@ -1700,6 +1700,186 @@
       box-shadow: 0 1px 3px rgba(0,0,0,0.12);
     }
 
+    .va-layout {
+      display: flex;
+      min-height: calc(100vh - 60px);
+      background: var(--bg-main);
+    }
+    .va-sidebar {
+      width: 210px;
+      min-width: 210px;
+      background: var(--bg-card);
+      border-right: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      padding: 20px 0 16px;
+      gap: 2px;
+    }
+    .va-sidebar-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-dim);
+      padding: 0 18px 10px;
+    }
+    .va-sidebar-link {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 9px 18px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      cursor: pointer;
+      border-radius: 0;
+      border: none;
+      background: transparent;
+      text-align: left;
+      width: 100%;
+      transition: background 0.15s, color 0.15s;
+    }
+    .va-sidebar-link:hover { background: var(--bg-hover); color: var(--text-main); }
+    .va-sidebar-link.active { background: rgba(37,99,235,0.1); color: var(--primary); font-weight: 700; }
+    .va-sidebar-link svg { flex-shrink: 0; }
+    .va-sidebar-divider { height: 1px; background: var(--border-subtle); margin: 8px 18px; }
+    .va-sidebar-reset {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 9px 18px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-dim);
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      text-align: left;
+      width: 100%;
+      transition: color 0.15s;
+    }
+    .va-sidebar-reset:hover { color: #ef4444; }
+    .va-content {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .va-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 28px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--bg-card);
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .va-header-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-main);
+      max-width: 420px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .va-header-controls { display: flex; align-items: center; gap: 10px; }
+    .va-body { flex: 1; padding: 28px; overflow-y: auto; }
+    .va-tab-pane { display: none; }
+    .va-tab-pane.active { display: block; }
+    .va-subtab-bar {
+      display: flex;
+      gap: 0;
+      border-bottom: 2px solid var(--border-subtle);
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    .va-subtab-btn {
+      padding: 9px 18px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .va-subtab-btn:hover { color: var(--text-main); }
+    .va-subtab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .va-breakdown-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .va-breakdown-label { font-size: 13px; color: var(--text-main); min-width: 120px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .va-breakdown-bar-track { flex: 1; height: 8px; background: var(--border-subtle); border-radius: 4px; overflow: hidden; }
+    .va-breakdown-bar-fill { height: 100%; background: var(--primary); border-radius: 4px; transition: width 0.4s; }
+    .va-breakdown-count { font-size: 12px; font-weight: 700; color: var(--text-main); min-width: 32px; text-align: right; }
+    .va-funnel-step {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 18px 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      margin-bottom: 8px;
+    }
+    .va-funnel-step-num { width: 28px; height: 28px; border-radius: 50%; background: var(--primary); color: #fff; font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .va-funnel-step-label { flex: 1; font-size: 13px; font-weight: 600; color: var(--text-main); }
+    .va-funnel-step-count { font-size: 22px; font-weight: 800; color: var(--text-main); }
+    .va-funnel-step-pct { font-size: 13px; font-weight: 700; color: var(--text-muted); min-width: 60px; text-align: right; }
+    .va-funnel-arrow { text-align: center; color: var(--text-dim); font-size: 18px; margin: -2px 0; }
+    .va-heatmap-grid { display: grid; grid-template-columns: 80px repeat(7, 1fr); gap: 3px; }
+    .va-heatmap-cell {
+      height: 32px;
+      border-radius: 4px;
+      background: var(--border-subtle);
+      position: relative;
+      cursor: default;
+    }
+    .va-heatmap-cell.level-zero { background: var(--border-subtle); opacity: 0.4; }
+    .va-heatmap-cell.level-low { background: rgba(37,99,235,0.18); }
+    .va-heatmap-cell.level-medium { background: rgba(37,99,235,0.45); }
+    .va-heatmap-cell.level-high { background: rgba(37,99,235,0.72); }
+    .va-heatmap-cell.level-peak { background: var(--primary); }
+    .va-heatmap-label { font-size: 11px; color: var(--text-dim); display: flex; align-items: center; height: 32px; }
+    .va-heatmap-head { font-size: 11px; font-weight: 700; color: var(--text-muted); text-align: center; padding-bottom: 4px; }
+    .va-summary-chart-wrap { position: relative; height: 240px; margin-bottom: 24px; }
+    .va-summary-legend { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 12px; }
+    .va-summary-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-muted); cursor: pointer; }
+    .va-summary-legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .va-live-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: rgba(239,68,68,0.1); color: #ef4444; font-size: 12px; font-weight: 700; border-radius: 20px; }
+    .va-live-pulse { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; animation: va-pulse 1.4s infinite; }
+    @keyframes va-pulse { 0%,100%{ opacity:1; } 50%{ opacity:0.3; } }
+    .va-live-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      font-size: 12.5px;
+    }
+    .va-live-row:last-child { border-bottom: none; }
+    .va-back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+      transition: color 0.15s;
+    }
+    .va-back-btn:hover { color: var(--primary); }
+
     .metric-diff-badge {
       font-size: 11px;
       font-weight: 700;
@@ -4320,6 +4500,125 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
           </div>
         </div>
       </section>
+
+      <section class="tab-view" id="viewVideoAnalytics">
+        <div class="va-layout">
+          <div class="va-sidebar">
+            <button class="va-back-btn" style="padding: 0 18px 14px;" onclick="vaGoBack()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+              Voltar para o vídeo
+            </button>
+            <div class="va-sidebar-title">Analytics</div>
+            <button class="va-sidebar-link active" id="vaSidebarRetention" onclick="switchVaTab('retention')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+              Retenção
+            </button>
+            <button class="va-sidebar-link" id="vaSidebarSummary" onclick="switchVaTab('summary')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
+              Resumo
+            </button>
+            <button class="va-sidebar-link" id="vaSidebarFunnel" onclick="switchVaTab('funnel')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+              Visualização do funil
+            </button>
+            <button class="va-sidebar-link" id="vaSidebarBenchmark" onclick="switchVaTab('benchmark')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"></path><path d="M12 20V4"></path><path d="M6 20v-6"></path></svg>
+              Benchmarks
+            </button>
+            <button class="va-sidebar-link" id="vaSidebarBestTimes" onclick="switchVaTab('best-times')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+              Melhores horários
+            </button>
+            <button class="va-sidebar-link" id="vaSidebarLive" onclick="switchVaTab('live')">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="2"></circle><path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48-.01a6 6 0 0 1 0-8.49m11.31-2.82a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0-14.14"></path></svg>
+              Ao Vivo
+            </button>
+            <div class="va-sidebar-divider"></div>
+            <button class="va-sidebar-reset" onclick="openVaResetModal()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 .49-4.5"></path></svg>
+              Resetar métricas
+            </button>
+          </div>
+
+          <div class="va-content">
+            <div class="va-header">
+              <div id="vaHeaderTitle" class="va-header-title">—</div>
+              <div class="va-header-controls">
+                <select class="select-filter" id="vaPeriodSelector" onchange="vaOnPeriodChange()" style="font-size:12.5px;padding:6px 10px;">
+                  <option value="today" selected>Hoje</option>
+                  <option value="yesterday">Ontem</option>
+                  <option value="7d">Últimos 7 dias</option>
+                  <option value="30d">Últimos 30 dias</option>
+                  <option value="month">Este mês</option>
+                  <option value="all">Todo o período</option>
+                  <option value="custom">Personalizado...</option>
+                </select>
+                <div id="vaCustomRange" style="display:none;align-items:center;gap:8px;">
+                  <input type="date" id="vaStartDate" class="form-input-text" style="padding:5px 10px;font-size:12px;">
+                  <span style="color:var(--text-dim);font-size:12px;">até</span>
+                  <input type="date" id="vaEndDate" class="form-input-text" style="padding:5px 10px;font-size:12px;">
+                  <button type="button" class="btn-primary-action" style="padding:5px 12px;font-size:12px;" onclick="vaLoadCurrentTab()">Filtrar</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="va-body">
+              <div class="va-tab-pane active" id="vaPane-retention">
+                <div class="va-subtab-bar">
+                  <button class="va-subtab-btn active" onclick="switchVaRetentionSubtab('general')">Retenção Geral</button>
+                  <button class="va-subtab-btn" onclick="switchVaRetentionSubtab('countries')">Países</button>
+                  <button class="va-subtab-btn" onclick="switchVaRetentionSubtab('devices')">Dispositivos</button>
+                  <button class="va-subtab-btn" onclick="switchVaRetentionSubtab('os')">Sistema Operacional</button>
+                  <button class="va-subtab-btn" onclick="switchVaRetentionSubtab('browsers')">Navegadores</button>
+                  <button class="va-subtab-btn" onclick="switchVaRetentionSubtab('traffic')">Origem do Tráfego</button>
+                </div>
+                <div id="vaRetSubpane-general"></div>
+                <div id="vaRetSubpane-countries" style="display:none;"></div>
+                <div id="vaRetSubpane-devices" style="display:none;"></div>
+                <div id="vaRetSubpane-os" style="display:none;"></div>
+                <div id="vaRetSubpane-browsers" style="display:none;"></div>
+                <div id="vaRetSubpane-traffic" style="display:none;"></div>
+              </div>
+
+              <div class="va-tab-pane" id="vaPane-summary">
+                <div id="vaSummaryContent"></div>
+              </div>
+
+              <div class="va-tab-pane" id="vaPane-funnel">
+                <div id="vaFunnelContent"></div>
+              </div>
+
+              <div class="va-tab-pane" id="vaPane-benchmark">
+                <div id="vaBenchmarkContent"></div>
+              </div>
+
+              <div class="va-tab-pane" id="vaPane-best-times">
+                <div id="vaBestTimesContent"></div>
+              </div>
+
+              <div class="va-tab-pane" id="vaPane-live">
+                <div id="vaLiveContent"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div id="vaResetModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10000;align-items:center;justify-content:center;">
+        <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:14px;padding:28px;max-width:440px;width:90%;position:relative;">
+          <button onclick="closeVaResetModal()" style="position:absolute;top:14px;right:14px;background:transparent;border:none;cursor:pointer;color:var(--text-dim);font-size:18px;">&#x2715;</button>
+          <div style="font-size:15px;font-weight:700;color:var(--text-main);margin-bottom:14px;">Redefinir métricas</div>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:14px;line-height:1.5;">Tem certeza de que deseja redefinir todas as métricas deste vídeo? Esta ação é irreversível.</p>
+          <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:12px 14px;margin-bottom:20px;font-size:12.5px;color:#f59e0b;">
+            Isso não afetará a contagem de reproduções para eventuais premiações.
+          </div>
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Gostaria de prosseguir com a redefinição?</p>
+          <div style="display:flex;gap:10px;justify-content:flex-end;">
+            <button onclick="closeVaResetModal()" class="btn-clean-secondary">Cancelar</button>
+            <button onclick="confirmVaReset()" style="padding:9px 22px;background:#ef4444;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">Redefinir</button>
+          </div>
+        </div>
+      </div>
 
       <section class="tab-view" id="viewUsers">
         <div class="card-panel">
@@ -7560,6 +7859,9 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       } else if (/^\/players\/([^/]+)\/edit\/?$/.test(p)) {
         const m = p.match(/^\/players\/([^/]+)\/edit\/?$/);
         openEditor(m[1], false);
+      } else if (/^\/players\/([^/]+)\/analytics(?:\/([^/]+))?\/?$/.test(p) || /^\/video\/([^/]+)\/analytics(?:\/([^/]+))?\/?$/.test(p)) {
+        const m = p.match(/^\/(?:players|video)\/([^/]+)\/analytics(?:\/([^/]+))?\/?$/);
+        openVideoAnalyticsFull(m[1], m[2] || 'retention', false);
       } else if (p === '/folders/top-videos') {
         navigateTo('videos', false);
         switchLibrarySubtab('top', false);
@@ -7602,7 +7904,8 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         storage: { tab: 'viewStorage', nav: 'navStorage', title: 'Armazenamento', url: '/servidor' },
         security: { tab: 'viewSecurity', nav: 'navSecurity', title: 'Segurança', url: '/account/settings' },
         settings: { tab: 'viewSettings', nav: 'navSettings', title: 'Configurações', url: '/settings/profile' },
-        editor: { tab: 'viewEditor', nav: 'navVideos', title: 'Configurações de Vídeo', url: '/editor' }
+        editor: { tab: 'viewEditor', nav: 'navVideos', title: 'Configurações de Vídeo', url: '/editor' },
+        videoAnalytics: { tab: 'viewVideoAnalytics', nav: 'navVideos', title: 'Analytics do Vídeo', url: '/analytics' }
       };
 
       const target = navMap[tabName] || navMap.overview;
@@ -9502,18 +9805,427 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       }
     }
 
+    let currentVaVideoId = null;
+    let currentVaTab = 'retention';
+    let currentVaRetSubtab = 'general';
+    let currentVaData = null;
+
     async function openVideoAnalytics(id) {
-      navigateTo('analytics');
-      await populateAnalyticsSelector();
-      const select = document.getElementById('analyticsVideoSelector');
-      if (select) select.value = id;
-      loadVideoAnalyticsData();
+      openVideoAnalyticsFull(id, 'retention', true);
     }
 
-    let currentAnalyticsChartTab = 'retention';
+    async function openVideoAnalyticsFull(id, tab = 'retention', updateUrl = true) {
+      currentVaVideoId = id;
+      currentVaTab = tab;
+      navigateTo('videoAnalytics', false);
 
-    function switchAnalyticsChartTab(tab) {
-      currentAnalyticsChartTab = tab;
+      const targetUrl = `/players/${encodeURIComponent(id)}/analytics${tab !== 'retention' ? '/' + tab : ''}?returnTo=%2Ffolders`;
+      if (updateUrl) {
+        history.pushState({ tab: 'videoAnalytics', videoId: id, subtab: tab }, '', targetUrl);
+      }
+
+      const v = (videos || []).find(x => x.id === id) || (topVideos || []).find(x => x.id === id);
+      const titleEl = document.getElementById('vaHeaderTitle');
+      if (titleEl) {
+        titleEl.textContent = v ? v.title : id;
+      }
+
+      switchVaTab(tab, false);
+    }
+
+    function vaGoBack() {
+      const p = new URLSearchParams(window.location.search);
+      const ret = p.get('returnTo');
+      if (ret === '%2Ffolders' || ret === '/folders' || !ret) {
+        navigateTo('videos');
+      } else {
+        navigateTo('overview');
+      }
+    }
+
+    function switchVaTab(tab, updateUrl = true) {
+      currentVaTab = tab;
+      const tabs = ['retention', 'summary', 'funnel', 'benchmark', 'best-times', 'live'];
+      tabs.forEach(t => {
+        const link = document.getElementById(`vaSidebar${t.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('')}`);
+        const pane = document.getElementById(`vaPane-${t}`);
+        if (link) link.classList.toggle('active', t === tab);
+        if (pane) pane.classList.toggle('active', t === tab);
+      });
+
+      if (updateUrl && currentVaVideoId) {
+        const subPath = tab === 'retention' ? '' : '/' + tab;
+        history.pushState({ tab: 'videoAnalytics', videoId: currentVaVideoId, subtab: tab }, '', `/players/${encodeURIComponent(currentVaVideoId)}/analytics${subPath}?returnTo=%2Ffolders`);
+      }
+
+      vaLoadCurrentTab();
+    }
+
+    function vaOnPeriodChange() {
+      const sel = document.getElementById('vaPeriodSelector');
+      const cr = document.getElementById('vaCustomRange');
+      if (sel && sel.value === 'custom') {
+        if (cr) cr.style.display = 'inline-flex';
+      } else {
+        if (cr) cr.style.display = 'none';
+        vaLoadCurrentTab();
+      }
+    }
+
+    function getVaQueryStr() {
+      const sel = document.getElementById('vaPeriodSelector');
+      const period = sel ? sel.value : 'today';
+      let qs = `period=${encodeURIComponent(period)}`;
+      if (period === 'custom') {
+        const s = document.getElementById('vaStartDate')?.value || '';
+        const e = document.getElementById('vaEndDate')?.value || '';
+        if (s && e) qs += `&startDate=${encodeURIComponent(s)}&endDate=${encodeURIComponent(e)}`;
+      }
+      return qs;
+    }
+
+    async function vaLoadCurrentTab() {
+      if (!currentVaVideoId) return;
+      if (currentVaTab === 'retention') await loadVaRetention();
+      else if (currentVaTab === 'summary') await loadVaSummary();
+      else if (currentVaTab === 'funnel') await loadVaFunnel();
+      else if (currentVaTab === 'benchmark') await loadVaBenchmark();
+      else if (currentVaTab === 'best-times') await loadVaBestTimes();
+      else if (currentVaTab === 'live') await loadVaLive();
+    }
+
+    async function loadVaRetention() {
+      const pane = document.getElementById('vaRetSubpane-general');
+      if (!pane) return;
+      pane.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:20px;">Carregando métricas...</div>';
+      try {
+        const qs = getVaQueryStr();
+        const res = await api(`/api/analytics/video/${currentVaVideoId}?${qs}`);
+        const retRes = await api(`/api/analytics/video/${currentVaVideoId}/retention?${qs}`);
+        currentVaData = { ...res, ...retRes };
+
+        const curve = res.retentionCurve || [];
+        const m = res.metrics || {};
+
+        let barsHtml = '';
+        if (!curve.length || curve.every(x => !x.sessions && !x.percent)) {
+          barsHtml = '<div style="color:var(--text-dim);font-size:13px;padding:40px;text-align:center;">Nenhuma reprodução registrada para o período selecionado.</div>';
+        } else {
+          barsHtml = `<div class="retention-bars-row" style="margin-bottom:28px;">` +
+            curve.map(pt => {
+              const h = Math.max(4, pt.percent || 0);
+              return `
+                <div class="retention-col">
+                  <div class="retention-col-bar" style="height:${h}%;">
+                    <span class="retention-val-tooltip">${pt.percent || 0}% (${pt.sessions || 0})</span>
+                  </div>
+                  <span class="retention-col-label">${pt.label}</span>
+                </div>
+              `;
+            }).join('') +
+          `</div>`;
+        }
+
+        const metricsGrid = `
+          <div style="font-size:16px;font-weight:700;color:var(--text-main);margin-bottom:14px;">Métricas</div>
+          <div class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 24px;">
+            <div class="metric-card">
+              <div class="metric-title">Visualizações</div>
+              <div class="metric-value">${(m.views || 0).toLocaleString()}</div>
+              <div class="metric-sub"><span class="metric-diff-badge ${m.viewsDiff?.positive ? 'positive' : 'neutral'}">${m.viewsDiff?.text || '0%'}</span> vs anterior</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-title">Visualizações Únicas</div>
+              <div class="metric-value">${(m.uniqueVisitors || 0).toLocaleString()}</div>
+              <div class="metric-sub"><span class="metric-diff-badge ${m.uniqueVisitorsDiff?.positive ? 'positive' : 'neutral'}">${m.uniqueVisitorsDiff?.text || '0%'}</span> vs anterior</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-title">Plays</div>
+              <div class="metric-value">${(m.plays || 0).toLocaleString()}</div>
+              <div class="metric-sub"><span class="metric-diff-badge ${m.playRateDiff?.positive ? 'positive' : 'neutral'}">${m.playRateDiff?.text || '0%'}</span> vs anterior</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-title">Plays Únicos</div>
+              <div class="metric-value">${(m.uniqueVisitors || 0).toLocaleString()}</div>
+              <div class="metric-sub">${m.playRate || '0.0'}% Play Rate</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-title">Taxa de Play</div>
+              <div class="metric-value">${m.playRate || '0.0'}%</div>
+              <div class="metric-sub"><span class="metric-diff-badge ${m.playRateDiff?.positive ? 'positive' : 'neutral'}">${m.playRateDiff?.text || '0%'}</span> vs anterior</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-title">Cliques no Botão</div>
+              <div class="metric-value">${(m.ctaClicks || 0).toLocaleString()}</div>
+              <div class="metric-sub positive">${m.ctaClickRate || '0.0'}% CTR</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-title">Conversões</div>
+              <div class="metric-value">${(m.conversions || 0).toLocaleString()}</div>
+              <div class="metric-sub">${m.conversionRate || '0.00'}% conv.</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-title">Receita</div>
+              <div class="metric-value" style="color:#10b981;">${m.revenueFormatted || 'R$ 0,00'}</div>
+              <div class="metric-sub"><span class="metric-diff-badge ${m.revenueDiff?.positive ? 'positive' : 'neutral'}">${m.revenueDiff?.text || '0%'}</span> vs anterior</div>
+            </div>
+          </div>
+        `;
+
+        pane.innerHTML = barsHtml + metricsGrid;
+        renderVaBreakdownList('vaRetSubpane-countries', retRes.countries || [], 'País');
+        renderVaBreakdownList('vaRetSubpane-devices', retRes.devices || [], 'Dispositivo');
+        renderVaBreakdownList('vaRetSubpane-os', retRes.os || [], 'Sistema Operacional');
+        renderVaBreakdownList('vaRetSubpane-browsers', retRes.browsers || [], 'Navegador');
+        renderVaBreakdownList('vaRetSubpane-traffic', retRes.traffic || [], 'Origem');
+      } catch (e) {
+        pane.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:20px;">Falha ao carregar dados de retenção.</div>';
+      }
+    }
+
+    function switchVaRetentionSubtab(sub) {
+      currentVaRetSubtab = sub;
+      const subs = ['general', 'countries', 'devices', 'os', 'browsers', 'traffic'];
+      const btns = document.querySelectorAll('#vaPane-retention .va-subtab-btn');
+      subs.forEach((s, idx) => {
+        const pane = document.getElementById(`vaRetSubpane-${s}`);
+        if (btns[idx]) btns[idx].classList.toggle('active', s === sub);
+        if (pane) pane.style.display = s === sub ? 'block' : 'none';
+      });
+    }
+
+    function renderVaBreakdownList(containerId, list, colLabel) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+      if (!list || list.length === 0) {
+        container.innerHTML = `<div style="color:var(--text-dim);font-size:13px;padding:40px;text-align:center;">Nenhum registro para ${colLabel} no período.</div>`;
+        return;
+      }
+      const max = Math.max(1, ...list.map(x => x.count));
+      container.innerHTML = `
+        <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:10px;padding:20px;max-width:680px;">
+          <div style="font-size:14px;font-weight:700;color:var(--text-main);margin-bottom:16px;">Top ${colLabel}</div>
+          ${list.map(item => {
+            const pct = Math.max(3, Math.round((item.count / max) * 100));
+            return `
+              <div class="va-breakdown-row">
+                <div class="va-breakdown-label" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>
+                <div class="va-breakdown-bar-track">
+                  <div class="va-breakdown-bar-fill" style="width:${pct}%;"></div>
+                </div>
+                <div class="va-breakdown-count">${item.count}</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    async function loadVaSummary() {
+      const container = document.getElementById('vaSummaryContent');
+      if (!container) return;
+      container.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:20px;">Carregando resumo temporal...</div>';
+      try {
+        const qs = getVaQueryStr();
+        const data = await api(`/api/analytics/video/${currentVaVideoId}/summary?${qs}`);
+        const labels = data.labels || [];
+        const plays = data.series?.plays || [];
+        const views = data.series?.views || [];
+        const ctaClicks = data.series?.ctaClicks || [];
+
+        if (!labels.length) {
+          container.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:40px;text-align:center;">Nenhuma atividade no período para traçar o resumo.</div>';
+          return;
+        }
+
+        const maxVal = Math.max(1, ...plays, ...views, ...ctaClicks);
+        container.innerHTML = `
+          <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:22px;">
+            <div class="va-summary-legend">
+              <div class="va-summary-legend-item"><span class="va-summary-legend-dot" style="background:#ef4444;"></span> Plays</div>
+              <div class="va-summary-legend-item"><span class="va-summary-legend-dot" style="background:#3b82f6;"></span> Visualizações</div>
+              <div class="va-summary-legend-item"><span class="va-summary-legend-dot" style="background:#10b981;"></span> Cliques no Botão</div>
+            </div>
+            <div style="display:flex;align-items:flex-end;gap:12px;height:200px;border-bottom:1px solid var(--border-subtle);padding-bottom:8px;overflow-x:auto;">
+              ${labels.map((l, i) => {
+                const pVal = plays[i] || 0;
+                const vVal = views[i] || 0;
+                const cVal = ctaClicks[i] || 0;
+                const pHeight = Math.max(2, Math.round((pVal / maxVal) * 180));
+                const vHeight = Math.max(2, Math.round((vVal / maxVal) * 180));
+                const cHeight = Math.max(2, Math.round((cVal / maxVal) * 180));
+                return `
+                  <div style="display:flex;flex-direction:column;align-items:center;min-width:38px;height:100%;justify-content:flex-end;gap:4px;">
+                    <div style="display:flex;align-items:flex-end;gap:2px;height:180px;">
+                      <div title="Plays: ${pVal}" style="width:7px;height:${pHeight}px;background:#ef4444;border-radius:2px 2px 0 0;"></div>
+                      <div title="Views: ${vVal}" style="width:7px;height:${vHeight}px;background:#3b82f6;border-radius:2px 2px 0 0;"></div>
+                      <div title="CTA: ${cVal}" style="width:7px;height:${cHeight}px;background:#10b981;border-radius:2px 2px 0 0;"></div>
+                    </div>
+                    <span style="font-size:10px;color:var(--text-dim);">${escapeHtml(l)}</span>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      } catch (e) {
+        container.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:20px;">Falha ao carregar resumo.</div>';
+      }
+    }
+
+    async function loadVaFunnel() {
+      const container = document.getElementById('vaFunnelContent');
+      if (!container) return;
+      container.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:20px;">Carregando funil...</div>';
+      try {
+        const qs = getVaQueryStr();
+        const data = await api(`/api/analytics/video/${currentVaVideoId}/funnel?${qs}`);
+        const steps = data.steps || [];
+
+        container.innerHTML = `
+          <div style="max-width:620px;">
+            <div style="font-size:13px;color:var(--text-dim);margin-bottom:18px;">4 etapas selecionadas</div>
+            ${steps.map((s, i) => `
+              <div class="va-funnel-step">
+                <div class="va-funnel-step-num">${i + 1}</div>
+                <div class="va-funnel-step-label">${escapeHtml(s.label)}</div>
+                <div class="va-funnel-step-count">${(s.count || 0).toLocaleString()}</div>
+                <div class="va-funnel-step-pct">${s.pct || 0}%</div>
+              </div>
+              ${i < steps.length - 1 ? `<div class="va-funnel-arrow">&#x2193;</div>` : ''}
+            `).join('')}
+          </div>
+        `;
+      } catch (e) {
+        container.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:20px;">Falha ao carregar funil.</div>';
+      }
+    }
+
+    async function loadVaBenchmark() {
+      const container = document.getElementById('vaBenchmarkContent');
+      if (!container) return;
+      container.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:20px;">Carregando benchmarks...</div>';
+      try {
+        const qs = getVaQueryStr();
+        const data = await api(`/api/analytics/video/${currentVaVideoId}/benchmark?${qs}`);
+        container.innerHTML = `
+          <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:14px;padding:50px 30px;text-align:center;max-width:680px;margin:30px auto;">
+            <div style="width:54px;height:54px;border-radius:50%;background:rgba(37,99,235,0.1);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;color:var(--primary);">
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"></path><path d="M12 20V4"></path><path d="M6 20v-6"></path></svg>
+            </div>
+            <h3 style="font-size:18px;font-weight:700;color:var(--text-main);margin-bottom:10px;">O benchmark precisa de mais dados</h3>
+            <p style="font-size:13px;color:var(--text-muted);max-width:480px;line-height:1.6;margin:0 auto 16px;">
+              Começamos a exibir os benchmarks quando seu vídeo atinge 200 plays únicos no período selecionado. Atualmente você tem <strong style="color:var(--text-main);">${data.uniquePlays || 0}</strong>. Tente ampliar o intervalo de datas ou continue gerando tráfego e volte em breve.
+            </p>
+          </div>
+        `;
+      } catch (e) {
+        container.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:20px;">Falha ao carregar benchmark.</div>';
+      }
+    }
+
+    async function loadVaBestTimes() {
+      const container = document.getElementById('vaBestTimesContent');
+      if (!container) return;
+      container.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:20px;">Carregando mapa de horários...</div>';
+      try {
+        const qs = getVaQueryStr();
+        const data = await api(`/api/analytics/video/${currentVaVideoId}/best-times?${qs}`);
+        const bands = data.hourBands || [];
+        const days = data.weekdays || ['Dom','Seg','Ter','Qua','Qui','Sex','Sab'];
+        const heatmap = data.heatmap || [];
+
+        container.innerHTML = `
+          <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:22px;max-width:860px;overflow-x:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+              <span style="font-size:14px;font-weight:700;color:var(--text-main);">Plays por Faixa de Horário</span>
+              <div style="display:flex;gap:14px;font-size:11.5px;color:var(--text-dim);align-items:center;">
+                <span>Legenda:</span>
+                <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:rgba(37,99,235,0.18);"></span> Baixo</span>
+                <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:rgba(37,99,235,0.45);"></span> Médio</span>
+                <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:rgba(37,99,235,0.72);"></span> Alto</span>
+                <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:var(--primary);"></span> Pico</span>
+              </div>
+            </div>
+            <div class="va-heatmap-grid">
+              <div></div>
+              ${days.map(d => `<div class="va-heatmap-head">${d}</div>`).join('')}
+              ${bands.map(b => {
+                const cells = days.map((_, dayIdx) => {
+                  const item = heatmap.find(h => h.weekday === dayIdx && h.hour_band === b);
+                  const count = item ? item.count : 0;
+                  const level = item ? item.level : 'zero';
+                  return `<div class="va-heatmap-cell level-${level}" title="${count} plays em ${days[dayIdx]} (${b})"></div>`;
+                }).join('');
+                return `<div class="va-heatmap-label">${b}</div>${cells}`;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      } catch (e) {
+        container.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:20px;">Falha ao carregar mapa de horários.</div>';
+      }
+    }
+
+    async function loadVaLive() {
+      const container = document.getElementById('vaLiveContent');
+      if (!container) return;
+      container.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:20px;">Carregando atividade recente...</div>';
+      try {
+        const data = await api(`/api/analytics/video/${currentVaVideoId}/live`);
+        const recent = data.recent || [];
+
+        container.innerHTML = `
+          <div style="max-width:760px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+              <div style="display:flex;align-items:center;gap:12px;">
+                <div class="va-live-badge"><span class="va-live-pulse"></span> AO VIVO</div>
+                <div style="font-size:14px;color:var(--text-main);"><strong style="font-size:20px;font-weight:800;color:var(--primary);">${data.activeNow || 0}</strong> ativos nos últimos 30 min</div>
+              </div>
+              <button class="btn-clean-secondary" style="font-size:12px;padding:6px 12px;" onclick="loadVaLive()">Atualizar agora</button>
+            </div>
+            <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow:hidden;">
+              <div style="padding:14px 18px;border-bottom:1px solid var(--border-subtle);font-size:13px;font-weight:700;color:var(--text-main);">Visitantes recentes (últimas 2 horas)</div>
+              ${!recent.length ? '<div style="padding:30px;text-align:center;color:var(--text-dim);font-size:13px;">Nenhum visitante registrado nas últimas 2 horas.</div>' : recent.map(r => `
+                <div class="va-live-row">
+                  <div style="font-family:monospace;font-size:11.5px;color:var(--text-dim);min-width:65px;">#${r.visitorShort}</div>
+                  <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;font-weight:600;color:var(--text-main);">
+                    <span>${escapeHtml(r.country || 'Desconhecido')}</span>
+                    ${r.city ? `<span style="font-size:11px;color:var(--text-dim);font-weight:400;">(${escapeHtml(r.city)})</span>` : ''}
+                  </div>
+                  <div style="font-size:11.5px;color:var(--text-muted);min-width:110px;">${escapeHtml(r.device)} • ${escapeHtml(r.browser || r.os || '')}</div>
+                  <div style="font-size:11.5px;color:var(--primary);font-weight:600;min-width:85px;text-align:right;">${r.minutesAgo === 0 ? 'Agora mesmo' : `há ${r.minutesAgo} min`}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      } catch (e) {
+        container.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:20px;">Falha ao carregar dados ao vivo.</div>';
+      }
+    }
+
+    function openVaResetModal() {
+      const m = document.getElementById('vaResetModal');
+      if (m) m.style.display = 'flex';
+    }
+
+    function closeVaResetModal() {
+      const m = document.getElementById('vaResetModal');
+      if (m) m.style.display = 'none';
+    }
+
+    async function confirmVaReset() {
+      if (!currentVaVideoId) return;
+      try {
+        await api(`/api/analytics/video/${currentVaVideoId}/reset`, { method: 'DELETE' });
+        closeVaResetModal();
+        showToast('Métricas redefinidas com sucesso!');
+        await vaLoadCurrentTab();
+      } catch (e) {
+        showToast('Erro ao redefinir métricas.', true);
+      }
+    }
       const tabs = ['retention', 'audience', 'conversions'];
       tabs.forEach(t => {
         const btn = document.getElementById(`tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`);

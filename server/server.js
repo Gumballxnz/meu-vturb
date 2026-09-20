@@ -3847,6 +3847,219 @@ app.get('/api/analytics/video/:id', authMiddleware, (req, res) => {
   });
 });
 
+function buildDateCondition(period, startDate, endDate) {
+  if (period === 'today') {
+    return { dc: "date(created_at, '+2 hours') = date('now', '+2 hours')" };
+  } else if (period === 'yesterday') {
+    return { dc: "date(created_at, '+2 hours') = date('now', '+2 hours', '-1 day')" };
+  } else if (period === '7d') {
+    return { dc: "created_at >= datetime('now', '-7 days')" };
+  } else if (period === '30d') {
+    return { dc: "created_at >= datetime('now', '-30 days')" };
+  } else if (period === 'month') {
+    return { dc: "strftime('%Y-%m', created_at, '+2 hours') = strftime('%Y-%m', 'now', '+2 hours')" };
+  } else if (period === 'all') {
+    return { dc: '1=1' };
+  } else if (period === 'custom' && startDate && endDate) {
+    const sDate = String(startDate).slice(0, 10);
+    const eDate = String(endDate).slice(0, 10);
+    return { dc: `date(created_at, '+2 hours') >= date('${sDate}') AND date(created_at, '+2 hours') <= date('${eDate}')` };
+  }
+  return { dc: "date(created_at, '+2 hours') = date('now', '+2 hours')" };
+}
+
+app.get('/api/analytics/video/:id/retention', authMiddleware, (req, res) => {
+  const vidId = req.params.id;
+  const video = db.prepare('SELECT id, user_id, plays FROM videos WHERE id = ? AND deleted_at IS NULL').get(vidId);
+  if (!video) return res.status(404).json({ error: 'Vídeo não encontrado.' });
+  if (req.user.role !== 'owner' && video.user_id !== req.user.id) return res.status(403).json({ error: 'Permissão negada.' });
+
+  const { dc } = buildDateCondition(req.query.period || 'today', req.query.startDate, req.query.endDate);
+
+  const totalPlays = db.prepare(`SELECT COUNT(*) as c FROM analytics_events WHERE video_id = ? AND event_type = 'play' AND ${dc}`).get(vidId).c;
+
+  const milestones = [0, 10, 25, 50, 75, 90, 100];
+  const retentionCurve = milestones.map(m => {
+    let count;
+    if (m === 0) {
+      count = totalPlays;
+    } else {
+      count = db.prepare(`SELECT COUNT(DISTINCT session_id) as c FROM analytics_events WHERE video_id = ? AND event_type = 'progress' AND milestone = ? AND ${dc}`).get(vidId, m).c;
+    }
+    return { milestone: m, label: `${m}%`, sessions: count, percent: totalPlays > 0 ? Math.min(100, Math.round((count / totalPlays) * 100)) : 0 };
+  });
+
+  const countries = db.prepare(`SELECT COALESCE(country, 'Desconhecido') as name, COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'play' AND ${dc} GROUP BY country ORDER BY count DESC LIMIT 10`).all(vidId);
+  const devices = db.prepare(`SELECT COALESCE(device, 'desktop') as name, COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'play' AND ${dc} GROUP BY device ORDER BY count DESC`).all(vidId);
+  const osList = db.prepare(`SELECT COALESCE(os, 'Other') as name, COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'play' AND ${dc} GROUP BY os ORDER BY count DESC LIMIT 10`).all(vidId);
+  const browsers = db.prepare(`SELECT COALESCE(browser, 'Other') as name, COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'play' AND ${dc} GROUP BY browser ORDER BY count DESC LIMIT 10`).all(vidId);
+
+  const trafficRaw = db.prepare(`SELECT COALESCE(utm_source, COALESCE(domain, 'Direto')) as name, COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'page_view' AND ${dc} GROUP BY name ORDER BY count DESC LIMIT 10`).all(vidId);
+
+  res.json({ totalPlays, retentionCurve, countries, devices, os: osList, browsers, traffic: trafficRaw });
+});
+
+app.get('/api/analytics/video/:id/summary', authMiddleware, (req, res) => {
+  const vidId = req.params.id;
+  const video = db.prepare('SELECT id, user_id FROM videos WHERE id = ? AND deleted_at IS NULL').get(vidId);
+  if (!video) return res.status(404).json({ error: 'Vídeo não encontrado.' });
+  if (req.user.role !== 'owner' && video.user_id !== req.user.id) return res.status(403).json({ error: 'Permissão negada.' });
+
+  const period = req.query.period || '7d';
+  const { dc } = buildDateCondition(period, req.query.startDate, req.query.endDate);
+
+  let groupFmt = "date(created_at, '+2 hours')";
+  let labelFmt = groupFmt;
+  if (period === 'today' || period === 'yesterday') {
+    groupFmt = "strftime('%H', created_at, '+2 hours')";
+    labelFmt = groupFmt;
+  }
+
+  const playsRows = db.prepare(`SELECT ${labelFmt} as label, COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'play' AND ${dc} GROUP BY label ORDER BY label`).all(vidId);
+  const viewsRows = db.prepare(`SELECT ${labelFmt} as label, COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'page_view' AND ${dc} GROUP BY label ORDER BY label`).all(vidId);
+  const ctaRows = db.prepare(`SELECT ${labelFmt} as label, COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'cta_clicked' AND ${dc} GROUP BY label ORDER BY label`).all(vidId);
+
+  const allLabels = [...new Set([...playsRows, ...viewsRows, ...ctaRows].map(r => r.label))].sort();
+  const toMap = rows => Object.fromEntries(rows.map(r => [r.label, r.count]));
+
+  const playsMap = toMap(playsRows);
+  const viewsMap = toMap(viewsRows);
+  const ctaMap = toMap(ctaRows);
+
+  const labels = allLabels;
+  const plays = labels.map(l => playsMap[l] || 0);
+  const views = labels.map(l => viewsMap[l] || 0);
+  const ctaClicks = labels.map(l => ctaMap[l] || 0);
+
+  res.json({ labels, series: { plays, views, ctaClicks } });
+});
+
+app.get('/api/analytics/video/:id/funnel', authMiddleware, (req, res) => {
+  const vidId = req.params.id;
+  const video = db.prepare('SELECT id, user_id FROM videos WHERE id = ? AND deleted_at IS NULL').get(vidId);
+  if (!video) return res.status(404).json({ error: 'Vídeo não encontrado.' });
+  if (req.user.role !== 'owner' && video.user_id !== req.user.id) return res.status(403).json({ error: 'Permissão negada.' });
+
+  const { dc } = buildDateCondition(req.query.period || 'today', req.query.startDate, req.query.endDate);
+
+  const uniqueViews = db.prepare(`SELECT COUNT(DISTINCT visitor_id) as c FROM analytics_events WHERE video_id = ? AND event_type = 'page_view' AND ${dc}`).get(vidId).c;
+  const uniquePlays = db.prepare(`SELECT COUNT(DISTINCT visitor_id) as c FROM analytics_events WHERE video_id = ? AND event_type = 'play' AND ${dc}`).get(vidId).c;
+  const uniqueCtaClicks = db.prepare(`SELECT COUNT(DISTINCT visitor_id) as c FROM analytics_events WHERE video_id = ? AND event_type = 'cta_clicked' AND ${dc}`).get(vidId).c;
+  const conversions = db.prepare(`SELECT COUNT(*) as c FROM analytics_events WHERE video_id = ? AND conversion_amount > 0 AND ${dc}`).get(vidId).c;
+
+  const steps = [
+    { label: 'Visualizações Únicas', count: uniqueViews, pct: 100 },
+    { label: 'Plays Únicos', count: uniquePlays, pct: uniqueViews > 0 ? parseFloat(((uniquePlays / uniqueViews) * 100).toFixed(1)) : 0 },
+    { label: 'Cliques no Botão', count: uniqueCtaClicks, pct: uniqueViews > 0 ? parseFloat(((uniqueCtaClicks / uniqueViews) * 100).toFixed(1)) : 0 },
+    { label: 'Conversões', count: conversions, pct: uniqueViews > 0 ? parseFloat(((conversions / uniqueViews) * 100).toFixed(1)) : 0 }
+  ];
+
+  res.json({ steps });
+});
+
+app.get('/api/analytics/video/:id/benchmark', authMiddleware, (req, res) => {
+  const vidId = req.params.id;
+  const video = db.prepare('SELECT id, user_id FROM videos WHERE id = ? AND deleted_at IS NULL').get(vidId);
+  if (!video) return res.status(404).json({ error: 'Vídeo não encontrado.' });
+  if (req.user.role !== 'owner' && video.user_id !== req.user.id) return res.status(403).json({ error: 'Permissão negada.' });
+
+  const { dc } = buildDateCondition(req.query.period || 'all', req.query.startDate, req.query.endDate);
+  const uniquePlays = db.prepare(`SELECT COUNT(DISTINCT visitor_id) as c FROM analytics_events WHERE video_id = ? AND event_type = 'play' AND ${dc}`).get(vidId).c;
+  const required = 200;
+
+  res.json({ hasEnoughData: uniquePlays >= required, uniquePlays, required });
+});
+
+app.get('/api/analytics/video/:id/best-times', authMiddleware, (req, res) => {
+  const vidId = req.params.id;
+  const video = db.prepare('SELECT id, user_id FROM videos WHERE id = ? AND deleted_at IS NULL').get(vidId);
+  if (!video) return res.status(404).json({ error: 'Vídeo não encontrado.' });
+  if (req.user.role !== 'owner' && video.user_id !== req.user.id) return res.status(403).json({ error: 'Permissão negada.' });
+
+  const { dc } = buildDateCondition(req.query.period || '30d', req.query.startDate, req.query.endDate);
+
+  const rows = db.prepare(`
+    SELECT
+      CAST(strftime('%H', created_at, '+2 hours') AS INTEGER) as hour_num,
+      CAST(strftime('%w', created_at, '+2 hours') AS INTEGER) as weekday,
+      COUNT(*) as count
+    FROM analytics_events
+    WHERE video_id = ? AND event_type = 'play' AND ${dc}
+    GROUP BY hour_num, weekday
+    ORDER BY weekday, hour_num
+  `).all(vidId);
+
+  const heatmap = [];
+  const hourBands = ['0h-2h','2h-4h','4h-6h','6h-8h','8h-10h','10h-12h','12h-14h','14h-16h','16h-18h','18h-20h','20h-22h','22h-24h'];
+  for (let w = 0; w < 7; w++) {
+    for (let b = 0; b < 12; b++) {
+      const startH = b * 2;
+      const endH = startH + 2;
+      const count = rows.filter(r => r.weekday === w && r.hour_num >= startH && r.hour_num < endH).reduce((s, r) => s + r.count, 0);
+      heatmap.push({ weekday: w, hour_band: hourBands[b], count });
+    }
+  }
+
+  const maxCount = Math.max(1, ...heatmap.map(h => h.count));
+  heatmap.forEach(h => {
+    const ratio = h.count / maxCount;
+    h.level = ratio === 0 ? 'zero' : ratio < 0.25 ? 'low' : ratio < 0.55 ? 'medium' : ratio < 0.85 ? 'high' : 'peak';
+  });
+
+  res.json({ heatmap, hourBands, weekdays: ['Dom','Seg','Ter','Qua','Qui','Sex','Sab'] });
+});
+
+app.get('/api/analytics/video/:id/live', authMiddleware, (req, res) => {
+  const vidId = req.params.id;
+  const video = db.prepare('SELECT id, user_id FROM videos WHERE id = ? AND deleted_at IS NULL').get(vidId);
+  if (!video) return res.status(404).json({ error: 'Vídeo não encontrado.' });
+  if (req.user.role !== 'owner' && video.user_id !== req.user.id) return res.status(403).json({ error: 'Permissão negada.' });
+
+  const activeRows = db.prepare(`
+    SELECT COUNT(DISTINCT session_id) as c
+    FROM analytics_events
+    WHERE video_id = ? AND created_at >= datetime('now', '-30 minutes')
+  `).get(vidId);
+
+  const recentRows = db.prepare(`
+    SELECT visitor_id, country, device, os, browser, city,
+           MAX(created_at) as last_seen, event_type
+    FROM analytics_events
+    WHERE video_id = ? AND created_at >= datetime('now', '-2 hours')
+    GROUP BY session_id
+    ORDER BY last_seen DESC
+    LIMIT 50
+  `).all(vidId);
+
+  const now = Date.now();
+  const recent = recentRows.map(r => ({
+    visitorShort: r.visitor_id ? r.visitor_id.slice(0, 8) : '?',
+    country: r.country || 'Desconhecido',
+    city: r.city || '',
+    device: r.device || 'desktop',
+    os: r.os || '',
+    browser: r.browser || '',
+    lastEvent: r.event_type,
+    minutesAgo: Math.round((now - new Date(r.last_seen + 'Z').getTime()) / 60000)
+  }));
+
+  res.json({ activeNow: activeRows.c || 0, recent });
+});
+
+app.delete('/api/analytics/video/:id/reset', authMiddleware, (req, res) => {
+  const vidId = req.params.id;
+  const video = db.prepare('SELECT id, user_id FROM videos WHERE id = ? AND deleted_at IS NULL').get(vidId);
+  if (!video) return res.status(404).json({ error: 'Vídeo não encontrado.' });
+  if (req.user.role !== 'owner' && video.user_id !== req.user.id) return res.status(403).json({ error: 'Permissão negada.' });
+
+  db.prepare('DELETE FROM analytics_events WHERE video_id = ?').run(vidId);
+  db.prepare('UPDATE videos SET plays = 0 WHERE id = ?').run(vidId);
+
+  res.json({ success: true });
+});
+
+
+
 app.post('/api/upload', authMiddleware, checkStorageQuotaPre, (req, res) => {
   upload.single('videoFile')(req, res, (err) => {
     if (err) {
