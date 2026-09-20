@@ -11,6 +11,7 @@ const QRCode = require('qrcode');
 const Database = require('better-sqlite3');
 const { Readable } = require('stream');
 const { finished } = require('stream/promises');
+const geoip = require('geoip-lite');
 
 [path.join(__dirname, '.env'), path.join(__dirname, '..', '.env')].forEach(envPath => {
   if (fs.existsSync(envPath)) {
@@ -303,7 +304,7 @@ const analyticsCols = [
   'device TEXT DEFAULT "desktop"',
   'browser TEXT DEFAULT "Chrome"',
   'os TEXT DEFAULT "Windows"',
-  'country TEXT DEFAULT "Brazil"',
+  'country TEXT DEFAULT "Mozambique"',
   'domain TEXT',
   'utm_source TEXT',
   'utm_medium TEXT',
@@ -315,6 +316,29 @@ const analyticsCols = [
   'platform TEXT'
 ];
 for (const colDef of analyticsCols) {
+  try { db.exec(`ALTER TABLE analytics_events ADD COLUMN ${colDef}`); } catch (e) {}
+}
+
+const analyticsEnrichedCols = [
+  'ip_address TEXT',
+  'city TEXT',
+  'region TEXT',
+  'latitude REAL',
+  'longitude REAL',
+  'user_agent TEXT',
+  'screen_width INTEGER',
+  'screen_height INTEGER',
+  'language TEXT',
+  'timezone TEXT',
+  'fbclid TEXT',
+  'ttclid TEXT',
+  'meta_em TEXT',
+  'meta_ph TEXT',
+  'meta_fn TEXT',
+  'meta_ln TEXT',
+  'meta_external_id TEXT'
+];
+for (const colDef of analyticsEnrichedCols) {
   try { db.exec(`ALTER TABLE analytics_events ADD COLUMN ${colDef}`); } catch (e) {}
 }
 
@@ -3374,24 +3398,26 @@ app.get('/api/videos/:id/public', (req, res) => {
   try {
     const v = db.prepare('SELECT id, title, video_url, duration, settings_json, hls_ready, hls_manifest, smartautoplay_url, blocked_at, blocked_reason, user_id FROM videos WHERE id = ? AND deleted_at IS NULL').get(vidId);
     if (!v) return res.status(404).json({ error: 'Vídeo não encontrado ou indisponível.' });
-    if (v.blocked_at) {
-      let isAuthorizedPreview = false;
-      const token = req.query.token || (req.headers.authorization ? req.headers.authorization.replace(/^Bearer\s+/i, '') : null);
-      if (token) {
-        try {
-          const session = db.prepare('SELECT user_id FROM sessions WHERE token = ?').get(token);
-          if (session) {
-            const user = db.prepare('SELECT id, role FROM users WHERE id = ?').get(session.user_id);
-            if (user && (user.role === 'owner' || user.id === v.user_id)) {
-              isAuthorizedPreview = true;
-            }
+
+    const token = req.query.token || (req.headers.authorization ? req.headers.authorization.replace(/^Bearer\s+/i, '') : null);
+    let isOwnerPreview = false;
+
+    if (token) {
+      try {
+        const session = db.prepare('SELECT user_id FROM sessions WHERE token = ?').get(token);
+        if (session) {
+          const user = db.prepare('SELECT id, role FROM users WHERE id = ?').get(session.user_id);
+          if (user && (user.role === 'owner' || user.id === v.user_id)) {
+            isOwnerPreview = true;
           }
-        } catch (e) {}
-      }
-      if (!isAuthorizedPreview) {
-        return res.status(403).json({ error: 'Vídeo bloqueado pela moderação.', blocked: true, reason: v.blocked_reason });
-      }
+        }
+      } catch (e) {}
     }
+
+    if (v.blocked_at && !isOwnerPreview) {
+      return res.status(403).json({ error: 'Vídeo bloqueado pela moderação.', blocked: true, reason: v.blocked_reason });
+    }
+
     let settings = {};
     try { settings = JSON.parse(v.settings_json || '{}'); } catch (e) {}
 
@@ -3422,7 +3448,8 @@ app.get('/api/videos/:id/public', (req, res) => {
       smartautoplay_url: smartautoplayUrl,
       hls_ready: Boolean(v.hls_ready),
       duration: v.duration,
-      settings
+      settings,
+      is_owner_preview: isOwnerPreview
     });
   } catch (err) {
     res.status(500).json({ error: 'Erro ao buscar vídeo.' });
@@ -3512,17 +3539,56 @@ app.post('/api/analytics/event', (req, res) => {
   const cleanCurrency = req.body.conversion_currency || 'BRL';
   const cleanPlatform = req.body.platform || null;
 
+  const rawIp = (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
+  const cleanIp = rawIp.replace(/^::ffff:/, '') || null;
+  let geoCity = null;
+  let geoRegion = null;
+  let geoLat = null;
+  let geoLng = null;
+  if (cleanIp) {
+    try {
+      const geo = geoip.lookup(cleanIp);
+      if (geo) {
+        geoCity = geo.city || null;
+        geoRegion = geo.region || null;
+        if (geo.ll && geo.ll.length === 2) {
+          geoLat = geo.ll[0];
+          geoLng = geo.ll[1];
+        }
+      }
+    } catch (e) {}
+  }
+
+  const cleanUserAgent = (req.body.user_agent || req.headers['user-agent'] || '').slice(0, 512) || null;
+  const cleanScreenWidth = Number.isInteger(req.body.screen_width) ? req.body.screen_width : null;
+  const cleanScreenHeight = Number.isInteger(req.body.screen_height) ? req.body.screen_height : null;
+  const cleanLanguage = req.body.language ? String(req.body.language).slice(0, 32) : null;
+  const cleanTimezone = req.body.timezone ? String(req.body.timezone).slice(0, 64) : null;
+  const cleanFbclid = req.body.fbclid ? String(req.body.fbclid).slice(0, 256) : null;
+  const cleanTtclid = req.body.ttclid ? String(req.body.ttclid).slice(0, 256) : null;
+  const cleanMetaEm = req.body.meta_em ? String(req.body.meta_em).slice(0, 128) : null;
+  const cleanMetaPh = req.body.meta_ph ? String(req.body.meta_ph).slice(0, 128) : null;
+  const cleanMetaFn = req.body.meta_fn ? String(req.body.meta_fn).slice(0, 128) : null;
+  const cleanMetaLn = req.body.meta_ln ? String(req.body.meta_ln).slice(0, 128) : null;
+  const cleanMetaExternalId = req.body.meta_external_id ? String(req.body.meta_external_id).slice(0, 256) : null;
+
   db.prepare(`
     INSERT INTO analytics_events (
       video_id, visitor_id, session_id, event_type, milestone, watch_time,
       device, browser, os, country, domain, utm_source, utm_medium, utm_campaign, utm_content, utm_term,
-      conversion_amount, conversion_currency, platform
+      conversion_amount, conversion_currency, platform,
+      ip_address, city, region, latitude, longitude,
+      user_agent, screen_width, screen_height, language, timezone,
+      fbclid, ttclid, meta_em, meta_ph, meta_fn, meta_ln, meta_external_id
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     cleanVidId, cleanVisitorId, cleanSessionId, eventType, cleanMilestone, cleanWatchTime,
     cleanDevice, cleanBrowser, cleanOs, cleanCountry, cleanDomain, cleanUtmSource, cleanUtmMedium, cleanUtmCampaign, cleanUtmContent, cleanUtmTerm,
-    cleanAmount, cleanCurrency, cleanPlatform
+    cleanAmount, cleanCurrency, cleanPlatform,
+    cleanIp, geoCity, geoRegion, geoLat, geoLng,
+    cleanUserAgent, cleanScreenWidth, cleanScreenHeight, cleanLanguage, cleanTimezone,
+    cleanFbclid, cleanTtclid, cleanMetaEm, cleanMetaPh, cleanMetaFn, cleanMetaLn, cleanMetaExternalId
   );
 
   if (eventType === 'play') {

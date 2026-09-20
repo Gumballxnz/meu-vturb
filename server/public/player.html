@@ -580,6 +580,27 @@
       let hlsSrc = '';
       let smartAutoplaySrc = '';
       let dbSettings = {};
+      let isOwnerPreview = false;
+
+      const trackingCtx = {
+        screen_width: window.screen.width,
+        screen_height: window.screen.height,
+        language: navigator.language || '',
+        timezone: (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch(e) { return ''; } })(),
+        user_agent: navigator.userAgent,
+        fbclid: params.get('fbclid') || null,
+        ttclid: params.get('ttclid') || null,
+        meta_em: params.get('em') || null,
+        meta_ph: params.get('ph') || null,
+        meta_fn: params.get('fn') || null,
+        meta_ln: params.get('ln') || null,
+        meta_external_id: params.get('external_id') || null,
+        utm_source: params.get('utm_source') || null,
+        utm_medium: params.get('utm_medium') || null,
+        utm_campaign: params.get('utm_campaign') || null,
+        utm_content: params.get('utm_content') || null,
+        utm_term: params.get('utm_term') || null,
+      };
 
       if (vidId && !videoSrc) {
         try {
@@ -612,6 +633,7 @@
             hlsSrc = data.hls_url || '';
             smartAutoplaySrc = data.smartautoplay_url || '';
             dbSettings = data.settings || {};
+            isOwnerPreview = data.is_owner_preview === true;
             if (data.title) {
               document.title = data.title;
             }
@@ -878,14 +900,15 @@
       });
 
       function emitAnalyticsEvent(eventType, milestone, watchTime) {
-        if (!vidId || isPreview) return;
+        if (!vidId || isPreview || isOwnerPreview) return;
         const payload = {
           videoId: vidId,
           visitorId: visitorId,
           sessionId: sessionId,
           eventType: eventType,
           milestone: milestone !== undefined ? milestone : null,
-          watchTime: watchTime || 0
+          watchTime: watchTime || 0,
+          ...trackingCtx
         };
 
         const json = JSON.stringify(payload);

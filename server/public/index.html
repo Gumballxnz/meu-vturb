@@ -8738,7 +8738,9 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
 
     function openVideoInNewTab(vidId) {
       const playerHost = appConfig.playerDomain || window.location.origin;
-      window.open(`${playerHost}/player?id=${encodeURIComponent(vidId)}`, '_blank');
+      const tok = token || localStorage.getItem('cloudvturb_token') || '';
+      const tokenPart = tok ? `&token=${encodeURIComponent(tok)}` : '';
+      window.open(`${playerHost}/player?id=${encodeURIComponent(vidId)}${tokenPart}`, '_blank');
     }
 
     let renamingVideoId = null;
@@ -10181,7 +10183,9 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       const v = videos.find(x => x.id === currentEditingVideoId);
       if (!v) return;
       const playerHost = appConfig.playerDomain || window.location.origin;
-      window.open(`${playerHost}/player?id=${encodeURIComponent(v.id)}`, '_blank');
+      const tok = token || localStorage.getItem('cloudvturb_token') || '';
+      const tokenPart = tok ? `&token=${encodeURIComponent(tok)}` : '';
+      window.open(`${playerHost}/player?id=${encodeURIComponent(v.id)}${tokenPart}`, '_blank');
     }
 
     let currentEmbedSnippetTab = 'js';
