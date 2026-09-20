@@ -3557,12 +3557,26 @@ app.get('/api/videos/:id/public', (req, res) => {
       smartautoplayUrl = `${origin}${v.smartautoplay_url}`;
     }
 
+    let posterUrl = null;
+    const posterPath = path.join(VIDEOS_DIR, vidId, 'poster.jpg');
+    if (fs.existsSync(posterPath)) {
+      posterUrl = `${origin}/videos/${vidId}/poster.jpg`;
+    } else if (settings.thumbnailUrl) {
+      posterUrl = settings.thumbnailUrl;
+    } else if (v.thumbnail) {
+      posterUrl = v.thumbnail.startsWith('http') ? v.thumbnail : `${origin}${v.thumbnail}`;
+    } else if (videoUrl) {
+      posterUrl = `${videoUrl}#t=0.5`;
+    }
+
     res.json({
       id: v.id,
       title: v.title,
       video_url: videoUrl,
       hls_url: hlsUrl,
       smartautoplay_url: smartautoplayUrl,
+      poster_url: posterUrl,
+      thumbnail: posterUrl,
       hls_ready: Boolean(v.hls_ready),
       duration: v.duration,
       settings,
@@ -4806,6 +4820,12 @@ app.get('/videos/:id/:file', (req, res) => {
     res.setHeader('Content-Type', 'video/MP2T');
     res.setHeader('Content-Length', stat.size);
     res.setHeader('Accept-Ranges', 'bytes');
+    res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    return fs.createReadStream(filePath).pipe(res);
+  if (fileName.endsWith('.jpg') || fileName.endsWith('.jpeg') || fileName.endsWith('.png') || fileName.endsWith('.webp')) {
+    const cType = fileName.endsWith('.png') ? 'image/png' : (fileName.endsWith('.webp') ? 'image/webp' : 'image/jpeg');
+    res.setHeader('Content-Type', cType);
+    res.setHeader('Content-Length', stat.size);
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     return fs.createReadStream(filePath).pipe(res);
   }
