@@ -742,15 +742,6 @@ function ownerMiddleware(req, res, next) {
   }
 }
 
-const sseClients = new Map();
-
-function pushNotificationToUser(userId, notification) {
-  const client = sseClients.get(userId);
-  if (client && !client.writableEnded) {
-    client.write(`data: ${JSON.stringify(notification)}\n\n`);
-  }
-}
-
 function getSystemFromEmail() {
   const custom = (process.env.RESEND_FROM_EMAIL || '').trim();
   if (custom && !custom.includes('onboarding@resend.dev')) {
@@ -1740,43 +1731,10 @@ app.post('/api/admin/users/:id/action', authMiddleware, ownerMiddleware, async (
       };
       db.prepare(`INSERT INTO user_notifications (user_id, type, title, message) VALUES (?, ?, ?, ?)`)
         .run(targetId, notif.type, notif.title, notif.message);
-      pushNotificationToUser(targetId, notif);
     }
   }
 
   res.json({ success: true });
-});
-
-app.get('/api/user/notifications/stream', authMiddleware, (req, res) => {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache, no-transform');
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('X-Accel-Buffering', 'no');
-  res.setHeader('Transfer-Encoding', 'identity');
-  res.flushHeaders();
-
-  const userId = req.user.id;
-  sseClients.set(userId, res);
-
-  const pending = db.prepare('SELECT * FROM user_notifications WHERE user_id = ? AND read = 0 ORDER BY created_at DESC LIMIT 20').all(userId);
-  if (pending.length > 0) {
-    pending.forEach(n => res.write(`data: ${JSON.stringify(n)}\n\n`));
-  }
-
-  res.write(': connected\n\n');
-
-  const heartbeat = setInterval(() => {
-    if (res.writableEnded) {
-      clearInterval(heartbeat);
-      return;
-    }
-    res.write(': ping\n\n');
-  }, 25000);
-
-  req.on('close', () => {
-    clearInterval(heartbeat);
-    if (sseClients.get(userId) === res) sseClients.delete(userId);
-  });
 });
 
 app.get('/api/user/notifications', authMiddleware, (req, res) => {

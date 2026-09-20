@@ -6614,10 +6614,12 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       if (event) event.stopPropagation();
       const dropdown = document.getElementById('notifDropdown');
       if (!dropdown) return;
+      const willOpen = !dropdown.classList.contains('active');
       dropdown.classList.toggle('active');
+      if (willOpen) {
+        loadUserNotifications();
+      }
     }
-
-    let notifEventSource = null;
 
     function renderNotificationItem(n) {
       const isUnread = !n.read;
@@ -6660,65 +6662,6 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
             </div>
           `;
         }
-      } catch (err) {}
-    }
-
-    let _sseRetryDelay = 10000;
-    let _sseRetryTimer = null;
-
-    function initNotificationSSE() {
-      if (!token || notifEventSource) return;
-      if (_sseRetryTimer) {
-        clearTimeout(_sseRetryTimer);
-        _sseRetryTimer = null;
-      }
-      try {
-        notifEventSource = new EventSource(`/api/user/notifications/stream?token=${encodeURIComponent(token)}`);
-
-        notifEventSource.onopen = () => {
-          _sseRetryDelay = 10000;
-        };
-
-        notifEventSource.onmessage = (e) => {
-          try {
-            const notif = JSON.parse(e.data);
-            if (!notif || !notif.title) return;
-
-            const dot = document.getElementById('notifBadgeDot');
-            if (dot) dot.style.display = 'block';
-
-            const listEl = document.getElementById('notifList');
-            if (listEl) {
-              const empty = listEl.querySelector('.notif-empty');
-              if (empty) listEl.innerHTML = '';
-              listEl.insertAdjacentHTML('afterbegin', renderNotificationItem(notif));
-            }
-
-            showToast(`${notif.title}: ${notif.message}`);
-
-            if (notif.type === 'promotion') {
-              if (currentUser) {
-                currentUser.role = 'owner';
-                try { localStorage.setItem('cloudvturb_user', JSON.stringify(currentUser)); } catch (err) {}
-                setupUserHeader();
-              }
-            }
-          } catch (err) {}
-        };
-
-        notifEventSource.onerror = () => {
-          if (notifEventSource) {
-            notifEventSource.close();
-            notifEventSource = null;
-          }
-          if (token) {
-            _sseRetryTimer = setTimeout(() => {
-              _sseRetryTimer = null;
-              initNotificationSSE();
-            }, _sseRetryDelay);
-            _sseRetryDelay = Math.min(_sseRetryDelay * 2, 120000);
-          }
-        };
       } catch (err) {}
     }
 
@@ -6822,7 +6765,6 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         routeByUrl();
         loadAllDashboardData();
         loadUserNotifications();
-        initNotificationSSE();
       } catch (err) {
         token = '';
         try {
@@ -7500,10 +7442,6 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           setButtonLoading(btn, true, 'Saindo...');
           try {
             await new Promise(r => setTimeout(r, 250));
-            if (notifEventSource) {
-              notifEventSource.close();
-              notifEventSource = null;
-            }
             token = '';
             currentUser = null;
             try {
