@@ -2564,7 +2564,7 @@ app.get('/api/storage/details', authMiddleware, (req, res) => {
   if (isOwner) {
     rawVideos = db.prepare(`
       SELECT v.id, v.title, v.duration, v.file_size, v.source_type, v.created_at, v.deleted_at,
-             v.blocked_at, v.blocked_reason,
+             v.blocked_at, v.blocked_reason, v.video_url,
              v.user_id, u.name as user_name, u.email as user_email, u.role as user_role,
              f.name as folder_name
       FROM videos v
@@ -2576,7 +2576,7 @@ app.get('/api/storage/details', authMiddleware, (req, res) => {
   } else {
     rawVideos = db.prepare(`
       SELECT v.id, v.title, v.duration, v.file_size, v.source_type, v.created_at, v.deleted_at,
-             v.blocked_at, v.blocked_reason,
+             v.blocked_at, v.blocked_reason, v.video_url,
              v.user_id,
              f.name as folder_name
       FROM videos v
@@ -2600,6 +2600,7 @@ app.get('/api/storage/details', authMiddleware, (req, res) => {
       id: v.id,
       title: v.title,
       userId: v.user_id,
+      videoUrl: v.video_url || '',
       isBlocked: !!v.blocked_at,
       blockedAt: v.blocked_at,
       blockedReason: v.blocked_reason,
@@ -3131,7 +3132,7 @@ app.patch('/api/videos/:id/restore', authMiddleware, (req, res) => {
   res.json({ success: true });
 });
 
-app.put('/api/videos/:id', authMiddleware, (req, res) => {
+const updateVideoHandler = (req, res) => {
   const { title, settings, duration, folderId } = req.body;
   const vidId = req.params.id;
 
@@ -3174,6 +3175,91 @@ app.put('/api/videos/:id', authMiddleware, (req, res) => {
   });
 
   res.json({ success: true });
+};
+
+app.put('/api/videos/:id', authMiddleware, updateVideoHandler);
+app.patch('/api/videos/:id', authMiddleware, updateVideoHandler);
+
+app.post('/api/videos/:id/duplicate', authMiddleware, (req, res) => {
+  const vidId = req.params.id;
+  const existing = db.prepare('SELECT * FROM videos WHERE id = ?').get(vidId);
+  if (!existing) return res.status(404).json({ error: 'Vídeo não encontrado.' });
+  if (req.user.role !== 'owner' && existing.user_id !== req.user.id) {
+    return res.status(403).json({ error: 'Permissão negada.' });
+  }
+
+  const newId = 'vsl_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
+  const newTitle = `${existing.title || 'Vídeo'} (Cópia)`.slice(0, 150);
+
+  db.prepare(`
+    INSERT INTO videos (id, user_id, folder_id, title, source_type, file_path, file_size, video_url, duration, settings_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    newId,
+    existing.user_id,
+    existing.folder_id,
+    newTitle,
+    existing.source_type,
+    existing.file_path,
+    existing.file_size,
+    existing.video_url,
+    existing.duration,
+    existing.settings_json
+  );
+
+  dispatchWebhookEvent(existing.user_id, 'video.created', {
+    video_id: newId,
+    name: newTitle,
+    size_bytes: existing.file_size || 0,
+    source: 'duplicate'
+  });
+
+  res.json({ success: true, id: newId });
+});
+
+app.get('/api/videos/:id/download', authMiddleware, (req, res) => {
+  const vidId = req.params.id;
+  const video = db.prepare('SELECT * FROM videos WHERE id = ?').get(vidId);
+  if (!video) return res.status(404).json({ error: 'Vídeo não encontrado.' });
+  if (req.user.role !== 'owner' && video.user_id !== req.user.id) {
+    return res.status(403).json({ error: 'Permissão negada.' });
+  }
+
+  const rawTitle = (video.title || 'video').trim().replace(/[/\\?%*:|"<>]/g, '_');
+  const downloadName = `${rawTitle}.mp4`;
+
+  if (video.file_path && fs.existsSync(video.file_path)) {
+    return res.download(video.file_path, downloadName);
+  }
+
+  if (video.video_url) {
+    const cleanUrl = video.video_url.split('?')[0].split('#')[0];
+    const baseName = path.basename(cleanUrl);
+    const candidate1 = path.join(VIDEOS_DIR, baseName);
+    if (fs.existsSync(candidate1)) {
+      return res.download(candidate1, downloadName);
+    }
+    const candidate2 = path.join(VIDEOS_DIR, video.id, baseName);
+    if (fs.existsSync(candidate2)) {
+      return res.download(candidate2, downloadName);
+    }
+    const dirCandidate = path.join(VIDEOS_DIR, video.id);
+    if (fs.existsSync(dirCandidate)) {
+      try {
+        const files = fs.readdirSync(dirCandidate);
+        const mp4File = files.find(f => f.endsWith('.mp4'));
+        if (mp4File) {
+          return res.download(path.join(dirCandidate, mp4File), downloadName);
+        }
+      } catch (e) {}
+    }
+  }
+
+  if (video.video_url && (video.video_url.startsWith('http://') || video.video_url.startsWith('https://'))) {
+    return res.redirect(video.video_url);
+  }
+
+  res.status(404).json({ error: 'Arquivo de vídeo não encontrado no servidor.' });
 });
 
 app.delete('/api/videos/:id', authMiddleware, (req, res) => {
