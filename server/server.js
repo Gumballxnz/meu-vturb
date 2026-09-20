@@ -2878,26 +2878,14 @@ app.post('/api/webhooks/:id/test', authMiddleware, async (req, res) => {
 });
 
 app.get('/api/folders', authMiddleware, (req, res) => {
-  const isOwner = req.user.role === 'owner';
-  let rows;
-  if (isOwner) {
-    rows = db.prepare(`
-      SELECT f.*, COUNT(v.id) as video_count
-      FROM folders f
-      LEFT JOIN videos v ON v.folder_id = f.id AND v.deleted_at IS NULL
-      GROUP BY f.id
-      ORDER BY f.created_at DESC
-    `).all();
-  } else {
-    rows = db.prepare(`
-      SELECT f.*, COUNT(v.id) as video_count
-      FROM folders f
-      LEFT JOIN videos v ON v.folder_id = f.id AND v.deleted_at IS NULL
-      WHERE f.user_id = ?
-      GROUP BY f.id
-      ORDER BY f.created_at DESC
-    `).all(req.user.id);
-  }
+  const rows = db.prepare(`
+    SELECT f.*, COUNT(v.id) as video_count
+    FROM folders f
+    LEFT JOIN videos v ON v.folder_id = f.id AND v.deleted_at IS NULL
+    WHERE f.user_id = ?
+    GROUP BY f.id
+    ORDER BY f.created_at DESC
+  `).all(req.user.id);
   res.json({ folders: rows });
 });
 
@@ -2907,7 +2895,7 @@ app.post('/api/folders', authMiddleware, (req, res) => {
     return res.status(400).json({ error: 'O nome da pasta é obrigatório.' });
   }
 
-  const cleanName = name.trim().slice(0, 80);
+  const cleanName = name.trim().slice(0, 35);
   const folderId = 'fld_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex');
 
   db.prepare(`
@@ -2930,7 +2918,7 @@ app.put('/api/folders/:id', authMiddleware, (req, res) => {
     return res.status(403).json({ error: 'Permissão negada.' });
   }
 
-  const cleanName = name.trim().slice(0, 80);
+  const cleanName = name.trim().slice(0, 35);
   db.prepare('UPDATE folders SET name = ? WHERE id = ?').run(cleanName, req.params.id);
   res.json({ success: true, name: cleanName });
 });
@@ -2948,7 +2936,6 @@ app.delete('/api/folders/:id', authMiddleware, (req, res) => {
 });
 
 app.get('/api/videos', authMiddleware, (req, res) => {
-  const isOwner = req.user.role === 'owner';
   const isTrash = req.query.trash === '1';
   const folderId = req.query.folder_id;
 
@@ -2961,10 +2948,8 @@ app.get('/api/videos', authMiddleware, (req, res) => {
     query += 'deleted_at IS NULL ';
   }
 
-  if (!isOwner) {
-    query += 'AND user_id = ? ';
-    params.push(req.user.id);
-  }
+  query += 'AND user_id = ? ';
+  params.push(req.user.id);
 
   if (folderId) {
     if (folderId === 'root') {
@@ -3028,7 +3013,7 @@ app.post('/api/videos', authMiddleware, (req, res) => {
   }
 
   const vidId = id && /^[a-zA-Z0-9_-]+$/.test(id) ? id : 'vsl_' + Date.now();
-  const cleanTitle = (title || 'Minha VSL').trim().slice(0, 150);
+  const cleanTitle = (title || 'Minha VSL').trim().slice(0, 70);
 
   let resolvedSize = 0;
   if (sourceType === 'local') {
@@ -3170,7 +3155,7 @@ const updateVideoHandler = (req, res) => {
       folder_id = ?
     WHERE id = ?
   `).run(
-    title ? title.trim().slice(0, 150) : null,
+    title ? title.trim().slice(0, 70) : null,
     duration || null,
     settings ? JSON.stringify(settings) : null,
     cleanFolderId,
@@ -3197,7 +3182,7 @@ app.post('/api/videos/:id/duplicate', authMiddleware, (req, res) => {
   }
 
   const newId = 'vsl_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6);
-  const newTitle = `${existing.title || 'Vídeo'} (Cópia)`.slice(0, 150);
+  const newTitle = `${existing.title || 'Vídeo'} (Cópia)`.slice(0, 70);
 
   db.prepare(`
     INSERT INTO videos (id, user_id, folder_id, title, source_type, file_path, file_size, video_url, duration, settings_json)
@@ -3588,14 +3573,9 @@ app.post('/api/analytics/event', (req, res) => {
 });
 
 app.get('/api/analytics/overview', authMiddleware, (req, res) => {
-  const isOwner = req.user.role === 'owner';
-  const videoFilter = isOwner
-    ? '1=1'
-    : 'video_id IN (SELECT id FROM videos WHERE user_id = ' + req.user.id + ')';
+  const videoFilter = 'video_id IN (SELECT id FROM videos WHERE user_id = ' + req.user.id + ' AND deleted_at IS NULL)';
 
-  const userVideos = isOwner
-    ? db.prepare('SELECT id, title, plays FROM videos ORDER BY created_at DESC').all()
-    : db.prepare('SELECT id, title, plays FROM videos WHERE user_id = ? ORDER BY created_at DESC').all(req.user.id);
+  const userVideos = db.prepare('SELECT id, title, plays FROM videos WHERE user_id = ? AND deleted_at IS NULL ORDER BY created_at DESC').all(req.user.id);
 
   const totalViews = db.prepare(`SELECT COUNT(*) as count FROM analytics_events WHERE event_type = 'page_view' AND ${videoFilter}`).get().count;
   const totalPlays = db.prepare(`SELECT COUNT(*) as count FROM analytics_events WHERE event_type = 'play' AND ${videoFilter}`).get().count;
@@ -3607,6 +3587,7 @@ app.get('/api/analytics/overview', authMiddleware, (req, res) => {
   const completionRate = totalPlays > 0 ? ((completes / totalPlays) * 100).toFixed(1) : '0.0';
   const conversionRate = totalPlays > 0 ? ((ctaClicks / totalPlays) * 100).toFixed(1) : '0.0';
 
+  const isOwner = req.user.role === 'owner';
   const usedBytes = isOwner ? getUsedStorageBytes() : getUserStorageBytes(req.user.id);
   const totalBytes = isOwner ? SERVER_STORAGE_LIMIT_BYTES : MEMBER_STORAGE_LIMIT_BYTES;
 
@@ -3958,7 +3939,7 @@ app.post('/api/upload/google-drive', authMiddleware, checkStorageQuotaPre, async
     const videoDomain = isProd ? `https://${PLAYER_DOMAIN}` : `${req.protocol}://${host}`;
     const videoUrl = `${videoDomain}/videos/${filename}`;
 
-    const cleanTitle = (title || meta.name || 'Vídeo do Google Drive').replace(/\.[^/.]+$/, '').trim().slice(0, 150);
+    const cleanTitle = (title || meta.name || 'Vídeo do Google Drive').replace(/\.[^/.]+$/, '').trim().slice(0, 70);
     const vidId = 'vsl_' + Date.now();
 
     let cleanFolderId = null;

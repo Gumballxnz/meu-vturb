@@ -1108,7 +1108,8 @@
       font-size: 13.5px;
       font-weight: 600;
       margin-bottom: 0;
-      max-width: 280px;
+      max-width: 320px;
+      min-width: 0;
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -1120,6 +1121,7 @@
       gap: 14px;
       display: flex;
       align-items: center;
+      flex-shrink: 0;
     }
 
     .video-grid.is-compact-view .video-card-actions {
@@ -1130,6 +1132,7 @@
       display: flex;
       align-items: center;
       margin-left: auto;
+      flex-shrink: 0;
     }
 
     @media (max-width: 768px) {
@@ -1144,6 +1147,9 @@
       .video-grid.is-compact-view .video-card-body {
         flex-direction: column;
         align-items: flex-start;
+      }
+      .video-grid.is-compact-view .video-card-title {
+        max-width: 100%;
       }
     }
 
@@ -1256,6 +1262,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      min-width: 0;
     }
 
     .video-stats-row {
@@ -1281,6 +1288,7 @@
       justify-content: flex-end;
       border-top: 1px solid var(--border-subtle);
       padding-top: 10px;
+      flex-shrink: 0;
     }
 
     .btn-action-card {
@@ -3203,6 +3211,7 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+      min-width: 0;
     }
 
     .folder-stats-info {
@@ -3210,6 +3219,7 @@
       color: var(--text-muted);
       margin: 0 12px;
       white-space: nowrap;
+      flex-shrink: 0;
     }
 
     .folder-card-actions {
@@ -3217,6 +3227,7 @@
       gap: 6px;
       align-items: center;
       margin-left: auto;
+      flex-shrink: 0;
     }
 
     .content-section-divider {
@@ -4906,7 +4917,7 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
                 <div id="drawerPanelEstilo" class="drawer-panel-section">
                   <div class="form-row">
                     <label class="form-label">Título da VSL</label>
-                    <input type="text" id="edTitle" class="form-input-text" oninput="liveUpdateSettings()">
+                    <input type="text" id="edTitle" class="form-input-text" maxlength="70" oninput="liveUpdateSettings()">
                   </div>
                   <div class="form-row">
                     <label class="form-label">Cor da Barra de Progresso</label>
@@ -5321,7 +5332,7 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
               <label class="form-label" style="margin-bottom: 0;">Título da VSL</label>
               <a href="javascript:void(0)" id="toggleRemoteUrlBtn" onclick="toggleRemoteUrlSection()" style="font-size: 12px; color: var(--primary); text-decoration: none; font-weight: 600;">+ Adicionar por Link (Cloudflare R2 / URL)</a>
             </div>
-            <input type="text" id="newVidTitle" class="form-input-text" placeholder="Ex: Minha VSL de Alta Conversão">
+            <input type="text" id="newVidTitle" class="form-input-text" placeholder="Ex: Minha VSL de Alta Conversão" maxlength="70">
           </div>
 
           <div id="newVidRemoteSection" style="display: none; margin-bottom: 12px;">
@@ -5367,7 +5378,7 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
       <div class="modal-body-clean">
         <div class="form-row">
           <label class="form-label">Nome da Pasta</label>
-          <input type="text" id="folderNameInput" class="form-input-text" placeholder="Ex: VSLs de Teste, Campanha Facebook...">
+          <input type="text" id="folderNameInput" class="form-input-text" placeholder="Ex: VSLs de Teste, Campanha Facebook..." maxlength="35">
         </div>
       </div>
       <div class="modal-footer-clean">
@@ -5405,7 +5416,7 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
       <div class="modal-body-clean">
         <div class="form-row">
           <label class="form-label">Título da VSL</label>
-          <input type="text" id="renameVideoInput" class="form-input-text" placeholder="Nome do vídeo" maxlength="150" onkeydown="if(event.key==='Enter') submitRenameVideo()">
+          <input type="text" id="renameVideoInput" class="form-input-text" placeholder="Nome do vídeo" maxlength="70" onkeydown="if(event.key==='Enter') submitRenameVideo()">
         </div>
       </div>
       <div class="modal-footer-clean">
@@ -8462,7 +8473,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
     }
 
     async function submitFolderForm() {
-      const name = document.getElementById('folderNameInput').value.trim();
+      const name = document.getElementById('folderNameInput').value.trim().slice(0, 35);
       if (!name) {
         showToast('Informe o nome da pasta.', true);
         return;
@@ -8794,7 +8805,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
     async function submitRenameVideo() {
       if (!renamingVideoId) return;
       const input = document.getElementById('renameVideoInput');
-      const newTitle = input ? input.value.trim() : '';
+      const newTitle = (input ? input.value.trim() : '').slice(0, 70);
       if (!newTitle) {
         showToast('O título não pode estar vazio.', true);
         return;
@@ -8918,7 +8929,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
               <div class="thumb-badge-duration" style="background: rgba(239, 68, 68, 0.85);">Na Lixeira</div>
             </div>
             <div class="video-card-body">
-              <div class="video-card-title">${escapeHtml(v.title)}</div>
+              <div class="video-card-title" title="${escapeHtml(v.title)}">${escapeHtml(v.title)}</div>
               <div class="video-stats-row">
                 <div class="video-stats-item">
                   <span>${(v.plays || 0).toLocaleString()} plays</span>
@@ -9147,7 +9158,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         const fileId = doc[google.picker.Document.ID];
         const fileName = doc[google.picker.Document.NAME];
         const titleInput = document.getElementById('onbVidTitle');
-        const customTitle = (titleInput && titleInput.value.trim()) || fileName;
+        const customTitle = ((titleInput && titleInput.value.trim()) || fileName).slice(0, 70);
         if (titleInput && !titleInput.value.trim()) {
           titleInput.value = fileName.replace(/\.[^/.]+$/, '');
         }
@@ -10294,7 +10305,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
     async function saveCurrentVideoSettings() {
       if (!currentEditingVideoId) return;
       const btn = event ? event.currentTarget : document.getElementById('btnSaveVideoSettings');
-      const title = document.getElementById('edTitle').value.trim();
+      const title = document.getElementById('edTitle').value.trim().slice(0, 70);
       const settings = getEditorSettings();
       setButtonLoading(btn, true, 'Salvando...');
 
@@ -10603,7 +10614,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
     }
 
     async function submitNewVideo() {
-      const title = document.getElementById('newVidTitle').value.trim() || 'Minha Nova VSL';
+      const title = (document.getElementById('newVidTitle').value.trim() || 'Minha Nova VSL').slice(0, 70);
       const btn = document.getElementById('btnSubmitNewVideo');
       const folderSelect = document.getElementById('newVidFolderSelect');
       const targetFolderId = folderSelect && folderSelect.value !== 'root' ? folderSelect.value : null;
