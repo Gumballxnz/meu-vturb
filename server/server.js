@@ -926,10 +926,7 @@ async function sendVerificationEmail({ to, code, type, name }) {
     return;
   }
 
-  let fromEmail = (process.env.RESEND_FROM_EMAIL || '').trim();
-  if (!fromEmail || fromEmail.includes('onboarding@resend.dev')) {
-    fromEmail = 'CloudVTurb <nao-responda@roleta-sorte.online>';
-  }
+  const fromEmail = getSystemFromEmail();
   const isRegister = type === 'register';
   const isChangePassword = type === 'change_password';
   const subject = isRegister
@@ -1000,10 +997,7 @@ async function sendInviteEmail({ to, name, inviterName, inviteLink, role }) {
     return;
   }
 
-  let fromEmail = (process.env.RESEND_FROM_EMAIL || '').trim();
-  if (!fromEmail || fromEmail.includes('onboarding@resend.dev')) {
-    fromEmail = 'CloudVTurb <nao-responda@roleta-sorte.online>';
-  }
+  const fromEmail = getSystemFromEmail();
   const roleLabel = role === 'admin' ? 'Administrador' : 'Usuário Comum';
   const subject = `${inviterName || 'Alguém'} convidou você para fazer parte da equipe no CloudVTurb`;
 
@@ -1069,10 +1063,7 @@ async function sendVideoModerationEmail({ to, name, videoTitle, action, reason }
     return;
   }
 
-  let fromEmail = (process.env.RESEND_FROM_EMAIL || '').trim();
-  if (!fromEmail || fromEmail.includes('onboarding@resend.dev')) {
-    fromEmail = 'CloudVTurb <nao-responda@roleta-sorte.online>';
-  }
+  const fromEmail = getSystemFromEmail();
 
   let subject = '';
   let actionTitle = '';
