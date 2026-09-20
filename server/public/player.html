@@ -595,11 +595,29 @@
       const vidId = params.get('id') || pathnameId || '';
       const tokenParam = params.get('token') || '';
       const isPreview = params.get('preview') === '1';
+      const posterParam = params.get('poster') || params.get('thumb') || '';
       let videoSrc = params.get('v') || '';
       let hlsSrc = '';
       let smartAutoplaySrc = '';
       let dbSettings = {};
       let isOwnerPreview = false;
+
+      const playerPoster = document.getElementById('playerPoster');
+      const video = document.getElementById('videoElement');
+      if (playerPoster) {
+        if (posterParam) {
+          playerPoster.style.backgroundImage = `url("${posterParam}")`;
+        } else if (vidId) {
+          playerPoster.style.backgroundImage = `url("/videos/${encodeURIComponent(vidId)}/poster.jpg")`;
+        }
+      }
+      if (video) {
+        if (posterParam) {
+          video.poster = posterParam;
+        } else if (vidId) {
+          video.poster = `/videos/${encodeURIComponent(vidId)}/poster.jpg`;
+        }
+      }
 
       const _ua = navigator.userAgent;
 
@@ -680,6 +698,11 @@
             smartAutoplaySrc = data.smartautoplay_url || '';
             dbSettings = data.settings || {};
             isOwnerPreview = data.is_owner_preview === true;
+            if (data.poster_url || data.thumbnail) {
+              const pUrl = data.poster_url || data.thumbnail;
+              if (playerPoster) playerPoster.style.backgroundImage = `url("${pUrl}")`;
+              if (video) video.poster = pUrl;
+            }
             if (data.title) {
               document.title = data.title;
             }
@@ -777,7 +800,6 @@
       };
 
       const playerWrapper = document.getElementById('playerWrapper');
-      const video = document.getElementById('videoElement');
       const playbackShield = document.getElementById('playbackShield');
       const smartOverlay = document.getElementById('smartOverlay');
       const pulseBadgeWrapper = document.getElementById('pulseBadgeWrapper');
@@ -797,6 +819,16 @@
       const ctaSubtext = document.getElementById('ctaSubtext');
       const playPauseIndicator = document.getElementById('playPauseIndicator');
       const playPauseIcon = document.getElementById('playPauseIcon');
+
+      function hidePoster() {
+        if (playerPoster && !playerPoster.classList.contains('hidden')) {
+          playerPoster.classList.add('hidden');
+        }
+      }
+      video.addEventListener('playing', hidePoster);
+      video.addEventListener('timeupdate', function () {
+        if (video.currentTime > 0.05) hidePoster();
+      });
 
       let hasUserUnmuted = false;
       let playRegistered = false;
@@ -994,7 +1026,12 @@
         if (window.Hls && window.Hls.isSupported()) {
           hlsInstance = new window.Hls({
             enableWorker: true,
-            lowLatencyMode: false
+            lowLatencyMode: true,
+            startLevel: 0,
+            startFragPrefetch: true,
+            maxBufferLength: 8,
+            maxMaxBufferLength: 15,
+            backBufferLength: 10
           });
           hlsInstance.loadSource(streamUrl);
           hlsInstance.attachMedia(video);
@@ -1003,9 +1040,21 @@
             if (autoplayAudio) {
               video.muted = false;
               video.volume = 1;
+            } else {
+              video.muted = true;
             }
-            video.play().catch(function () {});
-            registerPlay();
+            const playPromise = video.play();
+            if (playPromise !== undefined) {
+              playPromise.then(function () {
+                registerPlay();
+              }).catch(function () {
+                video.muted = true;
+                video.play().catch(function () {});
+                if (smartOverlay && !hasUserUnmuted) {
+                  smartOverlay.classList.remove('hidden');
+                }
+              });
+            }
           });
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
           video.src = streamUrl;
@@ -1015,9 +1064,21 @@
             if (autoplayAudio) {
               video.muted = false;
               video.volume = 1;
+            } else {
+              video.muted = true;
             }
-            video.play().catch(function () {});
-            registerPlay();
+            const playPromise = video.play();
+            if (playPromise !== undefined) {
+              playPromise.then(function () {
+                registerPlay();
+              }).catch(function () {
+                video.muted = true;
+                video.play().catch(function () {});
+                if (smartOverlay && !hasUserUnmuted) {
+                  smartOverlay.classList.remove('hidden');
+                }
+              });
+            }
           });
         } else if (videoSrc) {
           video.src = videoSrc;
@@ -1025,9 +1086,21 @@
           if (autoplayAudio) {
             video.muted = false;
             video.volume = 1;
+          } else {
+            video.muted = true;
           }
-          video.play().catch(function () {});
-          registerPlay();
+          const playPromise = video.play();
+          if (playPromise !== undefined) {
+            playPromise.then(function () {
+              registerPlay();
+            }).catch(function () {
+              video.muted = true;
+              video.play().catch(function () {});
+              if (smartOverlay && !hasUserUnmuted) {
+                smartOverlay.classList.remove('hidden');
+              }
+            });
+          }
         }
       }
 
@@ -1052,12 +1125,25 @@
           if (playPromise !== undefined) {
             playPromise.then(function () {
               registerPlay();
-            }).catch(function () {});
+            }).catch(function () {
+              video.muted = true;
+              video.play().catch(function () {});
+            });
           }
         } else {
           smartOverlay.classList.add('hidden');
-          video.play().catch(function () {});
-          registerPlay();
+          const playPromise = video.play();
+          if (playPromise !== undefined) {
+            playPromise.then(function () {
+              registerPlay();
+            }).catch(function () {
+              video.muted = true;
+              video.play().catch(function () {});
+              if (!hasUserUnmuted) {
+                smartOverlay.classList.remove('hidden');
+              }
+            });
+          }
         }
       }
 

@@ -811,6 +811,15 @@ function autoCheckPendingHls() {
             const candidate = path.join(VIDEOS_DIR, path.basename(v.video_url));
             if (fs.existsSync(candidate)) inputPath = candidate;
           }
+          if (!inputPath || !fs.existsSync(inputPath)) {
+            try {
+              if (fs.existsSync(videoDir)) {
+                const files = fs.readdirSync(videoDir);
+                const mp4 = files.find(f => f.endsWith('.mp4'));
+                if (mp4) inputPath = path.join(videoDir, mp4);
+              }
+            } catch (e) {}
+          }
         }
         if (inputPath && fs.existsSync(inputPath)) {
           try {
@@ -3063,21 +3072,33 @@ app.get('/api/videos', authMiddleware, (req, res) => {
 
   query += 'ORDER BY created_at DESC';
 
+  const origin = PLAYER_DOMAIN ? `https://${PLAYER_DOMAIN}` : `${req.protocol}://${req.get('host')}`;
   const rows = db.prepare(query).all(...params);
-  const videos = rows.map(r => ({
-    ...r,
-    settings: r.settings_json ? JSON.parse(r.settings_json) : {}
-  }));
+  const videos = rows.map(r => {
+    let settings = {};
+    try { settings = r.settings_json ? JSON.parse(r.settings_json) : {}; } catch (e) {}
+    const posterPath = path.join(VIDEOS_DIR, r.id, 'poster.jpg');
+    const posterUrl = fs.existsSync(posterPath) ? `${origin}/videos/${r.id}/poster.jpg` : (settings.thumbnailUrl || (r.video_url ? `${r.video_url}#t=0.5` : null));
+    return {
+      ...r,
+      settings,
+      poster_url: posterUrl,
+      thumbnail: posterUrl
+    };
+  });
 
   res.json({ videos });
 });
 
 app.get('/api/videos/top', authMiddleware, (req, res) => {
+  const origin = PLAYER_DOMAIN ? `https://${PLAYER_DOMAIN}` : `${req.protocol}://${req.get('host')}`;
   const videosQuery = 'SELECT id, title, video_url, duration, plays, settings_json, hls_ready, hls_manifest, created_at FROM videos WHERE deleted_at IS NULL AND user_id = ? ORDER BY plays DESC LIMIT 20';
   const rows = db.prepare(videosQuery).all(req.user.id);
   const topVideos = rows.map(v => {
     let settings = {};
     try { if (v.settings_json) settings = JSON.parse(v.settings_json); } catch (e) {}
+    const posterPath = path.join(VIDEOS_DIR, v.id, 'poster.jpg');
+    const posterUrl = fs.existsSync(posterPath) ? `${origin}/videos/${v.id}/poster.jpg` : (settings.thumbnailUrl || (v.video_url ? `${v.video_url}#t=0.5` : null));
     const ctaClicks = db.prepare("SELECT COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'cta_clicked'").get(v.id).count;
     const completes = db.prepare("SELECT COUNT(DISTINCT session_id) as count FROM analytics_events WHERE video_id = ? AND (event_type = 'complete' OR (event_type = 'progress' AND milestone = 100))").get(v.id).count;
     const completionRate = v.plays > 0 ? ((completes / v.plays) * 100).toFixed(1) : '0.0';
@@ -3087,7 +3108,8 @@ app.get('/api/videos/top', authMiddleware, (req, res) => {
       id: v.id,
       title: v.title,
       video_url: v.video_url,
-      thumbnail: settings.thumbnailUrl || (v.video_url ? `${v.video_url}#t=0.5` : null),
+      poster_url: posterUrl,
+      thumbnail: posterUrl,
       duration: v.duration,
       plays: v.plays || 0,
       hls_ready: Boolean(v.hls_ready),
