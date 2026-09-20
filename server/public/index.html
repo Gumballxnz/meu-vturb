@@ -7604,7 +7604,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
 
       if (folderId === 'root') {
         if (breadcrumbFolderPart) breadcrumbFolderPart.style.display = 'none';
-        if (foldersContainer) foldersContainer.style.display = 'block';
+        if (foldersContainer) foldersContainer.style.display = (currentContentFilter === 'all' || currentContentFilter === 'folders') ? 'block' : 'none';
         if (updateUrl) history.pushState(null, '', '/folders');
       } else {
         const f = folders.find(x => x.id === folderId);
@@ -7619,41 +7619,127 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
 
     function renderFoldersGrid() {
       const container = document.getElementById('foldersGrid');
-      if (!container) return;
-      container.innerHTML = '';
+      const ovContainer = document.getElementById('overviewFoldersGrid');
       const countLabel = document.getElementById('foldersCountLabel');
-      if (countLabel) countLabel.textContent = `${folders.length} pasta${folders.length === 1 ? '' : 's'}`;
+      const ovCountLabel = document.getElementById('overviewFoldersCountLabel');
 
-      if (folders.length === 0) {
-        container.innerHTML = `<p style="grid-column: 1/-1; font-size: 13px; color: var(--text-dim); padding: 12px 0;">Nenhuma pasta criada. Crie uma pasta para organizar suas VSLs.</p>`;
-        return;
+      if (countLabel) countLabel.textContent = `${folders.length} pasta${folders.length === 1 ? '' : 's'}`;
+      if (ovCountLabel) ovCountLabel.textContent = `${folders.length} pasta${folders.length === 1 ? '' : 's'}`;
+
+      if (container) {
+        container.innerHTML = '';
+        if (folders.length === 0) {
+          container.innerHTML = `<p style="grid-column: 1/-1; font-size: 13px; color: var(--text-dim); padding: 12px 0;">Nenhuma pasta criada. Crie uma pasta para organizar suas VSLs.</p>`;
+        } else {
+          folders.forEach(f => {
+            const card = document.createElement('div');
+            card.className = 'folder-card';
+            card.onclick = () => openFolder(f.id);
+            card.innerHTML = `
+              <div class="folder-card-main">
+                <div class="folder-icon-box">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                </div>
+                <div class="folder-card-info">
+                  <div class="folder-card-name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</div>
+                  <div class="folder-card-count">${f.video_count || 0} vídeo${(f.video_count || 0) === 1 ? '' : 's'}</div>
+                </div>
+              </div>
+              <div class="folder-card-actions">
+                <button class="btn-icon" style="width:28px;height:28px;" onclick="openRenameFolderModal('${f.id}', '${escapeHtml(f.name)}', event)" title="Renomear Pasta">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                </button>
+                <button class="btn-action-danger" style="padding:4px 7px;" onclick="deleteFolderPrompt('${f.id}', '${escapeHtml(f.name)}', event)" title="Excluir Pasta">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+              </div>
+            `;
+            container.appendChild(card);
+          });
+        }
       }
 
-      folders.forEach(f => {
-        const card = document.createElement('div');
-        card.className = 'folder-card';
-        card.onclick = () => openFolder(f.id);
-        card.innerHTML = `
-          <div class="folder-card-main">
-            <div class="folder-icon-box">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
-            </div>
-            <div class="folder-card-info">
-              <div class="folder-card-name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</div>
-              <div class="folder-card-count">${f.video_count || 0} vídeo${(f.video_count || 0) === 1 ? '' : 's'}</div>
-            </div>
-          </div>
-          <div class="folder-card-actions">
-            <button class="btn-icon" style="width:28px;height:28px;" onclick="openRenameFolderModal('${f.id}', '${escapeHtml(f.name)}', event)" title="Renomear Pasta">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-            </button>
-            <button class="btn-action-danger" style="padding:4px 7px;" onclick="deleteFolderPrompt('${f.id}', '${escapeHtml(f.name)}', event)" title="Excluir Pasta">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-            </button>
-          </div>
-        `;
-        container.appendChild(card);
+      if (ovContainer) {
+        ovContainer.innerHTML = '';
+        if (folders.length === 0) {
+          ovContainer.innerHTML = `<p style="grid-column: 1/-1; font-size: 13px; color: var(--text-dim); padding: 12px 0;">Nenhuma pasta criada.</p>`;
+        } else {
+          folders.forEach(f => {
+            const card = document.createElement('div');
+            card.className = 'folder-card';
+            card.onclick = () => { navigateTo('videos'); openFolder(f.id); };
+            card.innerHTML = `
+              <div class="folder-card-main">
+                <div class="folder-icon-box">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                </div>
+                <div class="folder-card-info">
+                  <div class="folder-card-name" title="${escapeHtml(f.name)}">${escapeHtml(f.name)}</div>
+                  <div class="folder-card-count">${f.video_count || 0} vídeo${(f.video_count || 0) === 1 ? '' : 's'}</div>
+                </div>
+              </div>
+            `;
+            ovContainer.appendChild(card);
+          });
+        }
+      }
+    }
+
+    let currentContentFilter = 'all';
+    let currentViewMode = 'compact';
+
+    function setContentFilter(filterType) {
+      currentContentFilter = filterType;
+
+      ['videos', 'overview'].forEach(prefix => {
+        const btnAll = document.getElementById(`contentFilterAll_${prefix}`);
+        const btnFolders = document.getElementById(`contentFilterFolders_${prefix}`);
+        const btnVideos = document.getElementById(`contentFilterVideos_${prefix}`);
+        if (btnAll) btnAll.classList.toggle('active', filterType === 'all');
+        if (btnFolders) btnFolders.classList.toggle('active', filterType === 'folders');
+        if (btnVideos) btnVideos.classList.toggle('active', filterType === 'videos');
       });
+
+      const foldersCont = document.getElementById('foldersContainer');
+      const videosCont = document.getElementById('mainVideoGrid');
+      if (foldersCont) foldersCont.style.display = (filterType === 'all' || filterType === 'folders') ? 'block' : 'none';
+      if (videosCont) videosCont.style.display = (filterType === 'all' || filterType === 'videos') ? '' : 'none';
+
+      const ovFoldersCont = document.getElementById('overviewFoldersContainer');
+      const ovVideosCont = document.getElementById('overviewVideosContainer');
+      if (ovFoldersCont) ovFoldersCont.style.display = (filterType === 'all' || filterType === 'folders') ? 'block' : 'none';
+      if (ovVideosCont) ovVideosCont.style.display = (filterType === 'all' || filterType === 'videos') ? 'block' : 'none';
+    }
+
+    function setViewMode(mode) {
+      currentViewMode = mode;
+      try { localStorage.setItem('cloudvturb_view_mode', mode); } catch (e) {}
+
+      ['videos', 'overview'].forEach(prefix => {
+        const btnLarge = document.getElementById(`viewModeLarge_${prefix}`);
+        const btnCompact = document.getElementById(`viewModeCompact_${prefix}`);
+        if (btnLarge) btnLarge.classList.toggle('active', mode === 'large');
+        if (btnCompact) btnCompact.classList.toggle('active', mode === 'compact');
+      });
+
+      const isCompact = mode === 'compact';
+      const mainGrid = document.getElementById('mainVideoGrid');
+      const ovGrid = document.getElementById('overviewRecentVideos');
+      const trashGrid = document.getElementById('trashVideoGrid');
+
+      if (mainGrid) mainGrid.classList.toggle('is-compact-view', isCompact);
+      if (ovGrid) ovGrid.classList.toggle('is-compact-view', isCompact);
+      if (trashGrid) trashGrid.classList.toggle('is-compact-view', isCompact);
+    }
+
+    function initViewModeAndFilters() {
+      setContentFilter('all');
+      let savedMode = 'compact';
+      try {
+        const stored = localStorage.getItem('cloudvturb_view_mode');
+        if (stored === 'large' || stored === 'compact') savedMode = stored;
+      } catch (e) {}
+      setViewMode(savedMode);
     }
 
     function populateFolderSelects() {
@@ -11290,6 +11376,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       document.addEventListener('DOMContentLoaded', () => {
         hydrateCachedSession();
         initSession();
+        initViewModeAndFilters();
         setupVerificationCodeInputs();
         setupImportDropZoneEvents();
         setupOnboardingDropZoneEvents();
@@ -11297,6 +11384,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
     } else {
       hydrateCachedSession();
       initSession();
+      initViewModeAndFilters();
       setupVerificationCodeInputs();
       setupImportDropZoneEvents();
       setupOnboardingDropZoneEvents();
