@@ -356,6 +356,17 @@ try {
   }
 } catch (e) {}
 
+try {
+  db.prepare(`
+    UPDATE videos
+    SET plays = (
+      SELECT COUNT(*)
+      FROM analytics_events
+      WHERE analytics_events.video_id = videos.id AND analytics_events.event_type = 'play'
+    )
+  `).run();
+} catch (e) {}
+
 const getSetting = (key, defaultVal) => {
   const row = db.prepare('SELECT value FROM system_settings WHERE key = ?').get(key);
   return row ? row.value : defaultVal;
@@ -3392,9 +3403,17 @@ app.post('/api/videos/:id/reprocess', authMiddleware, (req, res) => {
 app.post('/api/videos/:id/play', (req, res) => {
   const vidId = req.params.id;
   try {
-    db.prepare('UPDATE videos SET plays = plays + 1 WHERE id = ?').run(vidId);
+    db.prepare(`
+      UPDATE videos
+      SET plays = (
+        SELECT COUNT(*)
+        FROM analytics_events
+        WHERE video_id = ? AND event_type = 'play'
+      )
+      WHERE id = ?
+    `).run(vidId, vidId);
     const updated = db.prepare('SELECT plays FROM videos WHERE id = ?').get(vidId);
-    res.json({ success: true, plays: updated ? updated.plays : 1 });
+    res.json({ success: true, plays: updated ? updated.plays : 0 });
   } catch (e) {
     res.json({ success: false });
   }
@@ -3557,14 +3576,15 @@ app.post('/api/analytics/event', (req, res) => {
   );
 
   if (eventType === 'play') {
-    const playRecordedForSession = db.prepare(`
-      SELECT COUNT(*) as count FROM analytics_events
-      WHERE session_id = ? AND event_type = 'play'
-    `).get(cleanSessionId).count;
-
-    if (playRecordedForSession === 1) {
-      db.prepare('UPDATE videos SET plays = plays + 1 WHERE id = ?').run(cleanVidId);
-    }
+    db.prepare(`
+      UPDATE videos
+      SET plays = (
+        SELECT COUNT(*)
+        FROM analytics_events
+        WHERE video_id = ? AND event_type = 'play'
+      )
+      WHERE id = ?
+    `).run(cleanVidId, cleanVidId);
   }
 
   res.json({ success: true });
@@ -3587,17 +3607,16 @@ app.get('/api/analytics/overview', authMiddleware, (req, res) => {
   const pitchViews = db.prepare(`SELECT COUNT(*) as count FROM analytics_events WHERE event_type = 'pitch_viewed' AND ${videoFilter}`).get().count;
   const completes = db.prepare(`SELECT COUNT(DISTINCT session_id) as count FROM analytics_events WHERE (event_type = 'complete' OR (event_type = 'progress' AND milestone = 100)) AND ${videoFilter}`).get().count;
 
-  const totalPlaysBase = totalPlays > 0 ? totalPlays : userVideos.reduce((acc, v) => acc + (v.plays || 0), 0);
-  const completionRate = totalPlaysBase > 0 ? ((completes / totalPlaysBase) * 100).toFixed(1) : '0.0';
-  const conversionRate = totalPlaysBase > 0 ? ((ctaClicks / totalPlaysBase) * 100).toFixed(1) : '0.0';
+  const completionRate = totalPlays > 0 ? ((completes / totalPlays) * 100).toFixed(1) : '0.0';
+  const conversionRate = totalPlays > 0 ? ((ctaClicks / totalPlays) * 100).toFixed(1) : '0.0';
 
   const usedBytes = isOwner ? getUsedStorageBytes() : getUserStorageBytes(req.user.id);
   const totalBytes = isOwner ? SERVER_STORAGE_LIMIT_BYTES : MEMBER_STORAGE_LIMIT_BYTES;
 
   res.json({
     totalViews,
-    totalPlays: totalPlaysBase,
-    uniquePlays: uniquePlays || totalPlaysBase,
+    totalPlays,
+    uniquePlays,
     ctaClicks,
     pitchViews,
     completionRate,
@@ -3623,15 +3642,15 @@ app.get('/api/analytics/video/:id', authMiddleware, (req, res) => {
   const startDate = req.query.startDate;
   const endDate = req.query.endDate;
 
-  let dateCondition = "date(created_at) = date('now')";
-  let prevCondition = "date(created_at) = date('now', '-1 day')";
+  let dateCondition = "date(created_at, '-3 hours') = date('now', '-3 hours')";
+  let prevCondition = "date(created_at, '-3 hours') = date('now', '-3 hours', '-1 day')";
 
   if (period === 'today') {
-    dateCondition = "date(created_at) = date('now')";
-    prevCondition = "date(created_at) = date('now', '-1 day')";
+    dateCondition = "date(created_at, '-3 hours') = date('now', '-3 hours')";
+    prevCondition = "date(created_at, '-3 hours') = date('now', '-3 hours', '-1 day')";
   } else if (period === 'yesterday') {
-    dateCondition = "date(created_at) = date('now', '-1 day')";
-    prevCondition = "date(created_at) = date('now', '-2 days')";
+    dateCondition = "date(created_at, '-3 hours') = date('now', '-3 hours', '-1 day')";
+    prevCondition = "date(created_at, '-3 hours') = date('now', '-3 hours', '-2 days')";
   } else if (period === '7d') {
     dateCondition = "created_at >= datetime('now', '-7 days')";
     prevCondition = "created_at >= datetime('now', '-14 days') AND created_at < datetime('now', '-7 days')";
@@ -3639,19 +3658,19 @@ app.get('/api/analytics/video/:id', authMiddleware, (req, res) => {
     dateCondition = "created_at >= datetime('now', '-30 days')";
     prevCondition = "created_at >= datetime('now', '-60 days') AND created_at < datetime('now', '-30 days')";
   } else if (period === 'month') {
-    dateCondition = "strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now')";
-    prevCondition = "strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now', 'start of month', '-1 month')";
+    dateCondition = "strftime('%Y-%m', created_at, '-3 hours') = strftime('%Y-%m', 'now', '-3 hours')";
+    prevCondition = "strftime('%Y-%m', created_at, '-3 hours') = strftime('%Y-%m', 'now', '-3 hours', 'start of month', '-1 month')";
   } else if (period === 'all') {
     dateCondition = "1=1";
     prevCondition = "0=1";
   } else if (period === 'custom' && startDate && endDate) {
     const sDate = String(startDate).slice(0, 10);
     const eDate = String(endDate).slice(0, 10);
-    dateCondition = `date(created_at) >= date('${sDate}') AND date(created_at) <= date('${eDate}')`;
+    dateCondition = `date(created_at, '-3 hours') >= date('${sDate}') AND date(created_at, '-3 hours') <= date('${eDate}')`;
     const sTime = new Date(sDate).getTime();
     const eTime = new Date(eDate).getTime();
     const diffDays = Math.max(1, Math.round(Math.abs((eTime - sTime) / (1000 * 60 * 60 * 24)))) + 1;
-    prevCondition = `date(created_at) >= date('${sDate}', '-${diffDays} days') AND date(created_at) < date('${sDate}')`;
+    prevCondition = `date(created_at, '-3 hours') >= date('${sDate}', '-${diffDays} days') AND date(created_at, '-3 hours') < date('${sDate}')`;
   }
 
   function calcDiff(curr, prev) {
@@ -3682,8 +3701,8 @@ app.get('/api/analytics/video/:id', authMiddleware, (req, res) => {
   const plays = db.prepare(`SELECT COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'play' AND ${dateCondition}`).get(vidId).count;
   const prevPlays = db.prepare(`SELECT COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'play' AND ${prevCondition}`).get(vidId).count;
 
-  const basePlays = plays > 0 ? plays : (period === 'all' ? video.plays || 0 : 0);
-  const baseViews = views > 0 ? views : (basePlays > 0 ? basePlays : 0);
+  const basePlays = plays;
+  const baseViews = views;
 
   const playRate = baseViews > 0 ? ((basePlays / baseViews) * 100).toFixed(1) : '0.0';
   const prevPlayRate = prevViews > 0 ? ((prevPlays / prevViews) * 100).toFixed(1) : '0.0';
@@ -3772,9 +3791,9 @@ app.get('/api/analytics/video/:id', authMiddleware, (req, res) => {
       prevViews,
       viewsDiff: calcDiff(baseViews, prevViews),
 
-      uniqueVisitors: uniqueVisitors > 0 ? uniqueVisitors : baseViews,
+      uniqueVisitors,
       prevUniqueVisitors,
-      uniqueVisitorsDiff: calcDiff(uniqueVisitors > 0 ? uniqueVisitors : baseViews, prevUniqueVisitors),
+      uniqueVisitorsDiff: calcDiff(uniqueVisitors, prevUniqueVisitors),
 
       plays: basePlays,
       playRate,
