@@ -2331,39 +2331,167 @@
       color: rgba(255, 255, 255, 0.5);
       pointer-events: none;
     }
-    .va-retention-subtab-badge {
-      position: absolute;
-      top: 14px;
-      right: 18px;
-      background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(4px);
-      padding: 6px 14px;
-      border-radius: 20px;
-      font-size: 12px;
-      color: #fff;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      z-index: 5;
+    .va-retention-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .va-toolbar-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .va-pill-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+    }
+    .va-pill-btn:hover {
+      border-color: var(--border-hover);
+      background: var(--bg-hover);
+    }
+    .va-param-select {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--text-main);
+      outline: none;
+      cursor: pointer;
+    }
+    .va-param-select:hover {
+      border-color: var(--border-hover);
+    }
+    .va-search-input {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 6px 12px 6px 30px;
+      font-size: 12.5px;
+      color: var(--text-main);
+      outline: none;
+      min-width: 170px;
+      transition: border-color 0.15s;
+    }
+    .va-search-input:focus {
+      border-color: var(--primary);
+    }
+    .va-table-scroll-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      background: var(--bg-card);
     }
     .va-data-table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 13px;
+      font-size: 12.5px;
       text-align: left;
+      white-space: nowrap;
     }
     .va-data-table th {
-      padding: 12px 16px;
+      padding: 12px 14px;
       color: var(--text-dim);
       font-weight: 600;
       border-bottom: 1px solid var(--border-subtle);
       background: var(--bg-card);
+      user-select: none;
+      font-size: 12px;
+    }
+    .va-data-table th.sortable {
+      cursor: pointer;
+    }
+    .va-data-table th.sortable:hover {
+      color: var(--text-main);
     }
     .va-data-table td {
-      padding: 14px 16px;
+      padding: 12px 14px;
       color: var(--text-main);
       border-bottom: 1px solid var(--border-subtle);
     }
-    .va-data-table tr:hover td {
+    .va-data-table tr:last-child td {
+      border-bottom: none;
+    }
+    .va-data-table tr.clickable {
+      cursor: pointer;
+      transition: background 0.1s ease;
+    }
+    .va-data-table tr.clickable:hover td {
       background: var(--bg-hover);
+    }
+    .va-data-table tr.selected td {
+      background: rgba(16, 185, 129, 0.08);
+    }
+    .va-cols-dropdown {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      margin-top: 6px;
+      width: 230px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      z-index: 1000;
+      padding: 8px 0;
+      display: none;
+    }
+    .va-cols-dropdown.active {
+      display: block;
+    }
+    .va-col-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 7px 14px;
+      font-size: 12.5px;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: background 0.1s;
+    }
+    .va-col-item:hover {
+      background: var(--bg-hover);
+    }
+    .va-col-item input[type="checkbox"] {
+      cursor: pointer;
+      accent-color: var(--primary);
+    }
+    .va-empty-state-box {
+      padding: 60px 20px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .va-pitch-banner {
+      background: rgba(59, 130, 246, 0.08);
+      border: 1px solid rgba(59, 130, 246, 0.25);
+      border-radius: 10px;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      gap: 12px;
+      font-size: 13px;
     }
     .metric-diff-badge {
       font-size: 11px;
@@ -4410,10 +4538,10 @@
 
     .vturb-embed-tabs {
       display: flex;
-      border: 1px solid #333a42;
+      border: 1px solid var(--border-subtle);
       border-radius: 6px;
       overflow: hidden;
-      background: #181a1d;
+      background: var(--color-surface-muted);
     }
     .vturb-embed-tab-btn {
       background: transparent;
@@ -4421,22 +4549,23 @@
       padding: 7px 18px;
       font-size: 12.5px;
       font-weight: 600;
-      color: #94a3b8;
+      color: var(--text-muted);
       cursor: pointer;
       transition: all 0.15s ease;
     }
     .vturb-embed-tab-btn.active {
-      background: #25282d !important;
-      color: #ffffff !important;
+      background: var(--bg-card) !important;
+      color: var(--text-main) !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     }
     .btn-copy-code {
       position: absolute;
       top: 10px;
       right: 10px;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
       border-radius: 6px;
-      color: #94a3b8;
+      color: var(--text-muted);
       padding: 6px 8px;
       cursor: pointer;
       display: flex;
@@ -4445,9 +4574,9 @@
       transition: all 0.15s ease;
     }
     .btn-copy-code:hover {
-      background: rgba(255, 255, 255, 0.12);
-      color: #ffffff;
-      border-color: rgba(255, 255, 255, 0.25);
+      background: var(--color-surface-muted);
+      color: var(--text-main);
+      border-color: var(--border-focus, #3b82f6);
     }
     .btn-copy-code.copied {
       background: #10b981 !important;
@@ -6983,20 +7112,20 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
   </div>
 
   <div class="modal-overlay" id="vturbEmbedModal" onclick="if(event.target===this)closeEmbedModal()">
-    <div class="modal-box" style="max-width: 560px; width: 100%; max-height: min(90vh, 700px); display: flex; flex-direction: column; border-radius: 10px; background: #1c1f23; border: 1px solid #2d3239; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.85); overflow: hidden;">
-      <div class="modal-header-clean" style="flex-shrink: 0; padding: 16px 20px 12px 20px; border-bottom: 1px solid #282c33; display: flex; justify-content: space-between; align-items: center; background: #1c1f23;">
-        <div class="modal-title-clean" style="font-size: 17px; font-weight: 700; color: #ffffff;">Embed</div>
-        <button type="button" class="btn-icon" onclick="closeEmbedModal()" title="Fechar" style="color: #94a3b8; font-size: 24px; line-height: 1; background: transparent; border: none; cursor: pointer; padding: 4px 8px; display: flex; align-items: center; justify-content: center; border-radius: 4px;">&times;</button>
+    <div class="modal-box" style="max-width: 560px; width: 100%; max-height: min(90vh, 700px); display: flex; flex-direction: column; border-radius: 10px; overflow: hidden;">
+      <div class="modal-header-clean" style="flex-shrink: 0; padding: 16px 20px 12px 20px; display: flex; justify-content: space-between; align-items: center;">
+        <div class="modal-title-clean" style="font-size: 17px; font-weight: 700;">Embed</div>
+        <button type="button" class="btn-icon" onclick="closeEmbedModal()" title="Fechar" style="font-size: 24px; line-height: 1; background: transparent; border: none; cursor: pointer; padding: 4px 8px; display: flex; align-items: center; justify-content: center; border-radius: 4px;">&times;</button>
       </div>
       <div class="modal-body-clean" style="flex: 1 1 auto; overflow-y: auto; padding: 14px 20px 16px 20px;">
-        <p style="font-size: 13px; color: #94a3b8; margin: 0 0 16px 0;">
-          Incorpore o vídeo onde quiser! <a href="/help" target="_blank" style="color: #3b82f6; text-decoration: none; font-weight: 500;">Aprenda a incorporar seu vídeo</a>.
+        <p style="font-size: 13px; color: var(--text-muted); margin: 0 0 16px 0;">
+          Incorpore o vídeo onde quiser! <a href="/help" target="_blank" style="color: var(--primary); text-decoration: none; font-weight: 500;">Aprenda a incorporar seu vídeo</a>.
         </p>
 
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-top: 1px solid #282c33; border-bottom: 1px solid #282c33; margin-bottom: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); margin-bottom: 14px;">
           <div>
-            <strong style="font-size: 13px; color: #ffffff; display: block; margin-bottom: 2px;">Vídeo Responsivo</strong>
-            <span style="font-size: 11.5px; color: #8a94a6;">Use versões diferentes para dispositivos mobile e desktop</span>
+            <strong style="font-size: 13px; color: var(--text-main); display: block; margin-bottom: 2px;">Vídeo Responsivo</strong>
+            <span style="font-size: 11.5px; color: var(--text-dim);">Use versões diferentes para dispositivos mobile e desktop</span>
           </div>
           <label class="switch-clean">
             <input type="checkbox" id="embedResponsiveSwitch" onchange="toggleResponsiveEmbed(this.checked)">
@@ -7004,19 +7133,19 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           </label>
         </div>
 
-        <div id="embedResponsiveConfig" style="display: none; margin: -4px 0 16px 0; padding: 12px 14px; background: #16181b; border: 1px solid #282c33; border-radius: 8px;">
-          <label class="form-label" style="font-size: 12px; color: #cbd5e1; margin-bottom: 6px; display: block; font-weight: 600;">Selecione o vídeo para versão Mobile (largura &lt; 768px):</label>
-          <select id="embedMobileVideoSelect" class="form-select-dark" onchange="updateEmbedCodeDisplay()" style="width: 100%;"></select>
+        <div id="embedResponsiveConfig" style="display: none; margin: -4px 0 16px 0; padding: 12px 14px; background: var(--color-surface-muted); border: 1px solid var(--border-subtle); border-radius: 8px;">
+          <label class="form-label" style="font-size: 12px; color: var(--text-main); margin-bottom: 6px; display: block; font-weight: 600;">Selecione o vídeo para versão Mobile (largura &lt; 768px):</label>
+          <select id="embedMobileVideoSelect" class="select-filter" onchange="updateEmbedCodeDisplay()" style="width: 100%;"></select>
         </div>
 
         <div style="margin-bottom: 18px;">
           <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
             <div>
-              <strong style="font-size: 13px; color: #ffffff; display: block; margin-bottom: 2px;">Copie o Código de Embed</strong>
-              <span style="font-size: 11.5px; color: #8a94a6;">Use o código abaixo para inserir o vídeo diretamente no seu site</span>
+              <strong style="font-size: 13px; color: var(--text-main); display: block; margin-bottom: 2px;">Copie o Código de Embed</strong>
+              <span style="font-size: 11.5px; color: var(--text-dim);">Use o código abaixo para inserir o vídeo diretamente no seu site</span>
             </div>
             <div style="position: relative; display: flex; flex-direction: column; align-items: flex-end;">
-              <span style="background: #1d72fe; color: #ffffff; font-size: 10.5px; font-weight: 600; padding: 2px 8px; border-radius: 4px; margin-bottom: 4px;">Recomendado</span>
+              <span style="background: var(--primary); color: #ffffff; font-size: 10.5px; font-weight: 600; padding: 2px 8px; border-radius: 4px; margin-bottom: 4px;">Recomendado</span>
               <div class="vturb-embed-tabs">
                 <button type="button" class="vturb-embed-tab-btn active" id="btnEmbedTabJs" onclick="switchEmbedSnippetTab('js')" style="padding: 5px 14px; font-size: 12px;">JavaScript</button>
                 <button type="button" class="vturb-embed-tab-btn" id="btnEmbedTabIframe" onclick="switchEmbedSnippetTab('iframe')" style="padding: 5px 14px; font-size: 12px;">iFrame</button>
@@ -7025,7 +7154,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           </div>
 
           <div style="position: relative;">
-            <textarea id="vturbEmbedSnippetArea" class="form-input-text" style="font-family: monospace; font-size: 11px; height: 90px; resize: none; padding: 10px 38px 10px 10px; background: #131518; border: 1px solid #2b2f36; color: #e2e8f0; border-radius: 8px; line-height: 1.45; width: 100%; outline: none;" readonly></textarea>
+            <textarea id="vturbEmbedSnippetArea" class="form-input-text" style="font-family: monospace; font-size: 11px; height: 90px; resize: none; padding: 10px 38px 10px 10px; background: var(--color-surface-muted); border: 1px solid var(--border-subtle); color: var(--text-main); border-radius: 8px; line-height: 1.45; width: 100%; outline: none;" readonly></textarea>
             <button type="button" class="btn-copy-code" id="btnCopyEmbedSnippet" title="Copiar código" onclick="copyEmbedSnippet()">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
             </button>
@@ -7035,8 +7164,8 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         <div style="margin-bottom: 6px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
             <div>
-              <strong style="font-size: 13px; color: #ffffff; display: block; margin-bottom: 2px;">Otimizar Velocidade de Carregamento</strong>
-              <span style="font-size: 11.5px; color: #8a94a6;">Use o código de velocidade do VTurb para carregar o player mais rápido</span>
+              <strong style="font-size: 13px; color: var(--text-main); display: block; margin-bottom: 2px;">Otimizar Velocidade de Carregamento</strong>
+              <span style="font-size: 11.5px; color: var(--text-dim);">Use o código de velocidade do VTurb para carregar o player mais rápido</span>
             </div>
             <label class="switch-clean">
               <input type="checkbox" id="embedSpeedSwitch" checked onchange="toggleSpeedCodeBox(this.checked)">
@@ -7045,15 +7174,15 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           </div>
 
           <div id="embedSpeedContainer">
-            <div style="background: #181d24; border: 1px solid #262c36; border-radius: 8px; padding: 12px; margin-bottom: 10px; display: flex; gap: 10px; font-size: 11.5px; line-height: 1.5; color: #e2e8f0; align-items: flex-start;">
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="#1d72fe" style="flex-shrink: 0; margin-top: 1px;"><circle cx="12" cy="12" r="11" fill="#1d72fe"/><path d="M12 8h.01M11 11h2v5h-2z" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <div style="background: rgba(37, 99, 235, 0.08); border: 1px solid rgba(37, 99, 235, 0.2); border-radius: 8px; padding: 12px; margin-bottom: 10px; display: flex; gap: 10px; font-size: 11.5px; line-height: 1.5; color: var(--text-main); align-items: flex-start;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="var(--primary)" style="flex-shrink: 0; margin-top: 1px;"><circle cx="12" cy="12" r="11" fill="var(--primary)"/><path d="M12 8h.01M11 11h2v5h-2z" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/></svg>
               <div>
-                <strong>Instruções de uso:</strong> Cole o código abaixo na tag <span style="background: #ffffff; color: #0f172a; padding: 1px 6px; border-radius: 4px; font-weight: 700; font-family: monospace; font-size: 11px;">&lt;head&gt;</span> do seu site. Ao fazer isso, o VTurb vai carregar mais rápido na sua página 😜! Está com dúvidas? <a href="/help" target="_blank" style="color: #3b82f6; text-decoration: none; font-weight: 600;">Clique aqui</a> para pedir ajuda ao nosso suporte.
+                <strong>Instruções de uso:</strong> Cole o código abaixo na tag <span style="background: var(--bg-card); color: var(--primary); padding: 1px 6px; border-radius: 4px; font-weight: 700; font-family: monospace; font-size: 11px; border: 1px solid var(--border-subtle);">&lt;head&gt;</span> do seu site. Ao fazer isso, o VTurb vai carregar mais rápido na sua página 😜! Está com dúvidas? <a href="/help" target="_blank" style="color: var(--primary); text-decoration: none; font-weight: 600;">Clique aqui</a> para pedir ajuda ao nosso suporte.
               </div>
             </div>
 
             <div style="position: relative;">
-              <textarea id="vturbSpeedSnippetArea" class="form-input-text" style="font-family: monospace; font-size: 11px; height: 75px; resize: none; padding: 10px 38px 10px 10px; background: #131518; border: 1px solid #2b2f36; color: #e2e8f0; border-radius: 8px; line-height: 1.45; width: 100%; outline: none;" readonly></textarea>
+              <textarea id="vturbSpeedSnippetArea" class="form-input-text" style="font-family: monospace; font-size: 11px; height: 75px; resize: none; padding: 10px 38px 10px 10px; background: var(--color-surface-muted); border: 1px solid var(--border-subtle); color: var(--text-main); border-radius: 8px; line-height: 1.45; width: 100%; outline: none;" readonly></textarea>
               <button type="button" class="btn-copy-code" id="btnCopySpeedSnippet" title="Copiar código de velocidade" onclick="copySpeedSnippet()">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
               </button>
@@ -7061,8 +7190,8 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           </div>
         </div>
       </div>
-      <div class="modal-footer-clean" style="flex-shrink: 0; padding: 12px 20px 14px 20px; border-top: 1px solid #282c33; display: flex; justify-content: flex-end; background: #1c1f23;">
-        <button type="button" class="btn-primary-action" style="background: #1d72fe; padding: 8px 22px; border-radius: 6px; font-weight: 600; font-size: 13px; border: none; cursor: pointer; color: #ffffff;" onclick="closeEmbedModal()">Fechar</button>
+      <div class="modal-footer-clean" style="flex-shrink: 0; padding: 12px 20px 14px 20px; display: flex; justify-content: flex-end;">
+        <button type="button" class="btn-primary-action" style="padding: 8px 22px; border-radius: 6px; font-weight: 600; font-size: 13px;" onclick="closeEmbedModal()">Fechar</button>
       </div>
     </div>
   </div>

@@ -3896,13 +3896,57 @@ function buildDateCondition(period, startDate, endDate) {
 
 app.get('/api/analytics/video/:id/retention', authMiddleware, (req, res) => {
   const vidId = req.params.id;
-  const video = db.prepare('SELECT id, user_id, plays FROM videos WHERE id = ? AND deleted_at IS NULL').get(vidId);
+  const video = db.prepare('SELECT id, user_id, plays, duration, settings_json FROM videos WHERE id = ? AND deleted_at IS NULL').get(vidId);
   if (!video) return res.status(404).json({ error: 'Vídeo não encontrado.' });
   if (req.user.role !== 'owner' && video.user_id !== req.user.id) return res.status(403).json({ error: 'Permissão negada.' });
 
   const { dc } = buildDateCondition(req.query.period || 'today', req.query.startDate, req.query.endDate);
+  const filterType = (req.query.filterType || '').toLowerCase();
+  const filterValue = req.query.filterValue || '';
+  const trafficParam = (req.query.trafficParam || 'utm_source').toLowerCase();
+  const search = (req.query.search || '').trim();
 
-  const totalPlays = db.prepare(`SELECT COUNT(*) as c FROM analytics_events WHERE video_id = ? AND event_type = 'play' AND ${dc}`).get(vidId).c;
+  let durSec = 60;
+  if (video.duration) {
+    const parts = String(video.duration).split(':').map(Number);
+    if (parts.length === 2) durSec = (parts[0] * 60) + parts[1];
+    else if (parts.length === 3) durSec = (parts[0] * 3600) + (parts[1] * 60) + parts[2];
+    else durSec = Number(video.duration) || 60;
+  }
+  let pitchSec = 30;
+  try {
+    if (video.settings_json) {
+      const vs = JSON.parse(video.settings_json);
+      if (vs.pitchTime) pitchSec = Number(vs.pitchTime);
+      else if (vs.ctaTime) pitchSec = Number(vs.ctaTime);
+    }
+  } catch (e) {}
+  const pitchPct = durSec > 0 ? Math.min(100, Math.max(0, Math.round((pitchSec / durSec) * 100))) : 50;
+
+  let segFilterClause = '1=1';
+  const segParams = [vidId];
+  if (filterType && filterValue) {
+    if (filterType === 'country' || filterType === 'countries') {
+      segFilterClause = "COALESCE(country, 'Desconhecido') = ?";
+      segParams.push(filterValue);
+    } else if (filterType === 'device' || filterType === 'devices') {
+      segFilterClause = "COALESCE(device, 'desktop') = ?";
+      segParams.push(filterValue);
+    } else if (filterType === 'os') {
+      segFilterClause = "COALESCE(os, 'Other') = ?";
+      segParams.push(filterValue);
+    } else if (filterType === 'browser' || filterType === 'browsers') {
+      segFilterClause = "COALESCE(browser, 'Other') = ?";
+      segParams.push(filterValue);
+    } else if (filterType === 'traffic') {
+      const allowedCols = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'src', 'domain'];
+      const tCol = allowedCols.includes(trafficParam) ? trafficParam : 'utm_source';
+      segFilterClause = `COALESCE(${tCol}, 'Direto') = ?`;
+      segParams.push(filterValue);
+    }
+  }
+
+  const totalPlays = db.prepare(`SELECT COUNT(*) as c FROM analytics_events WHERE video_id = ? AND event_type = 'play' AND ${dc} AND ${segFilterClause}`).get(...segParams).c;
 
   const milestones = [0, 10, 25, 50, 75, 90, 100];
   const retentionCurve = milestones.map(m => {
@@ -3910,19 +3954,95 @@ app.get('/api/analytics/video/:id/retention', authMiddleware, (req, res) => {
     if (m === 0) {
       count = totalPlays;
     } else {
-      count = db.prepare(`SELECT COUNT(DISTINCT session_id) as c FROM analytics_events WHERE video_id = ? AND event_type = 'progress' AND milestone = ? AND ${dc}`).get(vidId, m).c;
+      count = db.prepare(`SELECT COUNT(DISTINCT session_id) as c FROM analytics_events WHERE video_id = ? AND event_type = 'progress' AND milestone = ? AND ${dc} AND ${segFilterClause}`).get(...segParams, m).c;
     }
-    return { milestone: m, label: `${m}%`, sessions: count, percent: totalPlays > 0 ? Math.min(100, Math.round((count / totalPlays) * 100)) : 0 };
+    return {
+      milestone: m,
+      label: `${m}%`,
+      sessions: count,
+      percent: totalPlays > 0 ? Math.min(100, Math.round((count / totalPlays) * 100)) : 0
+    };
   });
 
-  const countries = db.prepare(`SELECT COALESCE(country, 'Desconhecido') as name, COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'play' AND ${dc} GROUP BY country ORDER BY count DESC LIMIT 10`).all(vidId);
-  const devices = db.prepare(`SELECT COALESCE(device, 'desktop') as name, COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'play' AND ${dc} GROUP BY device ORDER BY count DESC`).all(vidId);
-  const osList = db.prepare(`SELECT COALESCE(os, 'Other') as name, COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'play' AND ${dc} GROUP BY os ORDER BY count DESC LIMIT 10`).all(vidId);
-  const browsers = db.prepare(`SELECT COALESCE(browser, 'Other') as name, COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'play' AND ${dc} GROUP BY browser ORDER BY count DESC LIMIT 10`).all(vidId);
+  function queryDimensionRows(dimExpr, extraWhere = '') {
+    const q = `
+      SELECT
+        ${dimExpr} as name,
+        COUNT(CASE WHEN event_type = 'page_view' THEN 1 END) as views,
+        COUNT(DISTINCT CASE WHEN event_type = 'page_view' THEN visitor_id END) as unique_views,
+        COUNT(CASE WHEN event_type = 'play' THEN 1 END) as plays,
+        COUNT(DISTINCT CASE WHEN event_type = 'play' THEN visitor_id END) as unique_plays,
+        COUNT(CASE WHEN event_type = 'cta_clicked' THEN 1 END) as cta_clicks,
+        COUNT(CASE WHEN conversion_amount > 0 OR event_type IN ('conversion', 'sale', 'purchase', 'lead') THEN 1 END) as conversions,
+        COALESCE(SUM(CASE WHEN conversion_amount > 0 THEN conversion_amount ELSE 0 END), 0) as revenue,
+        COALESCE(AVG(CASE WHEN event_type = 'progress' AND milestone IS NOT NULL THEN milestone END), 0) as avg_milestone,
+        COUNT(DISTINCT CASE WHEN event_type = 'pitch_viewed' OR (event_type = 'progress' AND milestone >= ${pitchPct}) THEN session_id END) as pitch_audience
+      FROM analytics_events
+      WHERE video_id = ? AND ${dc} ${extraWhere}
+      GROUP BY name
+      HAVING (views > 0 OR plays > 0)
+      ORDER BY plays DESC, views DESC
+      LIMIT 100
+    `;
+    const rows = db.prepare(q).all(vidId);
+    return rows.map(r => {
+      const views = Number(r.views || 0);
+      const uViews = Number(r.unique_views || 0);
+      const plays = Number(r.plays || 0);
+      const uPlays = Number(r.unique_plays || 0);
+      const cta = Number(r.cta_clicks || 0);
+      const conv = Number(r.conversions || 0);
+      const rev = Number(Number(r.revenue || 0).toFixed(2));
+      const pitchAud = Number(r.pitch_audience || 0);
+      const playRate = uViews > 0 ? Math.min(100, Number(((uPlays / uViews) * 100).toFixed(2))) : 0;
+      const eng = Math.min(100, Math.round(Number(r.avg_milestone || 0)));
+      const pitchRet = uPlays > 0 ? Math.min(100, Number(((pitchAud / uPlays) * 100).toFixed(2))) : 0;
+      const convRate = uPlays > 0 ? Math.min(100, Number(((conv / uPlays) * 100).toFixed(2))) : 0;
+      return {
+        name: r.name || 'Desconhecido',
+        views,
+        unique_views: uViews,
+        plays,
+        unique_plays: uPlays,
+        play_rate: playRate,
+        engagement: eng,
+        pitch_retention: pitchRet,
+        pitch_audience: pitchAud,
+        cta_clicks: cta,
+        conversions: conv,
+        conversion_rate: convRate,
+        revenue: rev,
+        revenue_formatted: `${rev.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MT`
+      };
+    });
+  }
 
-  const trafficRaw = db.prepare(`SELECT COALESCE(utm_source, COALESCE(domain, 'Direto')) as name, COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'page_view' AND ${dc} GROUP BY name ORDER BY count DESC LIMIT 10`).all(vidId);
+  const countries = queryDimensionRows("COALESCE(country, 'Desconhecido')");
+  const devices = queryDimensionRows("COALESCE(device, 'desktop')");
+  const osList = queryDimensionRows("COALESCE(os, 'Other')");
+  const browsers = queryDimensionRows("COALESCE(browser, 'Other')");
 
-  res.json({ totalPlays, retentionCurve, countries, devices, os: osList, browsers, traffic: trafficRaw });
+  const allowedTrafficCols = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'src', 'domain'];
+  const activeTrafficCol = allowedTrafficCols.includes(trafficParam) ? trafficParam : 'utm_source';
+  let trafficSearchClause = '';
+  if (search) {
+    const escaped = search.replace(/'/g, "''");
+    trafficSearchClause = `AND (COALESCE(${activeTrafficCol}, 'Direto') LIKE '%${escaped}%' OR domain LIKE '%${escaped}%')`;
+  }
+  const traffic = queryDimensionRows(`COALESCE(${activeTrafficCol}, CASE WHEN domain IS NOT NULL AND domain != '' THEN domain ELSE 'Direto' END)`, trafficSearchClause);
+
+  res.json({
+    totalPlays,
+    retentionCurve,
+    countries,
+    devices,
+    os: osList,
+    browsers,
+    traffic,
+    trafficParam: activeTrafficCol,
+    pitchPct,
+    pitchSec
+  });
 });
 
 app.get('/api/analytics/video/:id/summary', authMiddleware, (req, res) => {
