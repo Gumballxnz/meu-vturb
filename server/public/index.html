@@ -4754,7 +4754,7 @@
     }
     .vturb-phone-mockup {
       width: 310px;
-      height: 610px;
+      height: auto;
       background: #000000;
       border: 3.5px solid #3f3f46;
       border-radius: 40px;
@@ -4772,22 +4772,20 @@
       margin: 2px auto 10px;
     }
     .phone-screen-container {
-      flex: 1;
+      width: 100%;
       border-radius: 28px;
       overflow: hidden;
       background: #000;
-      display: flex;
-      align-items: stretch;
-      justify-content: stretch;
-      min-height: 0;
+      position: relative;
     }
     .phone-screen-container iframe {
-      flex: 1;
+      display: block;
       width: 100%;
       height: 100%;
       border: none;
-      display: block;
-      min-height: 0;
+      position: absolute;
+      top: 0;
+      left: 0;
     }
 
     .vturb-embed-tabs {
@@ -8252,7 +8250,9 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         return;
       }
 
-      routeByUrl();
+      const earlyPath = window.location.pathname.replace(/\/$/, '') || '/';
+      const isDataRoute = /^\/players\//.test(earlyPath) || /^\/video\//.test(earlyPath);
+      if (!isDataRoute) routeByUrl();
 
       fetch('/api/config').then(r => r.json()).then(cfg => {
         appConfig = cfg || appConfig;
@@ -13437,6 +13437,10 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       if (mobBtn) mobBtn.classList.toggle('active', isMobile);
       if (deskCanvas) deskCanvas.style.display = isMobile ? 'none' : 'block';
       if (mobCanvas) mobCanvas.style.display = isMobile ? 'flex' : 'none';
+      if (isMobile) {
+        const v = currentDetailsVideoId ? videos.find(x => x.id === currentDetailsVideoId) : null;
+        applyPhoneMockupAspect((v?.settings?.aspectRatio) || '16:9', ['vturbDetailsMobileCanvas']);
+      }
     }
 
     async function openPlayerDetails(id, updateUrl = true) {
@@ -13698,6 +13702,18 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       liveUpdateSettings();
     }
 
+    function applyPhoneMockupAspect(ar, canvasIds) {
+      const [w, h] = (ar || '16:9').split(':').map(Number);
+      const cssRatio = `${w} / ${h}`;
+      (canvasIds || []).forEach(canvasId => {
+        const screen = document.querySelector(`#${canvasId} .phone-screen-container`);
+        if (!screen) return;
+        screen.style.aspectRatio = cssRatio;
+        const padPct = ((h / w) * 100).toFixed(4);
+        screen.style.paddingTop = `${padPct}%`;
+      });
+    }
+
     function setPreviewFormat(mode) {
       const deskCanvas = document.getElementById('vturbDesktopCanvas');
       const mobCanvas = document.getElementById('vturbMobileCanvas');
@@ -13709,6 +13725,8 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         if (mobCanvas) mobCanvas.style.display = 'flex';
         if (btnDesk) btnDesk.classList.remove('active');
         if (btnMob) btnMob.classList.add('active');
+        const v = currentEditingVideoId ? videos.find(x => x.id === currentEditingVideoId) : null;
+        applyPhoneMockupAspect((v?.settings?.aspectRatio) || '16:9', ['vturbMobileCanvas']);
       } else {
         if (deskCanvas) deskCanvas.style.display = 'block';
         if (mobCanvas) mobCanvas.style.display = 'none';
