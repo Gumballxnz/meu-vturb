@@ -582,12 +582,39 @@
       let dbSettings = {};
       let isOwnerPreview = false;
 
+      const _ua = navigator.userAgent;
+
+      let _device = 'desktop';
+      if (/Mobi|Android|iPhone|iPod/i.test(_ua)) _device = 'mobile';
+      else if (/iPad|Tablet/i.test(_ua)) _device = 'tablet';
+
+      let _os = 'Other';
+      if (/Windows NT/i.test(_ua)) _os = 'Windows';
+      else if (/iPhone|iPod/i.test(_ua)) _os = 'iOS';
+      else if (/iPad/i.test(_ua)) _os = 'iOS';
+      else if (/Android/i.test(_ua)) _os = 'Android';
+      else if (/Mac OS X/i.test(_ua) && !/like Mac OS X/i.test(_ua)) _os = 'macOS';
+      else if (/Mac OS X/i.test(_ua)) _os = 'macOS';
+      else if (/CrOS/i.test(_ua)) _os = 'ChromeOS';
+      else if (/Linux/i.test(_ua)) _os = 'Linux';
+
+      let _browser = 'Other';
+      if (/Edg\//i.test(_ua)) _browser = 'Edge';
+      else if (/OPR\/|Opera/i.test(_ua)) _browser = 'Opera';
+      else if (/SamsungBrowser/i.test(_ua)) _browser = 'Samsung Browser';
+      else if (/Firefox/i.test(_ua)) _browser = 'Firefox';
+      else if (/Chrome/i.test(_ua)) _browser = 'Chrome';
+      else if (/Safari/i.test(_ua)) _browser = 'Safari';
+
       const trackingCtx = {
+        device: _device,
+        os: _os,
+        browser: _browser,
         screen_width: window.screen.width,
         screen_height: window.screen.height,
         language: navigator.language || '',
         timezone: (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone; } catch(e) { return ''; } })(),
-        user_agent: navigator.userAgent,
+        user_agent: _ua,
         fbclid: params.get('fbclid') || null,
         ttclid: params.get('ttclid') || null,
         meta_em: params.get('em') || null,
