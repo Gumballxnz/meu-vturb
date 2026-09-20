@@ -524,6 +524,13 @@ app.use((req, res, next) => {
     return res.sendFile(path.join(PUBLIC_DIR, 'player.html'));
   }
 
+  if (req.path === '/player.js' || req.path === '/sdk.js' || req.path.endsWith('/sdk.js')) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    return res.sendFile(path.join(PUBLIC_DIR, 'player.js'));
+  }
+
   next();
 });
 

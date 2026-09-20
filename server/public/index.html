@@ -3689,23 +3689,49 @@
 
     .vturb-embed-tabs {
       display: flex;
-      border: 1px solid var(--border-subtle);
+      border: 1px solid #333a42;
       border-radius: 6px;
       overflow: hidden;
+      background: #181a1d;
     }
     .vturb-embed-tab-btn {
-      background: var(--bg-surface);
+      background: transparent;
       border: none;
-      padding: 6px 14px;
+      padding: 7px 18px;
       font-size: 12.5px;
       font-weight: 600;
-      color: var(--text-muted);
+      color: #94a3b8;
       cursor: pointer;
       transition: all 0.15s ease;
     }
     .vturb-embed-tab-btn.active {
-      background: var(--bg-card);
-      color: var(--text-main);
+      background: #25282d !important;
+      color: #ffffff !important;
+    }
+    .btn-copy-code {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 6px;
+      color: #94a3b8;
+      padding: 6px 8px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+    }
+    .btn-copy-code:hover {
+      background: rgba(255, 255, 255, 0.12);
+      color: #ffffff;
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+    .btn-copy-code.copied {
+      background: #10b981 !important;
+      color: #ffffff !important;
+      border-color: #10b981 !important;
     }
 </style>
 </head>
@@ -6077,35 +6103,40 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
   </div>
 
   <div class="modal-overlay" id="vturbEmbedModal">
-    <div class="modal-box" style="max-width: 580px;">
-      <div class="modal-header-clean">
-        <div class="modal-title-clean">Embed</div>
-        <button class="btn-icon" onclick="closeEmbedModal()">&times;</button>
+    <div class="modal-box" style="max-width: 620px; border-radius: 10px; background: #1c1f23; border: 1px solid #2d3239; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);">
+      <div class="modal-header-clean" style="padding: 20px 24px 14px 24px; border-bottom: none; display: flex; justify-content: space-between; align-items: center;">
+        <div class="modal-title-clean" style="font-size: 18px; font-weight: 700; color: #ffffff;">Embed</div>
+        <button type="button" class="btn-icon" onclick="closeEmbedModal()" style="color: #94a3b8; font-size: 22px; line-height: 1; background: transparent; border: none; cursor: pointer;">&times;</button>
       </div>
-      <div class="modal-body-clean" style="padding: 24px;">
-        <p style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 20px;">
-          Incorpore o vídeo onde quiser! <a href="javascript:void(0)" style="color: var(--primary); text-decoration: underline;">Aprenda a incorporar seu vídeo</a>.
+      <div class="modal-body-clean" style="padding: 0 24px 20px 24px;">
+        <p style="font-size: 13.5px; color: #94a3b8; margin: 0 0 20px 0;">
+          Incorpore o vídeo onde quiser! <a href="/help" target="_blank" style="color: #3b82f6; text-decoration: none; font-weight: 500;">Aprenda a incorporar seu vídeo</a>.
         </p>
 
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-top: 1px solid #282c33; border-bottom: 1px solid #282c33; margin-bottom: 16px;">
           <div>
-            <strong style="font-size: 13.5px; color: var(--text-main); display: block;">Vídeo Responsivo</strong>
-            <span style="font-size: 12px; color: var(--text-muted);">Use versões diferentes para dispositivos mobile e desktop</span>
+            <strong style="font-size: 13.5px; color: #ffffff; display: block; margin-bottom: 2px;">Vídeo Responsivo</strong>
+            <span style="font-size: 12px; color: #8a94a6;">Use versões diferentes para dispositivos mobile e desktop</span>
           </div>
           <label class="switch-clean">
-            <input type="checkbox" id="embedResponsiveSwitch" onchange="updateEmbedCodeDisplay()">
+            <input type="checkbox" id="embedResponsiveSwitch" onchange="toggleResponsiveEmbed(this.checked)">
             <span class="slider-clean"></span>
           </label>
         </div>
 
-        <div style="margin-bottom: 24px;">
+        <div id="embedResponsiveConfig" style="display: none; margin: -6px 0 18px 0; padding: 12px 14px; background: #16181b; border: 1px solid #282c33; border-radius: 8px;">
+          <label class="form-label" style="font-size: 12px; color: #cbd5e1; margin-bottom: 6px; display: block; font-weight: 600;">Selecione o vídeo para versão Mobile (largura &lt; 768px):</label>
+          <select id="embedMobileVideoSelect" class="form-select-dark" onchange="updateEmbedCodeDisplay()" style="width: 100%;"></select>
+        </div>
+
+        <div style="margin-bottom: 22px;">
           <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
             <div>
-              <strong style="font-size: 13.5px; color: var(--text-main); display: block;">Copie o Código de Embed</strong>
-              <span style="font-size: 12px; color: var(--text-muted);">Use o código abaixo para inserir o vídeo diretamente no seu site</span>
+              <strong style="font-size: 13.5px; color: #ffffff; display: block; margin-bottom: 2px;">Copie o Código de Embed</strong>
+              <span style="font-size: 12px; color: #8a94a6;">Use o código abaixo para inserir o vídeo diretamente no seu site</span>
             </div>
             <div style="position: relative; display: flex; flex-direction: column; align-items: flex-end;">
-              <span style="background: #2563eb; color: #fff; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 4px; margin-bottom: 4px; text-transform: uppercase;">Recomendado</span>
+              <span style="background: #1d72fe; color: #ffffff; font-size: 11px; font-weight: 600; padding: 2px 10px; border-radius: 4px; margin-bottom: 5px;">Recomendado</span>
               <div class="vturb-embed-tabs">
                 <button type="button" class="vturb-embed-tab-btn active" id="btnEmbedTabJs" onclick="switchEmbedSnippetTab('js')">JavaScript</button>
                 <button type="button" class="vturb-embed-tab-btn" id="btnEmbedTabIframe" onclick="switchEmbedSnippetTab('iframe')">iFrame</button>
@@ -6114,18 +6145,18 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           </div>
 
           <div style="position: relative;">
-            <textarea id="vturbEmbedSnippetArea" class="form-input-text" style="font-family: monospace; font-size: 12px; height: 110px; resize: none; padding-right: 40px;" readonly></textarea>
-            <button type="button" class="btn-icon" style="position: absolute; top: 8px; right: 8px; color: var(--text-muted);" title="Copiar código" onclick="copyEmbedSnippet()">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <textarea id="vturbEmbedSnippetArea" class="form-input-text" style="font-family: monospace; font-size: 11.5px; height: 125px; resize: none; padding: 12px 42px 12px 12px; background: #131518; border: 1px solid #2b2f36; color: #e2e8f0; border-radius: 8px; line-height: 1.45; width: 100%; outline: none;" readonly></textarea>
+            <button type="button" class="btn-copy-code" id="btnCopyEmbedSnippet" title="Copiar código" onclick="copyEmbedSnippet()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
             </button>
           </div>
         </div>
 
-        <div>
+        <div style="margin-bottom: 10px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
             <div>
-              <strong style="font-size: 13.5px; color: var(--text-main); display: block;">Otimizar Velocidade de Carregamento</strong>
-              <span style="font-size: 12px; color: var(--text-muted);">Use o código de velocidade do CloudVTurb para carregar o player mais rápido</span>
+              <strong style="font-size: 13.5px; color: #ffffff; display: block; margin-bottom: 2px;">Otimizar Velocidade de Carregamento</strong>
+              <span style="font-size: 12px; color: #8a94a6;">Use o código de velocidade do VTurb para carregar o player mais rápido</span>
             </div>
             <label class="switch-clean">
               <input type="checkbox" id="embedSpeedSwitch" checked onchange="toggleSpeedCodeBox(this.checked)">
@@ -6134,24 +6165,24 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           </div>
 
           <div id="embedSpeedContainer">
-            <div style="background: rgba(37, 99, 235, 0.08); border: 1px solid rgba(37, 99, 235, 0.25); border-radius: 8px; padding: 12px 14px; margin-bottom: 12px; display: flex; gap: 10px; font-size: 12px; line-height: 1.5; color: var(--text-main);">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" style="flex-shrink: 0; margin-top: 2px;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+            <div style="background: #181d24; border: 1px solid #262c36; border-radius: 8px; padding: 14px; margin-bottom: 12px; display: flex; gap: 12px; font-size: 12px; line-height: 1.5; color: #e2e8f0; align-items: flex-start;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="#1d72fe" style="flex-shrink: 0; margin-top: 1px;"><circle cx="12" cy="12" r="11" fill="#1d72fe"/><path d="M12 8h.01M11 11h2v5h-2z" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round"/></svg>
               <div>
-                <strong>Instruções de uso:</strong> Cole o código abaixo na tag <code style="background: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 3px;">&lt;head&gt;</code> do seu site. Ao fazer isso, o VTurb vai carregar mais rápido na sua página! Está com dúvidas? <a href="javascript:void(0)" style="color: #3b82f6; text-decoration: underline;">Clique aqui</a> para pedir ajuda ao nosso suporte.
+                <strong>Instruções de uso:</strong> Cole o código abaixo na tag <span style="background: #ffffff; color: #0f172a; padding: 1px 6px; border-radius: 4px; font-weight: 700; font-family: monospace; font-size: 11px;">&lt;head&gt;</span> do seu site. Ao fazer isso, o VTurb vai carregar mais rápido na sua página 😜! Está com dúvidas? <a href="/help" target="_blank" style="color: #3b82f6; text-decoration: none; font-weight: 600;">Clique aqui</a> para pedir ajuda ao nosso suporte.
               </div>
             </div>
 
             <div style="position: relative;">
-              <textarea id="vturbSpeedSnippetArea" class="form-input-text" style="font-family: monospace; font-size: 12px; height: 95px; resize: none; padding-right: 40px;" readonly></textarea>
-              <button type="button" class="btn-icon" style="position: absolute; top: 8px; right: 8px; color: var(--text-muted);" title="Copiar código de velocidade" onclick="copySpeedSnippet()">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              <textarea id="vturbSpeedSnippetArea" class="form-input-text" style="font-family: monospace; font-size: 11.5px; height: 95px; resize: none; padding: 12px 42px 12px 12px; background: #131518; border: 1px solid #2b2f36; color: #e2e8f0; border-radius: 8px; line-height: 1.45; width: 100%; outline: none;" readonly></textarea>
+              <button type="button" class="btn-copy-code" id="btnCopySpeedSnippet" title="Copiar código de velocidade" onclick="copySpeedSnippet()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
               </button>
             </div>
           </div>
         </div>
       </div>
-      <div class="modal-footer-clean">
-        <button class="btn-primary-action" onclick="closeEmbedModal()">Fechar</button>
+      <div class="modal-footer-clean" style="padding: 14px 24px 20px 24px; border-top: none; display: flex; justify-content: flex-end;">
+        <button type="button" class="btn-primary-action" style="background: #1d72fe; padding: 10px 24px; border-radius: 6px; font-weight: 600; font-size: 13.5px; border: none; cursor: pointer; color: #ffffff;" onclick="closeEmbedModal()">Fechar</button>
       </div>
     </div>
   </div>
@@ -8689,7 +8720,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
 
       if (action === 'edit') openEditor(vidId);
       else if (action === 'analytics') openVideoAnalytics(vidId);
-      else if (action === 'embed') copyVideoEmbedDirect(vidId);
+      else if (action === 'embed') openEmbedModal(vidId);
       else if (action === 'open_tab') openVideoInNewTab(vidId);
       else if (action === 'rename') openRenameVideoModal(vidId);
       else if (action === 'move') openMoveVideoModal(vidId);
@@ -8703,20 +8734,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
     }
 
     function copyVideoEmbedDirect(vidId) {
-      const v = videos.find(x => x.id === vidId) || (topVideos && topVideos.find(x => x.id === vidId));
-      if (!v) return;
-      const playerHost = appConfig.playerDomain || window.location.origin;
-      const fullUrl = `${playerHost}/player?id=${encodeURIComponent(v.id)}`;
-      const snippet = `<div style="position:relative;width:100%;padding-top:56.25%;overflow:hidden;border-radius:16px;">\n  <iframe src="${fullUrl}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allow="autoplay; fullscreen" loading="lazy"></iframe>\n</div>`;
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(snippet).then(() => {
-          showToast('Código embed copiado com sucesso!');
-        }).catch(() => {
-          fallbackCopyText(snippet);
-        });
-      } else {
-        fallbackCopyText(snippet);
-      }
+      openEmbedModal(vidId);
     }
 
     function fallbackCopyText(text) {
@@ -9421,7 +9439,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
             <button type="button" class="btn-vsl-action" onclick="openVideoAnalytics('${v.id}')" title="Ver Analytics">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>
             </button>
-            <button type="button" class="btn-vsl-action" onclick="copyVideoEmbedDirect('${v.id}')" title="Copiar código embed">
+            <button type="button" class="btn-vsl-action" onclick="openEmbedModal('${v.id}')" title="Copiar código embed">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
             </button>
             <button type="button" class="btn-vsl-action btn-dots" onclick="toggleVslDropdownMenu(event, '${v.id}')" title="Mais Opções">
@@ -10195,12 +10213,51 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       if (!currentEditingVideoId) return;
       const v = videos.find(x => x.id === currentEditingVideoId) || (topVideos && topVideos.find(x => x.id === currentEditingVideoId));
       if (!v) return;
+
+      const respSwitch = document.getElementById('embedResponsiveSwitch');
+      if (respSwitch) respSwitch.checked = false;
+      const respConfig = document.getElementById('embedResponsiveConfig');
+      if (respConfig) respConfig.style.display = 'none';
+
+      const speedSwitch = document.getElementById('embedSpeedSwitch');
+      if (speedSwitch) speedSwitch.checked = true;
+      const speedBox = document.getElementById('embedSpeedContainer');
+      if (speedBox) speedBox.style.display = 'block';
+
+      populateEmbedMobileVideoSelect(currentEditingVideoId);
       updateEmbedCodeDisplay();
       document.getElementById('vturbEmbedModal').classList.add('active');
     }
 
     function closeEmbedModal() {
       document.getElementById('vturbEmbedModal').classList.remove('active');
+    }
+
+    function toggleResponsiveEmbed(checked) {
+      const box = document.getElementById('embedResponsiveConfig');
+      if (box) box.style.display = checked ? 'block' : 'none';
+      updateEmbedCodeDisplay();
+    }
+
+    function populateEmbedMobileVideoSelect(currentId) {
+      const sel = document.getElementById('embedMobileVideoSelect');
+      if (!sel) return;
+      sel.innerHTML = '';
+      const list = (videos && videos.length > 0) ? videos : [];
+      list.forEach(vid => {
+        const opt = document.createElement('option');
+        opt.value = vid.id;
+        let aspect = '16:9';
+        try {
+          const s = typeof vid.settings === 'object' && vid.settings ? vid.settings : JSON.parse(vid.settings_json || vid.settings || '{}');
+          if (s.aspectRatio) aspect = s.aspectRatio;
+        } catch (e) {}
+        opt.textContent = `${vid.title || 'Sem título'} (${aspect})`;
+        if (vid.id === currentId) {
+          opt.selected = true;
+        }
+        sel.appendChild(opt);
+      });
     }
 
     function switchEmbedSnippetTab(tab) {
@@ -10224,43 +10281,91 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
 
       const playerHost = appConfig.playerDomain || window.location.origin;
       const fullUrl = `${playerHost}/player?id=${encodeURIComponent(v.id)}`;
-      const isVertical = document.getElementById('edAspectRatio') && document.getElementById('edAspectRatio').value === '9:16';
+
+      let vSettings = {};
+      try {
+        vSettings = typeof v.settings === 'object' && v.settings ? v.settings : JSON.parse(v.settings_json || v.settings || '{}');
+      } catch (e) {}
+
+      const isVertical = (document.getElementById('edAspectRatio') && document.getElementById('edAspectRatio').value === '9:16') || vSettings.aspectRatio === '9:16';
       const padding = isVertical ? '177.77%' : '56.25%';
-      const rad = document.getElementById('edBorderRadius') ? document.getElementById('edBorderRadius').value : '16px';
+
+      const isResponsive = document.getElementById('embedResponsiveSwitch') && document.getElementById('embedResponsiveSwitch').checked;
+      let mobileV = v;
+      let mobilePadding = padding;
+      let mobileFullUrl = fullUrl;
+
+      if (isResponsive) {
+        const mobileSelect = document.getElementById('embedMobileVideoSelect');
+        const mobileId = mobileSelect ? mobileSelect.value : null;
+        if (mobileId) {
+          mobileV = videos.find(x => x.id === mobileId) || v;
+          mobileFullUrl = `${playerHost}/player?id=${encodeURIComponent(mobileV.id)}`;
+          let mSettings = {};
+          try {
+            mSettings = typeof mobileV.settings === 'object' && mobileV.settings ? mobileV.settings : JSON.parse(mobileV.settings_json || mobileV.settings || '{}');
+          } catch (e) {}
+          const mIsVertical = mSettings.aspectRatio === '9:16';
+          mobilePadding = mIsVertical ? '177.77%' : '56.25%';
+        }
+      }
 
       let snippet = '';
       if (currentEmbedSnippetTab === 'js') {
-        snippet = `\n<div id="smartplayer_wrapper_${v.id}" style="position:relative;width:100%;padding-top:${padding};overflow:hidden;border-radius:${rad};">\n  <iframe id="smartplayer_frame_${v.id}" src="${fullUrl}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allow="autoplay; fullscreen" loading="lazy"></iframe>\n</div>\n<script type="text/javascript">\n  window._vturb = window._vturb || [];\n  window._vturb.push({ id: "${v.id}" });\n<\/script>`;
+        if (!isResponsive) {
+          snippet = `<vturb-smartplayer id="vid-${v.id}" style="display: block; margin: 0 auto; width: 100%;"><div class="vturb-player-placeholder" style="position: relative; width: 100%; padding: ${padding} 0 0; z-index: 0; background-color: black;"><iframe id="ifr_${v.id}" src="${fullUrl}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" allow="autoplay; fullscreen" loading="lazy"></iframe></div></vturb-smartplayer><script type="text/javascript"> var s=document.createElement("script"); s.src="${playerHost}/player.js"; s.async=!0; document.head.appendChild(s); </script>`;
+        } else {
+          snippet = `<div class="vturb-responsive-container">\n  <div id="vid_desktop_${v.id}_wrap" class="vturb-desktop-player" style="display: block;">\n    <vturb-smartplayer id="vid-${v.id}" style="display: block; margin: 0 auto; width: 100%;"><div class="vturb-player-placeholder" style="position: relative; width: 100%; padding: ${padding} 0 0; z-index: 0; background-color: black;"><iframe id="ifr_${v.id}" src="${fullUrl}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" allow="autoplay; fullscreen" loading="lazy"></iframe></div></vturb-smartplayer>\n  </div>\n  <div id="vid_mobile_${mobileV.id}_wrap" class="vturb-mobile-player" style="display: none;">\n    <vturb-smartplayer id="vid-${mobileV.id}" style="display: block; margin: 0 auto; width: 100%;"><div class="vturb-player-placeholder" style="position: relative; width: 100%; padding: ${mobilePadding} 0 0; z-index: 0; background-color: black;"><iframe id="ifr_${mobileV.id}" src="${mobileFullUrl}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" allow="autoplay; fullscreen" loading="lazy"></iframe></div></vturb-smartplayer>\n  </div>\n</div>\n<style>\n  @media (max-width: 767px) {\n    #vid_desktop_${v.id}_wrap { display: none !important; }\n    #vid_mobile_${mobileV.id}_wrap { display: block !important; }\n  }\n  @media (min-width: 768px) {\n    #vid_desktop_${v.id}_wrap { display: block !important; }\n    #vid_mobile_${mobileV.id}_wrap { display: none !important; }\n  }\n</style>\n<script type="text/javascript"> var s=document.createElement("script"); s.src="${playerHost}/player.js"; s.async=!0; document.head.appendChild(s); </script>`;
+        }
       } else {
-        snippet = `<div style="position:relative;width:100%;padding-top:${padding};overflow:hidden;border-radius:${rad};">\n  <iframe src="${fullUrl}" style="position:absolute;top:0;left:0;width:100%;height:100%;border:none;" allow="autoplay; fullscreen" loading="lazy"></iframe>\n</div>`;
+        if (!isResponsive) {
+          snippet = `<script type="text/javascript"> var s=document.createElement("script"); s.src="${playerHost}/sdk.js"; s.async=!0; document.head.appendChild(s); </script> <div id="ifr_${v.id}_wrapper" style="margin: 0 auto; width: 100%; "><div style="padding: ${padding} 0 0; position: relative;"><iframe frameborder="0" allowfullscreen src="${fullUrl}" id="ifr_${v.id}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" referrerpolicy="no-referrer-when-downgrade"></iframe></div></div>`;
+        } else {
+          snippet = `<script type="text/javascript"> var s=document.createElement("script"); s.src="${playerHost}/sdk.js"; s.async=!0; document.head.appendChild(s); </script> <div id="ifr_desktop_${v.id}_wrapper" style="margin: 0 auto; width: 100%; "><div style="padding: ${padding} 0 0; position: relative;"><iframe frameborder="0" allowfullscreen src="${fullUrl}" id="ifr_desktop_${v.id}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" referrerpolicy="no-referrer-when-downgrade"></iframe></div></div> <div id="ifr_mobile_${mobileV.id}_wrapper" style="margin: 0 auto; width: 100%; display: none;"><div style="padding: ${mobilePadding} 0 0; position: relative;"><iframe frameborder="0" allowfullscreen src="${mobileFullUrl}" id="ifr_mobile_${mobileV.id}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" referrerpolicy="no-referrer-when-downgrade"></iframe></div></div>\n<style>\n  @media (max-width: 767px) {\n    #ifr_desktop_${v.id}_wrapper { display: none !important; }\n    #ifr_mobile_${mobileV.id}_wrapper { display: block !important; }\n  }\n  @media (min-width: 768px) {\n    #ifr_desktop_${v.id}_wrapper { display: block !important; }\n    #ifr_mobile_${mobileV.id}_wrapper { display: none !important; }\n  }\n</style>`;
+        }
       }
 
       const snippetEl = document.getElementById('vturbEmbedSnippetArea');
       if (snippetEl) snippetEl.value = snippet;
 
-      const speedSnippet = `<link rel="dns-prefetch" href="${playerHost}">\n<link rel="preconnect" href="${playerHost}" crossorigin>\n<link rel="preload" href="${fullUrl}" as="document">`;
+      let speedSnippet = '';
+      if (!isResponsive) {
+        speedSnippet = `<link rel="preload" href="${fullUrl}" as="document">\n<link rel="preload" href="${playerHost}/player.js" as="script">\n<script>!function(i,n){i._plt=i._plt||(n&&n.timeOrigin?n.timeOrigin+n.now():Date.now())}(window,performance);</script>\n<link rel="preconnect" href="${playerHost}">\n<link rel="dns-prefetch" href="${playerHost}">`;
+      } else {
+        speedSnippet = `<link rel="preload" href="${fullUrl}" as="document">\n<link rel="preload" href="${mobileFullUrl}" as="document">\n<link rel="preload" href="${playerHost}/player.js" as="script">\n<script>!function(i,n){i._plt=i._plt||(n&&n.timeOrigin?n.timeOrigin+n.now():Date.now())}(window,performance);</script>\n<link rel="preconnect" href="${playerHost}">\n<link rel="dns-prefetch" href="${playerHost}">`;
+      }
+
       const speedEl = document.getElementById('vturbSpeedSnippetArea');
       if (speedEl) speedEl.value = speedSnippet;
     }
 
-    function copyEmbedSnippet() {
-      const area = document.getElementById('vturbEmbedSnippetArea');
+    function copySnippetWithFeedback(areaId, btnId, successMsg) {
+      const area = document.getElementById(areaId);
+      const btn = document.getElementById(btnId);
       if (!area) return;
+
+      const originalHtml = btn ? btn.innerHTML : '';
       navigator.clipboard.writeText(area.value).then(() => {
-        showToast('Código de Embed copiado com sucesso!');
+        if (btn) {
+          btn.classList.add('copied');
+          btn.innerHTML = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+          setTimeout(() => {
+            btn.classList.remove('copied');
+            btn.innerHTML = originalHtml;
+          }, 1500);
+        }
+        showToast(successMsg);
       }).catch(() => {
         showToast('Falha ao copiar código.', true);
       });
     }
 
+    function copyEmbedSnippet() {
+      copySnippetWithFeedback('vturbEmbedSnippetArea', 'btnCopyEmbedSnippet', 'Código de Embed copiado com sucesso!');
+    }
+
     function copySpeedSnippet() {
-      const area = document.getElementById('vturbSpeedSnippetArea');
-      if (!area) return;
-      navigator.clipboard.writeText(area.value).then(() => {
-        showToast('Código de otimização copiado com sucesso!');
-      }).catch(() => {
-        showToast('Falha ao copiar código.', true);
-      });
+      copySnippetWithFeedback('vturbSpeedSnippetArea', 'btnCopySpeedSnippet', 'Código de otimização copiado com sucesso!');
     }
 
     async function saveCurrentVideoSettings() {
