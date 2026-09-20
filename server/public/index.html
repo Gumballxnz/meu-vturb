@@ -2277,6 +2277,8 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      cursor: crosshair;
+      user-select: none;
     }
     .va-retention-bg-video {
       position: absolute;
@@ -2318,7 +2320,140 @@
       inset: 0;
       width: 100%;
       height: 100%;
-      pointer-events: all;
+      pointer-events: none;
+    }
+    .va-retention-playhead {
+      position: absolute;
+      top: 0;
+      bottom: 28px;
+      width: 2px;
+      background: #10b981;
+      box-shadow: 0 0 10px rgba(16, 185, 129, 0.85);
+      pointer-events: none;
+      z-index: 8;
+    }
+    .va-retention-playhead::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -4px;
+      width: 10px;
+      height: 10px;
+      background: #10b981;
+      border: 2px solid #ffffff;
+      border-radius: 50%;
+      box-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
+    }
+    .va-retention-hover-line {
+      position: absolute;
+      top: 0;
+      bottom: 28px;
+      width: 1px;
+      background: rgba(255, 255, 255, 0.4);
+      border-left: 1px dashed rgba(255, 255, 255, 0.85);
+      pointer-events: none;
+      z-index: 7;
+    }
+    .va-retention-tooltip {
+      position: absolute;
+      z-index: 12;
+      background: rgba(15, 23, 42, 0.94);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(8px);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: #fff;
+      font-size: 11.5px;
+      pointer-events: none;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+      min-width: 130px;
+    }
+    .va-retention-tooltip .va-tt-header {
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 6px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      font-size: 12px;
+    }
+    .va-retention-tooltip .va-tt-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 3px;
+      color: #94a3b8;
+    }
+    .va-retention-tooltip .va-tt-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 4px;
+    }
+    .va-retention-tooltip .va-tt-val {
+      font-weight: 600;
+      color: #f8fafc;
+    }
+    .va-retention-player-controls {
+      position: absolute;
+      top: 14px;
+      right: 16px;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.82);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      backdrop-filter: blur(8px);
+      border-radius: 20px;
+      padding: 4px 12px 4px 6px;
+    }
+    .va-player-ctrl-btn {
+      background: transparent;
+      border: none;
+      color: #ffffff;
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: background 0.15s, color 0.15s;
+    }
+    .va-player-ctrl-btn:hover {
+      background: rgba(255, 255, 255, 0.18);
+      color: #10b981;
+    }
+    .va-player-time {
+      font-size: 11px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.9);
+      letter-spacing: 0.5px;
+      user-select: none;
+    }
+    .va-retention-center-play {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 54px;
+      height: 54px;
+      border-radius: 50%;
+      background: rgba(16, 185, 129, 0.9);
+      color: #ffffff;
+      border: none;
+      cursor: pointer;
+      z-index: 9;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+      transition: transform 0.2s, background 0.2s, opacity 0.2s;
+    }
+    .va-retention-center-play:hover {
+      transform: translate(-50%, -50%) scale(1.08);
+      background: #10b981;
     }
     .va-retention-time-axis {
       position: absolute;
@@ -5278,6 +5413,23 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
                     <div class="va-retention-grid-line"><span class="va-retention-grid-label">0%</span></div>
                   </div>
                   <svg id="vaRetentionSvg" class="va-retention-svg-layer" viewBox="0 0 1000 380" preserveAspectRatio="none"></svg>
+                  <div id="vaRetentionPlayhead" class="va-retention-playhead" style="display:none;"></div>
+                  <div id="vaRetentionHoverLine" class="va-retention-hover-line" style="display:none;"></div>
+                  <div id="vaRetentionTooltip" class="va-retention-tooltip" style="display:none;"></div>
+                  <button type="button" class="va-retention-center-play" id="vaRetentionCenterPlay" onclick="toggleVaRetentionPlayback(event)" title="Reproduzir vídeo">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                  </button>
+                  <div class="va-retention-player-controls" id="vaRetentionPlayerControls">
+                    <button type="button" class="va-player-ctrl-btn" id="vaRetentionPlayBtn" onclick="toggleVaRetentionPlayback(event)" title="Reproduzir / Pausar">
+                      <svg id="vaRetentionPlayIcon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                      <svg id="vaRetentionPauseIcon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" style="display:none;"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+                    </button>
+                    <button type="button" class="va-player-ctrl-btn" id="vaRetentionMuteBtn" onclick="toggleVaRetentionMute(event)" title="Áudio">
+                      <svg id="vaRetentionMuteIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
+                      <svg id="vaRetentionVolumeIcon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                    </button>
+                    <span class="va-player-time" id="vaRetentionTimeDisplay">00:00 / 00:00</span>
+                  </div>
                   <div class="va-retention-time-axis" id="vaRetentionTimeAxis">
                     <span>00:00</span>
                     <span id="vaTimeAxisMid1">--:--</span>
@@ -10697,12 +10849,221 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         }
 
         const durSec = vidObj && vidObj.duration ? parseDurationToSeconds(vidObj.duration) : 60;
+        currentVaTotalDuration = durSec;
         formatVaTimeAxis(durSec);
+        setupVaRetentionInteractions();
+        updateVaRetentionPlayhead();
 
         renderVaCurrentSubtabView();
       } catch (e) {
         subArea.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:20px;">Falha ao carregar dados de retenção.</div>';
       }
+    }
+
+    let currentVaTotalDuration = 60;
+    let vaCurrentRenderedCurve = [];
+    let isVaScrubbing = false;
+    let vaInteractionsInitialized = false;
+
+    function formatVaSeconds(s) {
+      if (isNaN(s) || s < 0) s = 0;
+      const m = Math.floor(s / 60).toString().padStart(2, '0');
+      const sec = Math.floor(s % 60).toString().padStart(2, '0');
+      return `${m}:${sec}`;
+    }
+
+    function toggleVaRetentionPlayback(e) {
+      if (e) e.stopPropagation();
+      const video = document.getElementById('vaRetentionVideoBg');
+      if (!video) return;
+      if (video.paused) {
+        video.play().then(() => {
+          setVaPlayButtonState(true);
+        }).catch(() => {
+          video.muted = true;
+          video.play().then(() => setVaPlayButtonState(true)).catch(() => {});
+        });
+      } else {
+        video.pause();
+        setVaPlayButtonState(false);
+      }
+    }
+
+    function toggleVaRetentionMute(e) {
+      if (e) e.stopPropagation();
+      const video = document.getElementById('vaRetentionVideoBg');
+      if (!video) return;
+      video.muted = !video.muted;
+      const muteIcon = document.getElementById('vaRetentionMuteIcon');
+      const volIcon = document.getElementById('vaRetentionVolumeIcon');
+      if (muteIcon && volIcon) {
+        muteIcon.style.display = video.muted ? 'block' : 'none';
+        volIcon.style.display = video.muted ? 'none' : 'block';
+      }
+    }
+
+    function setVaPlayButtonState(isPlaying) {
+      const playIcon = document.getElementById('vaRetentionPlayIcon');
+      const pauseIcon = document.getElementById('vaRetentionPauseIcon');
+      const centerPlay = document.getElementById('vaRetentionCenterPlay');
+      if (playIcon) playIcon.style.display = isPlaying ? 'none' : 'block';
+      if (pauseIcon) pauseIcon.style.display = isPlaying ? 'block' : 'none';
+      if (centerPlay) centerPlay.style.display = isPlaying ? 'none' : 'flex';
+    }
+
+    function updateVaRetentionPlayhead() {
+      const video = document.getElementById('vaRetentionVideoBg');
+      const box = document.getElementById('vaRetentionChartContainer');
+      const playhead = document.getElementById('vaRetentionPlayhead');
+      const timeDisplay = document.getElementById('vaRetentionTimeDisplay');
+      if (!box) return;
+
+      const dur = (video && video.duration && !isNaN(video.duration) && video.duration > 0) ? video.duration : (currentVaTotalDuration || 60);
+      const cur = video ? (video.currentTime || 0) : 0;
+      const ratio = Math.max(0, Math.min(1, cur / dur));
+
+      const rect = box.getBoundingClientRect();
+      const leftPad = (rect.width || 1000) * 0.05;
+      const plotWidth = (rect.width || 1000) * 0.914;
+      const xPos = leftPad + (ratio * plotWidth);
+
+      if (playhead) {
+        playhead.style.left = `${xPos}px`;
+        playhead.style.display = 'block';
+      }
+
+      if (timeDisplay) {
+        timeDisplay.textContent = `${formatVaSeconds(cur)} / ${formatVaSeconds(dur)}`;
+      }
+    }
+
+    function getRetentionDataAtRatio(ratio, curve, totalSec) {
+      const dur = totalSec || currentVaTotalDuration || 60;
+      const targetSec = ratio * dur;
+      if (!curve || !curve.length) {
+        return { percent: 0, sessions: 0, timeSec: targetSec };
+      }
+      const idxFloat = ratio * (curve.length - 1);
+      const idxLow = Math.floor(idxFloat);
+      const idxHigh = Math.min(curve.length - 1, Math.ceil(idxFloat));
+      const frac = idxFloat - idxLow;
+      const p1 = curve[idxLow] || curve[0];
+      const p2 = curve[idxHigh] || p1;
+      const pct = (Number(p1.percent || 0) * (1 - frac)) + (Number(p2.percent || 0) * frac);
+      const sess = Math.round((Number(p1.sessions || 0) * (1 - frac)) + (Number(p2.sessions || 0) * frac));
+      return { percent: pct, sessions: sess, timeSec: targetSec };
+    }
+
+    function setupVaRetentionInteractions() {
+      if (vaInteractionsInitialized) return;
+      const box = document.getElementById('vaRetentionChartContainer');
+      const video = document.getElementById('vaRetentionVideoBg');
+      const hoverLine = document.getElementById('vaRetentionHoverLine');
+      const tooltip = document.getElementById('vaRetentionTooltip');
+      if (!box || !video) return;
+      vaInteractionsInitialized = true;
+
+      video.addEventListener('timeupdate', updateVaRetentionPlayhead);
+      video.addEventListener('play', () => setVaPlayButtonState(true));
+      video.addEventListener('pause', () => setVaPlayButtonState(false));
+      video.addEventListener('ended', () => setVaPlayButtonState(false));
+      video.addEventListener('loadedmetadata', () => {
+        if (video.duration && !isNaN(video.duration) && video.duration > 0) {
+          currentVaTotalDuration = video.duration;
+          formatVaTimeAxis(video.duration);
+        }
+        updateVaRetentionPlayhead();
+      });
+
+      function handlePointer(e, seek = false) {
+        const rect = box.getBoundingClientRect();
+        const leftPad = rect.width * 0.05;
+        const plotWidth = rect.width * 0.914;
+        if (plotWidth <= 0) return;
+
+        const mouseX = e.clientX - rect.left;
+        const ratio = Math.max(0, Math.min(1, (mouseX - leftPad) / plotWidth));
+        const dur = (video.duration && !isNaN(video.duration) && video.duration > 0) ? video.duration : (currentVaTotalDuration || 60);
+        const targetTime = ratio * dur;
+
+        if (seek) {
+          video.currentTime = targetTime;
+          updateVaRetentionPlayhead();
+        }
+
+        const hoverX = leftPad + (ratio * plotWidth);
+        if (hoverLine) {
+          hoverLine.style.left = `${hoverX}px`;
+          hoverLine.style.display = 'block';
+        }
+
+        if (tooltip) {
+          const curve = (vaCurrentRenderedCurve && vaCurrentRenderedCurve.length) ? vaCurrentRenderedCurve : (currentVaData?.retentionCurve || []);
+          const info = getRetentionDataAtRatio(ratio, curve, dur);
+          const timeFmt = formatVaSeconds(targetTime);
+          const pctWidth = Math.round(ratio * 100);
+
+          tooltip.innerHTML = `
+            <div class="va-tt-header">${timeFmt} - ${pctWidth}%</div>
+            <div class="va-tt-row">
+              <div style="display:flex;align-items:center;">
+                <span class="va-tt-dot" style="background:#10b981;"></span>
+                <span>Audiência</span>
+              </div>
+              <span class="va-tt-val">${info.sessions}</span>
+            </div>
+            <div class="va-tt-row">
+              <div style="display:flex;align-items:center;">
+                <span class="va-tt-dot" style="background:#10b981;"></span>
+                <span>Retenção</span>
+              </div>
+              <span class="va-tt-val">${info.percent.toFixed(2).replace('.', ',')}%</span>
+            </div>
+          `;
+
+          tooltip.style.display = 'block';
+          const ttWidth = tooltip.offsetWidth || 140;
+          let ttLeft = hoverX - (ttWidth / 2);
+          if (ttLeft < 10) ttLeft = 10;
+          if (ttLeft + ttWidth > rect.width - 10) ttLeft = rect.width - ttWidth - 10;
+          tooltip.style.left = `${ttLeft}px`;
+          tooltip.style.top = '40px';
+        }
+      }
+
+      box.addEventListener('mousemove', e => {
+        if (e.target.closest('#vaRetentionPlayerControls') || e.target.closest('#vaRetentionCenterPlay')) {
+          if (hoverLine) hoverLine.style.display = 'none';
+          if (tooltip) tooltip.style.display = 'none';
+          return;
+        }
+        handlePointer(e, isVaScrubbing);
+      });
+
+      box.addEventListener('mouseleave', () => {
+        if (!isVaScrubbing) {
+          if (hoverLine) hoverLine.style.display = 'none';
+          if (tooltip) tooltip.style.display = 'none';
+        }
+      });
+
+      box.addEventListener('mousedown', e => {
+        if (e.target.closest('#vaRetentionPlayerControls') || e.target.closest('#vaRetentionCenterPlay')) return;
+        isVaScrubbing = true;
+        handlePointer(e, true);
+      });
+
+      window.addEventListener('mousemove', e => {
+        if (isVaScrubbing) {
+          handlePointer(e, true);
+        }
+      });
+
+      window.addEventListener('mouseup', () => {
+        if (isVaScrubbing) {
+          isVaScrubbing = false;
+        }
+      });
     }
 
     function parseDurationToSeconds(durStr) {
@@ -10730,6 +11091,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
     }
 
     function renderVaRetentionOverlaySvg(curve) {
+      vaCurrentRenderedCurve = curve || [];
       const svg = document.getElementById('vaRetentionSvg');
       if (!svg) return;
       if (!curve || !curve.length || !curve.some(p => (Number(p.sessions) || 0) > 0 || (Number(p.percent) || 0) > 0)) {
@@ -10937,26 +11299,8 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       const m = currentVaData.metrics || {};
 
       if (sub === 'general') {
-        const pitchSecFmt = currentVaData.pitchSec ? (() => {
-          const s = currentVaData.pitchSec;
-          const min = Math.floor(s / 60).toString().padStart(2, '0');
-          const sec = (s % 60).toString().padStart(2, '0');
-          return `${min}:${sec}`;
-        })() : '00:30';
-
         subArea.innerHTML = `
           <div style="font-size:16px;font-weight:700;color:var(--text-main);margin-bottom:14px;">Métricas</div>
-
-          <div class="va-pitch-banner" id="vaPitchBanner">
-            <div style="display:flex;align-items:center;gap:10px;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-              <span>IA detectou o pitch em <strong>${pitchSecFmt}</strong></span>
-            </div>
-            <div style="display:flex;align-items:center;gap:10px;">
-              <button class="btn-primary-action" style="padding:5px 14px;font-size:12px;" onclick="document.getElementById('vaPitchBanner').style.display='none'">Use este tempo</button>
-              <button style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:16px;" onclick="document.getElementById('vaPitchBanner').style.display='none'">&times;</button>
-            </div>
-          </div>
 
           <div class="va-retention-toolbar">
             <div class="va-toolbar-group">
@@ -15133,6 +15477,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         setupVerificationCodeInputs();
         setupImportDropZoneEvents();
         setupOnboardingDropZoneEvents();
+        setupVaRetentionInteractions();
       });
     } else {
       hydrateCachedSession();
@@ -15141,6 +15486,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       setupVerificationCodeInputs();
       setupImportDropZoneEvents();
       setupOnboardingDropZoneEvents();
+      setupVaRetentionInteractions();
     }
 </script>
 </body>
