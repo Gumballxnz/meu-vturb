@@ -405,6 +405,19 @@ try {
   db.prepare("UPDATE analytics_events SET conversion_currency = 'MT' WHERE conversion_currency = 'BRL'").run();
 } catch (e) {}
 
+try {
+  const vRows = db.prepare("SELECT id, settings_json FROM videos WHERE settings_json LIKE '%\"pixels\":true%'").all();
+  for (const row of vRows) {
+    try {
+      const parsed = JSON.parse(row.settings_json || '{}');
+      if (parsed.pixels === true) {
+        parsed.pixels = false;
+        db.prepare("UPDATE videos SET settings_json = ? WHERE id = ?").run(JSON.stringify(parsed), row.id);
+      }
+    } catch (err) {}
+  }
+} catch (e) {}
+
 const getSetting = (key, defaultVal) => {
   const row = db.prepare('SELECT value FROM system_settings WHERE key = ?').get(key);
   return row ? row.value : defaultVal;
