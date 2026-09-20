@@ -3938,13 +3938,13 @@ app.get('/api/analytics/video/:id', authMiddleware, (req, res) => {
   } catch (e) {}
 
   const actionButtons = [];
-  if (videoSettings.ctaEnabled !== false) {
+  if (Boolean(videoSettings.ctaEnabled)) {
     const ctaSec = Number(videoSettings.ctaTime || 0);
     const m = Math.floor(ctaSec / 60).toString().padStart(2, '0');
     const s = (ctaSec % 60).toString().padStart(2, '0');
     actionButtons.push({
       id: 'cta_primary',
-      title: videoSettings.ctaText || 'QUERO GARANTIR MINHA VAGA AGORA',
+      title: videoSettings.ctaText || 'Botão de Ação',
       timeFormatted: `${m}:${s}`,
       timeSeconds: ctaSec,
       url: videoSettings.ctaUrl || '',
@@ -4685,14 +4685,14 @@ app.post('/api/upload/google-drive', authMiddleware, checkStorageQuotaPre, async
       autoplayText: 'Seu vídeo ja iniciou\\nClique para escutar',
       fakeProgress: true,
       blockSeek: true,
-      ctaEnabled: true,
-      ctaTime: 8,
-      ctaText: 'QUERO GARANTIR MINHA VAGA AGORA',
-      ctaUrl: 'https://seusite.com/checkout',
-      ctaColor: '#16A34A',
-      ctaSubtext: 'Compra 100% Segura • Acesso Imediato',
+      ctaEnabled: false,
+      ctaTime: 10,
+      ctaText: '',
+      ctaUrl: '',
+      ctaColor: '#10b981',
+      ctaSubtext: '',
       resume: true,
-      pixels: true
+      pixels: false
     };
 
     const realDuration = getVideoDurationFormatted(targetPath);

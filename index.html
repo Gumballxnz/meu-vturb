@@ -5543,7 +5543,7 @@
                 <div class="toggle-info-desc">Surge no segundo programado da oferta</div>
               </div>
               <label class="switch-clean">
-                <input type="checkbox" id="edCtaEnabled" checked onchange="liveUpdateSettings()">
+                <input type="checkbox" id="edCtaEnabled" onchange="liveUpdateSettings()">
                 <span class="slider-clean"></span>
               </label>
             </div>
@@ -5556,11 +5556,11 @@
             </div>
             <div class="form-row">
               <label class="form-label">Texto do Botão</label>
-              <input type="text" id="edCtaText" class="form-input-text" value="QUERO GARANTIR MINHA VAGA AGORA" oninput="liveUpdateSettings()">
+              <input type="text" id="edCtaText" class="form-input-text" value="" placeholder="Texto do botão" oninput="liveUpdateSettings()">
             </div>
             <div class="form-row">
               <label class="form-label">Link de Venda / Checkout</label>
-              <input type="url" id="edCtaUrl" class="form-input-text" value="https://seusite.com/checkout" oninput="liveUpdateSettings()">
+              <input type="url" id="edCtaUrl" class="form-input-text" value="" placeholder="https://seusite.com/checkout" oninput="liveUpdateSettings()">
             </div>
             <div class="form-row">
               <label class="form-label">Cor do Botão CTA</label>
@@ -5571,7 +5571,7 @@
             </div>
             <div class="form-row" style="margin-bottom: 0;">
               <label class="form-label">Subtexto de Garantia</label>
-              <input type="text" id="edCtaSubtext" class="form-input-text" value="Compra 100% Segura • Acesso Imediato" oninput="liveUpdateSettings()">
+              <input type="text" id="edCtaSubtext" class="form-input-text" value="" placeholder="Subtexto de garantia" oninput="liveUpdateSettings()">
             </div>
           </div>
 
@@ -5624,7 +5624,7 @@
                 <div class="toggle-info-desc">Dispara eventos para Facebook Pixel em 25%, 50%, 75%, 90% e Pitch</div>
               </div>
               <label class="switch-clean">
-                <input type="checkbox" id="edPixels" checked onchange="liveUpdateSettings()">
+                <input type="checkbox" id="edPixels" onchange="liveUpdateSettings()">
                 <span class="slider-clean"></span>
               </label>
             </div>
@@ -11037,11 +11037,11 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
                 fakeProgress: true,
                 blockSeek: true,
                 ctaEnabled: false,
-                ctaTime: 8,
-                ctaText: 'QUERO GARANTIR MINHA VAGA AGORA',
-                ctaUrl: 'https://seusite.com/checkout',
+                ctaTime: 10,
+                ctaText: '',
+                ctaUrl: '',
                 ctaColor: '#10b981',
-                ctaSubtext: 'Compra 100% Segura • Acesso Imediato',
+                ctaSubtext: '',
                 resume: true,
                 pixels: false
               }
@@ -13515,18 +13515,18 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       setVal('edAudioNoticeBorderRadius', s.audioNoticeBorderRadius || '8px');
       setVal('edAudioNoticeGlow', s.audioNoticeGlow || 'subtle');
 
-      setChecked('edCtaEnabled', s.ctaEnabled !== false);
+      setChecked('edCtaEnabled', !!s.ctaEnabled);
       setVal('edCtaTime', s.ctaTime !== undefined ? s.ctaTime : 10);
-      setVal('edCtaText', s.ctaText || 'QUERO GARANTIR MINHA VAGA');
-      setVal('edCtaUrl', s.ctaUrl || 'https://seusite.com/checkout');
-      setVal('edCtaColor', s.ctaColor || '#2563EB');
-      setVal('edCtaColorHex', s.ctaColor || '#2563EB');
-      setVal('edCtaSubtext', s.ctaSubtext || 'Compra 100% Segura • Acesso Imediato');
+      setVal('edCtaText', s.ctaText || '');
+      setVal('edCtaUrl', s.ctaUrl || '');
+      setVal('edCtaColor', s.ctaColor || '#10b981');
+      setVal('edCtaColorHex', s.ctaColor || '#10b981');
+      setVal('edCtaSubtext', s.ctaSubtext || '');
 
       setChecked('edFakeProgress', s.fakeProgress !== false);
       setChecked('edBlockSeek', s.blockSeek !== false);
       setChecked('edResume', s.resume !== false);
-      setChecked('edPixels', s.pixels !== false);
+      setChecked('edPixels', !!s.pixels);
 
       setChecked('edTurboEnabled', !!s.turbo);
       setChecked('edHeadlineEnabled', !!s.headlines);
@@ -13975,11 +13975,11 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       setBadge('badgeTurbo', !!s.turbo);
       setBadge('badgeHeadlines', !!s.headlines);
       setBadge('badgeFiltro', !!s.trafficFilter);
-      setBadge('badgeCta', s.ctaEnabled !== false);
+      setBadge('badgeCta', !!s.ctaEnabled);
       setBadge('badgeThumb', !!s.thumbSniper);
       setBadge('badgeResume', s.resume !== false);
       setBadge('badgeGanchos', !!s.miniGanchos);
-      setBadge('badgePixels', s.pixels !== false);
+      setBadge('badgePixels', !!s.pixels);
       setBadge('badgeLegendas', !!s.subtitles);
     }
 
@@ -14107,12 +14107,12 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         blockSeek: getChecked('edBlockSeek', true),
         ctaEnabled: getChecked('edCtaEnabled', false),
         ctaTime: parseInt(getVal('edCtaTime', '10'), 10) || 0,
-        ctaText: getVal('edCtaText', 'QUERO GARANTIR MINHA VAGA'),
-        ctaUrl: getVal('edCtaUrl', 'https://seusite.com/checkout'),
-        ctaColor: getVal('edCtaColor', '#2563EB'),
-        ctaSubtext: getVal('edCtaSubtext', 'Compra 100% Segura • Acesso Imediato'),
+        ctaText: getVal('edCtaText', ''),
+        ctaUrl: getVal('edCtaUrl', ''),
+        ctaColor: getVal('edCtaColor', '#10b981'),
+        ctaSubtext: getVal('edCtaSubtext', ''),
         resume: getChecked('edResume', true),
-        pixels: getChecked('edPixels', true),
+        pixels: getChecked('edPixels', false),
         turbo: getChecked('edTurboEnabled', false),
         headlines: getChecked('edHeadlineEnabled', false),
         headlineText: getVal('edHeadlineText', ''),
@@ -14194,12 +14194,14 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         p.set('pixels', s.pixels ? '1' : '0');
 
         if (s.ctaEnabled) {
+          p.set('cta', '1');
           p.set('cta_time', s.ctaTime);
           p.set('cta_url', s.ctaUrl);
           p.set('cta_text', s.ctaText);
           p.set('cta_color', s.ctaColor);
           p.set('cta_subtext', s.ctaSubtext);
         } else {
+          p.set('cta', '0');
           p.set('cta_time', '999999');
         }
 
@@ -14815,11 +14817,11 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
               fakeProgress: true,
               blockSeek: true,
               ctaEnabled: false,
-              ctaTime: 8,
-              ctaText: 'QUERO GARANTIR MINHA VAGA AGORA',
-              ctaUrl: 'https://seusite.com/checkout',
-              ctaColor: '#16A34A',
-              ctaSubtext: 'Compra 100% Segura • Acesso Imediato',
+              ctaTime: 10,
+              ctaText: '',
+              ctaUrl: '',
+              ctaColor: '#10b981',
+              ctaSubtext: '',
               resume: true,
               pixels: false
             }
