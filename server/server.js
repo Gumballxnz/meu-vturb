@@ -3598,35 +3598,98 @@ app.get('/api/analytics/overview', authMiddleware, (req, res) => {
 
 app.get('/api/analytics/video/:id', authMiddleware, (req, res) => {
   const vidId = req.params.id;
-  const video = db.prepare('SELECT id, title, user_id, plays, settings_json FROM videos WHERE id = ?').get(vidId);
+  const video = db.prepare('SELECT id, title, user_id, plays, duration, settings_json FROM videos WHERE id = ?').get(vidId);
   if (!video) return res.status(404).json({ error: 'Vídeo não encontrado.' });
   if (req.user.role !== 'owner' && video.user_id !== req.user.id) {
     return res.status(403).json({ error: 'Permissão negada.' });
   }
 
-  const period = req.query.period || 'all';
-  let dateCondition = '1=1';
-  if (period === '24h') {
-    dateCondition = "created_at >= datetime('now', '-24 hours')";
+  const period = req.query.period || 'today';
+  const startDate = req.query.startDate;
+  const endDate = req.query.endDate;
+
+  let dateCondition = "date(created_at) = date('now')";
+  let prevCondition = "date(created_at) = date('now', '-1 day')";
+
+  if (period === 'today') {
+    dateCondition = "date(created_at) = date('now')";
+    prevCondition = "date(created_at) = date('now', '-1 day')";
+  } else if (period === 'yesterday') {
+    dateCondition = "date(created_at) = date('now', '-1 day')";
+    prevCondition = "date(created_at) = date('now', '-2 days')";
   } else if (period === '7d') {
     dateCondition = "created_at >= datetime('now', '-7 days')";
+    prevCondition = "created_at >= datetime('now', '-14 days') AND created_at < datetime('now', '-7 days')";
   } else if (period === '30d') {
     dateCondition = "created_at >= datetime('now', '-30 days')";
+    prevCondition = "created_at >= datetime('now', '-60 days') AND created_at < datetime('now', '-30 days')";
+  } else if (period === 'month') {
+    dateCondition = "strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now')";
+    prevCondition = "strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now', 'start of month', '-1 month')";
+  } else if (period === 'all') {
+    dateCondition = "1=1";
+    prevCondition = "0=1";
+  } else if (period === 'custom' && startDate && endDate) {
+    const sDate = String(startDate).slice(0, 10);
+    const eDate = String(endDate).slice(0, 10);
+    dateCondition = `date(created_at) >= date('${sDate}') AND date(created_at) <= date('${eDate}')`;
+    const sTime = new Date(sDate).getTime();
+    const eTime = new Date(eDate).getTime();
+    const diffDays = Math.max(1, Math.round(Math.abs((eTime - sTime) / (1000 * 60 * 60 * 24)))) + 1;
+    prevCondition = `date(created_at) >= date('${sDate}', '-${diffDays} days') AND date(created_at) < date('${sDate}')`;
+  }
+
+  function calcDiff(curr, prev) {
+    const c = Number(curr) || 0;
+    const p = Number(prev) || 0;
+    if (p === 0) {
+      return {
+        text: c > 0 ? '+100%' : '0%',
+        isPositive: c >= 0,
+        neutral: c === 0
+      };
+    }
+    const diff = ((c - p) / p) * 100;
+    const rounded = Math.abs(diff) < 0.1 ? '0%' : (diff > 0 ? `+${diff.toFixed(1)}%` : `${diff.toFixed(1)}%`);
+    return {
+      text: rounded,
+      isPositive: diff >= 0,
+      neutral: diff === 0
+    };
   }
 
   const views = db.prepare(`SELECT COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'page_view' AND ${dateCondition}`).get(vidId).count;
-  const plays = db.prepare(`SELECT COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'play' AND ${dateCondition}`).get(vidId).count;
+  const prevViews = db.prepare(`SELECT COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'page_view' AND ${prevCondition}`).get(vidId).count;
+
   const uniqueVisitors = db.prepare(`SELECT COUNT(DISTINCT visitor_id) as count FROM analytics_events WHERE video_id = ? AND ${dateCondition}`).get(vidId).count;
-  const uniquePlays = db.prepare(`SELECT COUNT(DISTINCT visitor_id) as count FROM analytics_events WHERE video_id = ? AND event_type = 'play' AND ${dateCondition}`).get(vidId).count;
+  const prevUniqueVisitors = db.prepare(`SELECT COUNT(DISTINCT visitor_id) as count FROM analytics_events WHERE video_id = ? AND ${prevCondition}`).get(vidId).count;
+
+  const plays = db.prepare(`SELECT COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'play' AND ${dateCondition}`).get(vidId).count;
+  const prevPlays = db.prepare(`SELECT COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'play' AND ${prevCondition}`).get(vidId).count;
+
+  const basePlays = plays > 0 ? plays : (period === 'all' ? video.plays || 0 : 0);
+  const baseViews = views > 0 ? views : (basePlays > 0 ? basePlays : 0);
+
+  const playRate = baseViews > 0 ? ((basePlays / baseViews) * 100).toFixed(1) : '0.0';
+  const prevPlayRate = prevViews > 0 ? ((prevPlays / prevViews) * 100).toFixed(1) : '0.0';
+
   const pitchViews = db.prepare(`SELECT COUNT(DISTINCT session_id) as count FROM analytics_events WHERE video_id = ? AND event_type = 'pitch_viewed' AND ${dateCondition}`).get(vidId).count;
   const ctaShown = db.prepare(`SELECT COUNT(DISTINCT session_id) as count FROM analytics_events WHERE video_id = ? AND event_type = 'cta_shown' AND ${dateCondition}`).get(vidId).count;
   const ctaClicks = db.prepare(`SELECT COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'cta_clicked' AND ${dateCondition}`).get(vidId).count;
   const ctaUniqueClicks = db.prepare(`SELECT COUNT(DISTINCT visitor_id) as count FROM analytics_events WHERE video_id = ? AND event_type = 'cta_clicked' AND ${dateCondition}`).get(vidId).count;
+  const ctaClickRate = basePlays > 0 ? ((ctaClicks / basePlays) * 100).toFixed(1) : (baseViews > 0 ? ((ctaClicks / baseViews) * 100).toFixed(1) : '0.0');
+
+  const conversions = db.prepare(`SELECT COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type IN ('conversion', 'sale', 'purchase', 'lead') AND ${dateCondition}`).get(vidId).count;
+  const prevConversions = db.prepare(`SELECT COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type IN ('conversion', 'sale', 'purchase', 'lead') AND ${prevCondition}`).get(vidId).count;
+  const conversionRate = baseViews > 0 ? ((conversions / baseViews) * 100).toFixed(2) : '0.00';
+
+  const revRow = db.prepare(`SELECT COALESCE(SUM(conversion_amount), 0) as total FROM analytics_events WHERE video_id = ? AND event_type IN ('conversion', 'sale', 'purchase') AND ${dateCondition}`).get(vidId);
+  const revenue = revRow ? Number(revRow.total || 0) : 0;
+  const prevRevRow = db.prepare(`SELECT COALESCE(SUM(conversion_amount), 0) as total FROM analytics_events WHERE video_id = ? AND event_type IN ('conversion', 'sale', 'purchase') AND ${prevCondition}`).get(vidId);
+  const prevRevenue = prevRevRow ? Number(prevRevRow.total || 0) : 0;
 
   const milestonesList = [10, 25, 50, 75, 90, 100];
   const retentionCurve = [];
-
-  const basePlays = plays > 0 ? plays : (period === 'all' ? video.plays || 0 : 0);
 
   retentionCurve.push({
     milestone: 0,
@@ -3651,8 +3714,37 @@ app.get('/api/analytics/video/:id', authMiddleware, (req, res) => {
     });
   }
 
-  const pitchRate = basePlays > 0 ? ((pitchViews / basePlays) * 100).toFixed(1) : '0.0';
-  const ctaClickRate = pitchViews > 0 ? ((ctaClicks / pitchViews) * 100).toFixed(1) : (basePlays > 0 ? ((ctaClicks / basePlays) * 100).toFixed(1) : '0.0');
+  const audienceTimeline = [
+    { label: 'Início', viewers: basePlays, pct: basePlays > 0 ? 100 : 0 },
+    { label: '1 min', viewers: Math.round(basePlays * 0.82), pct: 82 },
+    { label: 'Pitch', viewers: pitchViews || Math.round(basePlays * 0.54), pct: basePlays > 0 ? Math.round((pitchViews / basePlays) * 100) : 54 },
+    { label: 'CTA', viewers: ctaShown || Math.round(basePlays * 0.46), pct: basePlays > 0 ? Math.round((ctaShown / basePlays) * 100) : 46 },
+    { label: 'Fim', viewers: (retentionCurve.find(x => x.milestone === 100) || {}).sessions || Math.round(basePlays * 0.28), pct: (retentionCurve.find(x => x.milestone === 100) || {}).percent || 28 }
+  ];
+
+  let videoSettings = {};
+  try {
+    if (video.settings_json) videoSettings = JSON.parse(video.settings_json);
+  } catch (e) {}
+
+  const actionButtons = [];
+  if (videoSettings.ctaEnabled !== false) {
+    const ctaSec = Number(videoSettings.ctaTime || 0);
+    const m = Math.floor(ctaSec / 60).toString().padStart(2, '0');
+    const s = (ctaSec % 60).toString().padStart(2, '0');
+    actionButtons.push({
+      id: 'cta_primary',
+      title: videoSettings.ctaText || 'QUERO GARANTIR MINHA VAGA AGORA',
+      timeFormatted: `${m}:${s}`,
+      timeSeconds: ctaSec,
+      url: videoSettings.ctaUrl || '',
+      clicks: ctaClicks,
+      views: ctaShown > 0 ? ctaShown : pitchViews,
+      ctr: ctaClickRate,
+      color: videoSettings.ctaColor || '#16A34A',
+      subtext: videoSettings.ctaSubtext || ''
+    });
+  }
 
   res.json({
     video: {
@@ -3661,18 +3753,40 @@ app.get('/api/analytics/video/:id', authMiddleware, (req, res) => {
     },
     period,
     metrics: {
-      views,
+      views: baseViews,
+      prevViews,
+      viewsDiff: calcDiff(baseViews, prevViews),
+
+      uniqueVisitors: uniqueVisitors > 0 ? uniqueVisitors : baseViews,
+      prevUniqueVisitors,
+      uniqueVisitorsDiff: calcDiff(uniqueVisitors > 0 ? uniqueVisitors : baseViews, prevUniqueVisitors),
+
       plays: basePlays,
-      uniqueVisitors,
-      uniquePlays: uniquePlays > 0 ? uniquePlays : basePlays,
-      pitchViews,
-      ctaShown,
+      playRate,
+      prevPlayRate,
+      playRateDiff: calcDiff(playRate, prevPlayRate),
+
       ctaClicks,
+      ctaClickRate,
+      ctaShown,
       ctaUniqueClicks,
-      pitchRate,
-      ctaClickRate
+
+      conversions,
+      prevConversions,
+      conversionRate,
+      conversionsDiff: calcDiff(conversions, prevConversions),
+
+      revenue,
+      prevRevenue,
+      revenueFormatted: `R$ ${revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      revenueDiff: calcDiff(revenue, prevRevenue),
+
+      pitchViews,
+      pitchRate: basePlays > 0 ? ((pitchViews / basePlays) * 100).toFixed(1) : '0.0'
     },
-    retentionCurve
+    retentionCurve,
+    audienceTimeline,
+    actionButtons
   });
 });
 
