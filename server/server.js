@@ -35,6 +35,7 @@ const geoip = require('geoip-lite');
 });
 
 const app = express();
+app.set('trust proxy', true);
 const PORT = process.env.PORT || 4000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
@@ -392,7 +393,8 @@ try {
 } catch (e) {}
 
 try {
-  db.prepare("UPDATE analytics_events SET country = 'África do Sul' WHERE LOWER(city) LIKE '%johannesburg%'").run();
+  db.prepare("UPDATE analytics_events SET country = 'Moçambique', city = 'Maputo' WHERE LOWER(city) LIKE '%luanda%' OR country = 'Angola'").run();
+  db.prepare("UPDATE analytics_events SET country = 'Moçambique', city = 'Maputo' WHERE LOWER(city) LIKE '%johannesburg%' AND (timezone = 'Africa/Maputo' OR country = 'Moçambique')").run();
   db.prepare("UPDATE analytics_events SET conversion_currency = 'MT' WHERE conversion_currency = 'BRL'").run();
 } catch (e) {}
 
@@ -3557,7 +3559,10 @@ app.post('/api/analytics/event', (req, res) => {
   const cleanCurrency = req.body.conversion_currency || 'MT';
   const cleanPlatform = req.body.platform || null;
 
-  const rawIp = (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
+  const cfIp = req.headers['cf-connecting-ip'];
+  const realIp = req.headers['x-real-ip'];
+  const fwdFor = (req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  const rawIp = (cfIp || realIp || fwdFor || req.ip || '').trim();
   const cleanIp = rawIp.replace(/^::ffff:/, '') || null;
   let geoCity = null;
   let geoRegion = null;
@@ -3582,16 +3587,28 @@ app.post('/api/analytics/event', (req, res) => {
     'IT': 'Itália'
   };
 
+  const cfCountry = (req.headers['cf-ipcountry'] || '').toUpperCase().trim();
+  if (cfCountry && cfCountry !== 'XX' && cfCountry !== 'T1' && countryNameMap[cfCountry]) {
+    detectedCountry = countryNameMap[cfCountry];
+  }
+
+  const clientTz = (req.body.timezone || '').trim();
+  if (clientTz === 'Africa/Maputo') {
+    detectedCountry = 'Moçambique';
+  }
+
   if (cleanIp) {
     try {
       const geo = geoip.lookup(cleanIp);
       if (geo) {
         geoCity = geo.city || null;
         geoRegion = geo.region || null;
-        if (geo.country && countryNameMap[geo.country]) {
-          detectedCountry = countryNameMap[geo.country];
-        } else if (geo.country) {
-          detectedCountry = geo.country;
+        if (!detectedCountry) {
+          if (geo.country && countryNameMap[geo.country]) {
+            detectedCountry = countryNameMap[geo.country];
+          } else if (geo.country) {
+            detectedCountry = geo.country;
+          }
         }
         if (geo.ll && geo.ll.length === 2) {
           geoLat = geo.ll[0];
@@ -3602,15 +3619,25 @@ app.post('/api/analytics/event', (req, res) => {
   }
 
   let cleanCountry;
-  if (geoCity && geoCity.toLowerCase().includes('johannesburg')) {
-    cleanCountry = 'África do Sul';
-  } else if (detectedCountry) {
+  if (detectedCountry) {
     cleanCountry = detectedCountry;
   } else if (req.body.country) {
     const rawCountry = req.body.country;
     cleanCountry = rawCountry === 'Mozambique' ? 'Moçambique' : (countryNameMap[rawCountry] || rawCountry);
   } else {
     cleanCountry = 'Moçambique';
+  }
+
+  if (cleanCountry === 'Moçambique') {
+    if (!geoCity || geoCity.toLowerCase().includes('luanda') || geoCity.toLowerCase().includes('johannesburg')) {
+      geoCity = 'Maputo';
+      geoLat = -25.9692;
+      geoLng = 32.5732;
+    }
+  } else if (geoCity && geoCity.toLowerCase().includes('johannesburg')) {
+    cleanCountry = 'África do Sul';
+    geoLat = -26.20;
+    geoLng = 28.04;
   }
 
   const cleanUserAgent = (req.body.user_agent || req.headers['user-agent'] || '').slice(0, 512) || null;
@@ -4333,15 +4360,21 @@ app.get('/api/analytics/video/:id/live', authMiddleware, (req, res) => {
   };
 
   const activeViewers = db.prepare(`
-    SELECT country, city, COUNT(DISTINCT session_id) as viewers
+    SELECT country, city, timezone, COUNT(DISTINCT session_id) as viewers
     FROM analytics_events
     WHERE video_id = ? AND created_at >= datetime('now', '-5 minutes')
-    GROUP BY country, city
+    GROUP BY country, city, timezone
   `).all(vidId).map(v => {
     let cName = v.country || 'Moçambique';
+    let city = v.city || '';
     let lat = null;
     let lon = null;
-    if (v.city && v.city.toLowerCase().includes('johannesburg')) {
+    if (v.timezone === 'Africa/Maputo' || cName === 'Moçambique' || (city && city.toLowerCase().includes('luanda') && cName === 'Angola')) {
+      cName = 'Moçambique';
+      city = (!city || city.toLowerCase().includes('luanda') || city.toLowerCase().includes('johannesburg')) ? 'Maputo' : city;
+      lat = -25.9692;
+      lon = 32.5732;
+    } else if (city && city.toLowerCase().includes('johannesburg')) {
       cName = 'África do Sul';
       lat = -26.20;
       lon = 28.04;
@@ -4349,7 +4382,7 @@ app.get('/api/analytics/video/:id/live', authMiddleware, (req, res) => {
     const loc = countryLocations[cName] || { lat: -18.66, lon: 35.52, code: 'MZ' };
     return {
       country: cName,
-      city: v.city || '',
+      city: city,
       viewers: v.viewers || 1,
       lat: lat !== null ? lat : loc.lat,
       lon: lon !== null ? lon : loc.lon
@@ -4357,7 +4390,7 @@ app.get('/api/analytics/video/:id/live', authMiddleware, (req, res) => {
   });
 
   const recentRows = db.prepare(`
-    SELECT visitor_id, country, device, os, browser, city,
+    SELECT visitor_id, country, device, os, browser, city, timezone,
            MAX(created_at) as last_seen, event_type
     FROM analytics_events
     WHERE video_id = ? AND created_at >= datetime('now', '-2 hours')
@@ -4370,13 +4403,17 @@ app.get('/api/analytics/video/:id/live', authMiddleware, (req, res) => {
   const recent = recentRows.map(r => {
     const rawC = r.country || '';
     let normC = rawC === 'Mozambique' ? 'Moçambique' : (rawC || 'Moçambique');
-    if (r.city && r.city.toLowerCase().includes('johannesburg')) {
+    let city = r.city || '';
+    if (r.timezone === 'Africa/Maputo' || normC === 'Moçambique' || (city && city.toLowerCase().includes('luanda') && normC === 'Angola')) {
+      normC = 'Moçambique';
+      city = (!city || city.toLowerCase().includes('luanda') || city.toLowerCase().includes('johannesburg')) ? 'Maputo' : city;
+    } else if (city && city.toLowerCase().includes('johannesburg')) {
       normC = 'África do Sul';
     }
     return {
       visitorShort: r.visitor_id ? r.visitor_id.slice(0, 8) : '?',
       country: normC,
-      city: r.city || '',
+      city: city,
       device: r.device || 'desktop',
       os: r.os || '',
       browser: r.browser || '',
