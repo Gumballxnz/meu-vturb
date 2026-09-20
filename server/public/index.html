@@ -11370,45 +11370,86 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       const cy = height / 2;
       const radius = 175;
 
-      const continents = [
-        [-18, 35], [-25, 32], [-15, 39], [-12, 17], [0, 20], [10, 15], [-29, 24], [5, 38], [15, 32], [28, 30],
-        [-15, -50], [-22, -45], [-3, -60], [-8, -35], [-34, -58], [-12, -77], [4, -73], [10, -84],
-        [38, -98], [34, -118], [40, -74], [45, -75], [52, -106], [64, -150], [25, -80], [19, -99],
-        [48, 2], [51, 0], [40, -4], [41, 12], [52, 13], [55, 37], [60, 10], [59, 18],
-        [28, 77], [13, 80], [35, 104], [31, 121], [35, 139], [1, 103], [-6, 106], [14, 100],
-        [-25, 133], [-33, 151], [-37, 145], [-31, 115], [-41, 174]
+      const landBoxes = [
+        { latMin: -35, latMax: 37, lonMin: -18, lonMax: 51, step: 2.2 },
+        { latMin: 5, latMax: 12, lonMin: -84, lonMax: -77, step: 2.5 },
+        { latMin: -56, latMax: 13, lonMin: -81, lonMax: -34, step: 2.2 },
+        { latMin: 25, latMax: 70, lonMin: -130, lonMax: -60, step: 2.5 },
+        { latMin: 14, latMax: 32, lonMin: -118, lonMax: -86, step: 2.5 },
+        { latMin: 36, latMax: 71, lonMin: -10, lonMax: 40, step: 2.2 },
+        { latMin: 50, latMax: 70, lonMin: -5, lonMax: 32, step: 2.5 },
+        { latMin: 10, latMax: 75, lonMin: 40, lonMax: 145, step: 2.5 },
+        { latMin: 8, latMax: 35, lonMin: 68, lonMax: 90, step: 2.2 },
+        { latMin: 20, latMax: 45, lonMin: 100, lonMax: 125, step: 2.2 },
+        { latMin: 30, latMax: 45, lonMin: 128, lonMax: 146, step: 2.5 },
+        { latMin: -10, latMax: 6, lonMin: 95, lonMax: 141, step: 2.5 },
+        { latMin: -44, latMax: -10, lonMin: 112, lonMax: 154, step: 2.2 },
+        { latMin: -47, latMax: -34, lonMin: 166, lonMax: 178, step: 2.5 },
+        { latMin: -26, latMax: -12, lonMin: 43, lonMax: 51, step: 2.2 },
+        { latMin: 60, latMax: 83, lonMin: -73, lonMax: -12, step: 3.5 }
       ];
 
+      function isRealLand(lat, lon) {
+        if (lat < -10 && lat > -35 && lon > 30 && lon < 41) return true;
+        if (lat < 35 && lat > -35 && lon > -18 && lon < 52) {
+          if (lat < -5 && lon > 42) return false;
+          if (lat > 15 && lon < -12) return false;
+          return true;
+        }
+        if (lat < 13 && lat > -56 && lon > -82 && lon < -34) {
+          if (lat < -20 && lon > -40) return false;
+          if (lat > 5 && lon < -75) return false;
+          return true;
+        }
+        if (lat >= 14 && lat <= 72 && lon >= -168 && lon <= -52) {
+          if (lat < 30 && lon < -115) return false;
+          if (lat < 25 && lon > -80) return false;
+          return true;
+        }
+        if (lat >= 36 && lat <= 71 && lon >= -10 && lon <= 45) {
+          return true;
+        }
+        if (lat >= 5 && lat <= 75 && lon >= 40 && lon <= 150) {
+          if (lat < 20 && lon > 45 && lon < 65) return false;
+          return true;
+        }
+        if (lat <= -10 && lat >= -44 && lon >= 112 && lon <= 154) {
+          return true;
+        }
+        return false;
+      }
+
       const globePoints = [];
-      for (const [lat, lon] of continents) {
-        const phi = (90 - lat) * (Math.PI / 180);
-        const theta = (lon + 180) * (Math.PI / 180);
-        for (let i = 0; i < 9; i++) {
-          const dPhi = (Math.random() - 0.5) * 0.28;
-          const dTheta = (Math.random() - 0.5) * 0.38;
-          const finalPhi = phi + dPhi;
-          const finalTheta = theta + dTheta;
-          globePoints.push({
-            x: radius * Math.sin(finalPhi) * Math.cos(finalTheta),
-            y: radius * Math.cos(finalPhi),
-            z: radius * Math.sin(finalPhi) * Math.sin(finalTheta)
-          });
+      for (const box of landBoxes) {
+        for (let lat = box.latMin; lat <= box.latMax; lat += box.step) {
+          for (let lon = box.lonMin; lon <= box.lonMax; lon += box.step) {
+            if (isRealLand(lat, lon)) {
+              const phi = (90 - lat) * (Math.PI / 180);
+              const theta = lon * (Math.PI / 180);
+              globePoints.push({
+                x: radius * Math.sin(phi) * Math.sin(theta),
+                y: -radius * Math.cos(phi),
+                z: radius * Math.sin(phi) * Math.cos(theta),
+                isAmbient: false
+              });
+            }
+          }
         }
       }
 
-      for (let i = 0; i < 180; i++) {
+      for (let i = 0; i < 90; i++) {
         const phi = Math.acos(2 * Math.random() - 1);
         const theta = 2 * Math.PI * Math.random();
         globePoints.push({
-          x: radius * Math.sin(phi) * Math.cos(theta),
-          y: radius * Math.cos(phi),
-          z: radius * Math.sin(phi) * Math.sin(theta),
+          x: radius * Math.sin(phi) * Math.sin(theta),
+          y: -radius * Math.cos(phi),
+          z: radius * Math.sin(phi) * Math.cos(theta),
           isAmbient: true
         });
       }
 
-      let rotationY = 0;
-      let rotationX = 0.25;
+      let rotationY = -0.6;
+      let rotationX = 0.2;
       let isDragging = false;
       let lastX = 0;
       let lastY = 0;
@@ -11423,8 +11464,9 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         if (!isDragging) return;
         const dx = e.clientX - lastX;
         const dy = e.clientY - lastY;
-        rotationY += dx * 0.008;
-        rotationX += dy * 0.008;
+        rotationY += dx * 0.006;
+        rotationX += dy * 0.006;
+        rotationX = Math.max(-1.1, Math.min(1.1, rotationX));
         lastX = e.clientX;
         lastY = e.clientY;
       };
@@ -11435,14 +11477,14 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         ctx.clearRect(0, 0, width, height);
 
         if (!isDragging) {
-          rotationY += 0.004;
+          rotationY += 0.003;
         }
         pulseTick += 0.05;
 
-        const grad = ctx.createRadialGradient(cx, cy, radius * 0.5, cx, cy, radius);
-        grad.addColorStop(0, '#0f172a');
-        grad.addColorStop(0.85, '#070b14');
-        grad.addColorStop(1, '#030712');
+        const grad = ctx.createRadialGradient(cx, cy, radius * 0.4, cx, cy, radius);
+        grad.addColorStop(0, '#0c1527');
+        grad.addColorStop(0.8, '#060b16');
+        grad.addColorStop(1, '#02050b');
         ctx.beginPath();
         ctx.arc(cx, cy, radius, 0, Math.PI * 2);
         ctx.fillStyle = grad;
@@ -11450,7 +11492,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
 
         ctx.beginPath();
         ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
         ctx.lineWidth = 1.5;
         ctx.stroke();
 
@@ -11458,42 +11500,42 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         const cosX = Math.cos(rotationX), sinX = Math.sin(rotationX);
 
         for (const pt of globePoints) {
-          const x1 = pt.x * cosY - pt.z * sinY;
-          const z1 = pt.z * cosY + pt.x * sinY;
-          const y2 = pt.y * cosX - z1 * sinX;
-          const z2 = z1 * cosX + pt.y * sinX;
+          const rx1 = pt.x * cosY + pt.z * sinY;
+          const rz1 = -pt.x * sinY + pt.z * cosY;
+          const ry2 = pt.y * cosX - rz1 * sinX;
+          const rz2 = pt.y * sinX + rz1 * cosX;
 
-          if (z2 > -radius * 0.2) {
-            const screenX = cx + x1;
-            const screenY = cy + y2;
-            const alpha = Math.max(0.1, (z2 + radius) / (2 * radius));
-            const size = pt.isAmbient ? 1 : 1.8;
+          if (rz2 > -radius * 0.05) {
+            const screenX = cx + rx1;
+            const screenY = cy + ry2;
+            const depthRatio = Math.max(0.08, (rz2 + radius) / (2 * radius));
+            const size = pt.isAmbient ? 1.0 : (1.4 + depthRatio * 0.8);
 
             ctx.beginPath();
             ctx.arc(screenX, screenY, size, 0, Math.PI * 2);
             ctx.fillStyle = pt.isAmbient
-              ? `rgba(148, 163, 184, ${alpha * 0.3})`
-              : `rgba(34, 211, 238, ${alpha * 0.9})`;
+              ? `rgba(148, 163, 184, ${depthRatio * 0.25})`
+              : `rgba(56, 189, 248, ${depthRatio * 0.95})`;
             ctx.fill();
           }
         }
 
         if (viewers && viewers.length > 0) {
           for (const v of viewers) {
-            const phi = (90 - (v.lat || -18)) * (Math.PI / 180);
-            const theta = ((v.lon || 35) + 180) * (Math.PI / 180);
-            const vx = radius * Math.sin(phi) * Math.cos(theta);
-            const vy = radius * Math.cos(phi);
-            const vz = radius * Math.sin(phi) * Math.sin(theta);
+            const phi = (90 - (v.lat || -18.66)) * (Math.PI / 180);
+            const theta = (v.lon || 35.52) * (Math.PI / 180);
+            const vx = radius * Math.sin(phi) * Math.sin(theta);
+            const vy = -radius * Math.cos(phi);
+            const vz = radius * Math.sin(phi) * Math.cos(theta);
 
-            const x1 = vx * cosY - vz * sinY;
-            const z1 = vz * cosY + vx * sinY;
-            const y2 = vy * cosX - z1 * sinX;
-            const z2 = z1 * cosX + vy * sinX;
+            const rx1 = vx * cosY + vz * sinY;
+            const rz1 = -vx * sinY + vz * cosY;
+            const ry2 = vy * cosX - rz1 * sinX;
+            const rz2 = vy * sinX + rz1 * cosX;
 
-            if (z2 > 0) {
-              const screenX = cx + x1;
-              const screenY = cy + y2;
+            if (rz2 > 0) {
+              const screenX = cx + rx1;
+              const screenY = cy + ry2;
               const pulseSize = 4 + Math.sin(pulseTick) * 3;
 
               ctx.beginPath();
