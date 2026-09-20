@@ -8589,21 +8589,41 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       });
     }
 
+    function restoreVideoPrompt(videoId) {
+      const v = (trashVideos || []).find(x => x.id === videoId);
+      const title = v?.title || 'este vídeo';
+      showConfirmDialog({
+        title: 'Restaurar Vídeo',
+        message: `Deseja restaurar "${escapeHtml(title)}" de volta para a sua Biblioteca de vídeos?`,
+        confirmText: 'Restaurar Vídeo',
+        isDanger: false,
+        onConfirm: async (btn) => {
+          setButtonLoading(btn, true, 'Restaurando...');
+          try {
+            await api(`/api/videos/${videoId}/restore`, { method: 'PATCH' });
+            closeConfirmModal();
+            await loadAllDashboardData();
+            loadTrashVideos();
+            showToast('Vídeo restaurado com sucesso!');
+          } catch (err) {
+            showToast(err.message, true);
+          } finally {
+            setButtonLoading(btn, false);
+          }
+        }
+      });
+    }
+
     async function restoreVideo(videoId) {
-      try {
-        await api(`/api/videos/${videoId}/restore`, { method: 'PATCH' });
-        await loadAllDashboardData();
-        loadTrashVideos();
-        showToast('Vídeo restaurado com sucesso!');
-      } catch (err) {
-        showToast(err.message, true);
-      }
+      restoreVideoPrompt(videoId);
     }
 
     function permanentDeletePrompt(videoId) {
+      const v = (trashVideos || []).find(x => x.id === videoId);
+      const title = v?.title || 'este vídeo';
       showConfirmDialog({
         title: 'Excluir Definitivamente',
-        message: 'Atenção: esta ação é irreversível. O arquivo físico será removido do disco e o espaço de armazenamento será liberado imediatamente.',
+        message: `Atenção: esta ação é irreversível. Deseja realmente excluir "${escapeHtml(title)}" definitivamente? O arquivo físico será removido do disco e o espaço de armazenamento será liberado imediatamente.`,
         confirmText: 'Excluir Definitivamente',
         isDanger: true,
         onConfirm: async (btn) => {
@@ -8939,7 +8959,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
                 </div>
               </div>
               <div class="video-card-actions">
-                <button class="btn-primary-action" style="flex:1;justify-content:center;padding:7px 10px;font-size:12.5px;" onclick="restoreVideo('${v.id}')">Restaurar</button>
+                <button class="btn-primary-action" style="flex:1;justify-content:center;padding:7px 10px;font-size:12.5px;" onclick="restoreVideoPrompt('${v.id}')">Restaurar</button>
                 <button class="btn-solid-danger" style="padding:7px 12px;font-size:12.5px;" onclick="permanentDeletePrompt('${v.id}')" title="Excluir Definitivamente">
                   Excluir
                 </button>
