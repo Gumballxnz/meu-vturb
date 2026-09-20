@@ -2435,21 +2435,36 @@ app.get('/api/storage/details', authMiddleware, (req, res) => {
       ? db.prepare("SELECT id, file_path, file_size, duration FROM videos WHERE source_type = 'local'").all()
       : db.prepare("SELECT id, file_path, file_size, duration FROM videos WHERE user_id = ? AND source_type = 'local'").all(req.user.id);
     for (const lv of localVideos) {
-      if (lv.file_path && fs.existsSync(lv.file_path)) {
+      let fPath = lv.file_path;
+      if (fPath && !fs.existsSync(fPath)) {
+        const altPath = path.join(VIDEOS_DIR, path.basename(fPath));
+        if (fs.existsSync(altPath)) fPath = altPath;
+      }
+      let currentSize = 0;
+      if (fPath && fs.existsSync(fPath)) {
+        try { currentSize = fs.statSync(fPath).size; } catch (e) {}
+      }
+      const hlsDir = path.join(VIDEOS_DIR, lv.id);
+      if (fs.existsSync(hlsDir)) {
         try {
-          const currentSize = fs.statSync(lv.file_path).size;
-          if (lv.file_size !== currentSize) {
-            db.prepare('UPDATE videos SET file_size = ? WHERE id = ?').run(currentSize, lv.id);
-            lv.file_size = currentSize;
-          }
-          if (!lv.duration || lv.duration === '10:00' || lv.duration === '05:00') {
-            const realDur = getVideoDurationFormatted(lv.file_path);
-            if (realDur) {
-              db.prepare('UPDATE videos SET duration = ? WHERE id = ?').run(realDur, lv.id);
-              lv.duration = realDur;
-            }
+          const subFiles = fs.readdirSync(hlsDir);
+          for (const sf of subFiles) {
+            try { currentSize += fs.statSync(path.join(hlsDir, sf)).size; } catch (e) {}
           }
         } catch (e) {}
+      }
+
+      if (currentSize > 0 && lv.file_size !== currentSize) {
+        db.prepare('UPDATE videos SET file_size = ? WHERE id = ?').run(currentSize, lv.id);
+        lv.file_size = currentSize;
+      }
+
+      if (fPath && (!lv.duration || lv.duration === '10:00' || lv.duration === '05:00')) {
+        const realDur = getVideoDurationFormatted(fPath);
+        if (realDur) {
+          db.prepare('UPDATE videos SET duration = ? WHERE id = ?').run(realDur, lv.id);
+          lv.duration = realDur;
+        }
       }
     }
   } catch (e) {}
@@ -2485,14 +2500,15 @@ app.get('/api/storage/details', authMiddleware, (req, res) => {
 
   const formattedVideos = rawVideos.map(v => {
     const sizeBytes = Number(v.file_size || 0);
-    const pctOfTotal = totalLimitBytes > 0 ? ((sizeBytes / totalLimitBytes) * 100).toFixed(2) : '0.00';
+    const rawPct = totalLimitBytes > 0 ? (sizeBytes / totalLimitBytes) * 100 : 0;
+    const pctOfTotal = rawPct > 0 && rawPct < 0.01 ? '< 0.01' : rawPct.toFixed(2);
     const pctOfUsed = usedBytes > 0 ? ((sizeBytes / usedBytes) * 100).toFixed(1) : '0.0';
     return {
       id: v.id,
       title: v.title,
       duration: v.duration || '00:00',
       sizeBytes,
-      sizeFormatted: formatStorage(sizeBytes),
+      sizeFormatted: v.source_type === 'remote' && sizeBytes === 0 ? 'Remoto (0 MB)' : formatStorage(sizeBytes),
       pctOfTotal,
       pctOfUsed,
       sourceType: v.source_type || 'local',
