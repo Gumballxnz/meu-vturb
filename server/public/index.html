@@ -7485,8 +7485,8 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           <td>${statusBadge}</td>
           <td>
             <div style="font-size:13px;font-weight:700;color:var(--text-main);">${v.sizeFormatted}</div>
-            <div style="margin-top:4px;height:4px;border-radius:2px;background:rgba(255,255,255,0.08);overflow:hidden;">
-              <div style="height:100%;border-radius:2px;background:var(--color-primary);width:${barWidth}%;transition:width 0.3s;"></div>
+            <div style="margin-top:4px;height:4px;border-radius:2px;background:var(--border-subtle);overflow:hidden;">
+              <div style="height:100%;border-radius:2px;background:var(--color-primary);width:${Math.max(barWidth, 2)}%;transition:width 0.3s;"></div>
             </div>
           </td>
           <td style="font-size:12.5px;color:var(--text-dim);">${v.pctOfTotal}%</td>
