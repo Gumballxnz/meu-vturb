@@ -1686,6 +1686,111 @@
       font-weight: 600;
     }
 
+    .analytics-subtabs-nav {
+      display: inline-flex;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 3px;
+      gap: 4px;
+    }
+
+    .analytics-subtab-btn {
+      padding: 6px 14px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-muted);
+      border: none;
+      background: transparent;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .analytics-subtab-btn:hover {
+      color: var(--text-main);
+    }
+
+    .analytics-subtab-btn.active {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    }
+
+    .metric-diff-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      margin-right: 4px;
+    }
+
+    .metric-diff-badge.positive {
+      background: rgba(16, 185, 129, 0.12);
+      color: #10b981;
+    }
+
+    .metric-diff-badge.negative {
+      background: rgba(239, 68, 68, 0.12);
+      color: #ef4444;
+    }
+
+    .metric-diff-badge.neutral {
+      background: rgba(161, 161, 170, 0.15);
+      color: var(--text-dim);
+    }
+
+    .action-btn-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .action-btn-main-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 240px;
+    }
+
+    .action-btn-color-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    .action-btn-stats-grid {
+      display: flex;
+      gap: 24px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .action-btn-stat-box {
+      text-align: right;
+    }
+
+    .action-btn-stat-val {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text-main);
+    }
+
+    .action-btn-stat-lbl {
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
     .table-responsive {
       width: 100%;
       overflow-x: auto;
@@ -4091,52 +4196,95 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
               <select class="select-filter" id="analyticsVideoSelector" onchange="loadVideoAnalyticsData()" style="min-width: 220px;"></select>
             </div>
 
-            <div class="filter-bar">
-              <select class="select-filter" id="analyticsPeriodSelector" onchange="loadVideoAnalyticsData()">
-                <option value="all">Todo o Período</option>
-                <option value="30d">Últimos 30 Dias</option>
+            <div class="filter-bar" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+              <div id="analyticsCustomDateRange" style="display: none; align-items: center; gap: 8px;">
+                <input type="date" id="analyticsStartDate" class="form-input-text" style="padding: 5px 10px; font-size: 12.5px;">
+                <span style="color: var(--text-dim); font-size: 12px;">até</span>
+                <input type="date" id="analyticsEndDate" class="form-input-text" style="padding: 5px 10px; font-size: 12.5px;">
+                <button type="button" class="btn-primary-action" style="padding: 5px 12px; font-size: 12px;" onclick="loadVideoAnalyticsData()">Filtrar</button>
+              </div>
+
+              <select class="select-filter" id="analyticsPeriodSelector" onchange="handleAnalyticsPeriodChange()">
+                <option value="today" selected>Hoje</option>
+                <option value="yesterday">Ontem</option>
                 <option value="7d">Últimos 7 Dias</option>
-                <option value="24h">Últimas 24 Horas</option>
+                <option value="30d">Últimos 30 Dias</option>
+                <option value="month">Este Mês</option>
+                <option value="all">Todo o Período</option>
+                <option value="custom">Personalizado...</option>
               </select>
             </div>
           </div>
 
-          <div class="metrics-grid" style="margin-bottom: 24px;">
+          <div class="metrics-grid" style="margin-bottom: 24px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));">
             <div class="metric-card">
-              <div class="metric-title">Visitantes Únicos</div>
+              <div class="metric-title">Visualizações</div>
+              <div class="metric-value" id="anaViews">0</div>
+              <div class="metric-sub" id="anaViewsDiffWrap"><span id="anaViewsDiff" class="metric-diff-badge neutral">0%</span> vs período anterior</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-title">Usuários Únicos</div>
               <div class="metric-value" id="anaUniqueVisitors">0</div>
-              <div class="metric-sub" id="anaTotalViews">0 views totais</div>
+              <div class="metric-sub" id="anaVisitorsDiffWrap"><span id="anaVisitorsDiff" class="metric-diff-badge neutral">0%</span> vs período anterior</div>
             </div>
 
             <div class="metric-card">
-              <div class="metric-title">Plays Iniciados</div>
-              <div class="metric-value" id="anaUniquePlays">0</div>
-              <div class="metric-sub" id="anaTotalPlays">0 plays acumulados</div>
+              <div class="metric-title">Play Rate</div>
+              <div class="metric-value" id="anaPlayRate">0%</div>
+              <div class="metric-sub" id="anaPlayRateDiffWrap"><span id="anaPlayRateDiff" class="metric-diff-badge neutral">0%</span> vs período anterior</div>
             </div>
 
             <div class="metric-card">
-              <div class="metric-title">Chegaram ao Pitch</div>
-              <div class="metric-value" id="anaPitchViews">0</div>
-              <div class="metric-sub positive" id="anaPitchRate">0% dos leads</div>
-            </div>
-
-            <div class="metric-card">
-              <div class="metric-title">Cliques no CTA</div>
+              <div class="metric-title">Call to action</div>
               <div class="metric-value" id="anaCtaClicks">0</div>
-              <div class="metric-sub positive" id="anaCtaConversionRate">0% conversão</div>
+              <div class="metric-sub positive" id="anaCtaConversionRate">0% taxa de clique</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-title">Conversões</div>
+              <div class="metric-value" id="anaConversions">0</div>
+              <div class="metric-sub" id="anaConversionsDiffWrap"><span id="anaConversionsDiff" class="metric-diff-badge neutral">0%</span> vs período anterior</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-title">Receita</div>
+              <div class="metric-value" id="anaRevenue" style="color: #10b981;">R$ 0,00</div>
+              <div class="metric-sub" id="anaRevenueDiffWrap"><span id="anaRevenueDiff" class="metric-diff-badge neutral">0%</span> vs período anterior</div>
             </div>
           </div>
 
           <div class="retention-chart-container">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-              <div>
-                <h4 style="font-size: 14.5px; font-weight: 700; color: var(--text-main);">Curva de Retenção da VSL</h4>
-                <p style="font-size: 12px; color: var(--text-dim); margin-top: 2px;">Percentual exato de espectadores retidos ao longo de cada marco do vídeo.</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 12px;">
+              <div class="analytics-subtabs-nav">
+                <button type="button" class="analytics-subtab-btn active" id="tabBtnRetention" onclick="switchAnalyticsChartTab('retention')">Curva de Retenção da VSL</button>
+                <button type="button" class="analytics-subtab-btn" id="tabBtnAudience" onclick="switchAnalyticsChartTab('audience')">Audiência</button>
+                <button type="button" class="analytics-subtab-btn" id="tabBtnConversions" onclick="switchAnalyticsChartTab('conversions')">Conversões</button>
               </div>
               <span class="badge-status green" id="anaPitchMarkerBadge">Pitch programado</span>
             </div>
 
-            <div class="retention-bars-row" id="retentionBarsContainer"></div>
+            <div id="anaTabPaneRetention">
+              <div class="retention-bars-row" id="retentionBarsContainer"></div>
+            </div>
+
+            <div id="anaTabPaneAudience" style="display: none;">
+              <div class="retention-bars-row" id="audienceBarsContainer"></div>
+            </div>
+
+            <div id="anaTabPaneConversions" style="display: none;">
+              <div id="conversionsChartContainer" style="padding: 10px 0;"></div>
+            </div>
+          </div>
+
+          <div class="card-panel" style="margin-top: 24px; padding: 20px; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-md);" id="analyticsActionButtonsPanel">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 14px; margin-bottom: 16px;">
+              <div>
+                <h4 style="font-size: 14.5px; font-weight: 700; color: var(--text-main); margin: 0;">Botões de Ação</h4>
+                <p style="font-size: 12px; color: var(--text-dim); margin-top: 2px; margin-bottom: 0;">Desempenho dos botões de chamada para ação (CTA) configurados neste vídeo.</p>
+              </div>
+            </div>
+            <div id="analyticsActionButtonsContainer"></div>
           </div>
         </div>
       </section>
@@ -9243,6 +9391,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
 
     function populateAnalyticsSelector() {
       const select = document.getElementById('analyticsVideoSelector');
+      if (!select) return;
       select.innerHTML = '';
       videos.forEach(v => {
         const opt = document.createElement('option');
@@ -9250,6 +9399,10 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         opt.textContent = v.title;
         select.appendChild(opt);
       });
+      const periodSelect = document.getElementById('analyticsPeriodSelector');
+      if (periodSelect && (!periodSelect.value || periodSelect.value === 'all')) {
+        periodSelect.value = 'today';
+      }
     }
 
     function openVideoAnalytics(id) {
@@ -9259,30 +9412,93 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       loadVideoAnalyticsData();
     }
 
+    let currentAnalyticsChartTab = 'retention';
+
+    function switchAnalyticsChartTab(tab) {
+      currentAnalyticsChartTab = tab;
+      const tabs = ['retention', 'audience', 'conversions'];
+      tabs.forEach(t => {
+        const btn = document.getElementById(`tabBtn${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        const pane = document.getElementById(`anaTabPane${t.charAt(0).toUpperCase() + t.slice(1)}`);
+        if (btn) btn.classList.toggle('active', t === tab);
+        if (pane) pane.style.display = t === tab ? 'block' : 'none';
+      });
+    }
+
+    function handleAnalyticsPeriodChange() {
+      const periodSelect = document.getElementById('analyticsPeriodSelector');
+      const customRange = document.getElementById('analyticsCustomDateRange');
+      if (periodSelect && periodSelect.value === 'custom') {
+        if (customRange) customRange.style.display = 'inline-flex';
+        const startInput = document.getElementById('analyticsStartDate');
+        const endInput = document.getElementById('analyticsEndDate');
+        if (startInput && !startInput.value) {
+          const today = new Date().toISOString().slice(0, 10);
+          startInput.value = today;
+          if (endInput) endInput.value = today;
+        }
+      } else {
+        if (customRange) customRange.style.display = 'none';
+        loadVideoAnalyticsData();
+      }
+    }
+
+    function updateAnalyticsDiffBadge(elementId, diffObj) {
+      const el = document.getElementById(elementId);
+      if (!el) return;
+      const diff = diffObj || { text: '0%', isPositive: true, neutral: true };
+      el.className = 'metric-diff-badge ' + (diff.neutral ? 'neutral' : (diff.isPositive ? 'positive' : 'negative'));
+      el.textContent = diff.text || '0%';
+    }
+
     async function loadVideoAnalyticsData() {
       const select = document.getElementById('analyticsVideoSelector');
-      const vidId = select.value || (videos[0] ? videos[0].id : null);
+      const vidId = select ? (select.value || (videos[0] ? videos[0].id : null)) : null;
       if (!vidId) return;
 
-      const period = document.getElementById('analyticsPeriodSelector').value;
+      const periodSelect = document.getElementById('analyticsPeriodSelector');
+      const period = periodSelect ? (periodSelect.value || 'today') : 'today';
+      const startDate = (document.getElementById('analyticsStartDate') || {}).value || '';
+      const endDate = (document.getElementById('analyticsEndDate') || {}).value || '';
+
+      let queryStr = `period=${encodeURIComponent(period)}`;
+      if (period === 'custom' && startDate && endDate) {
+        queryStr += `&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
+      }
 
       try {
-        const res = await api(`/api/analytics/video/${vidId}?period=${period}`);
-        const m = res.metrics;
+        const res = await api(`/api/analytics/video/${vidId}?${queryStr}`);
+        const m = res.metrics || {};
 
-        document.getElementById('anaUniqueVisitors').textContent = (m.uniqueVisitors || 0).toLocaleString();
-        document.getElementById('anaTotalViews').textContent = `${(m.views || 0).toLocaleString()} visualizações`;
+        const elViews = document.getElementById('anaViews');
+        if (elViews) elViews.textContent = (m.views || 0).toLocaleString();
+        updateAnalyticsDiffBadge('anaViewsDiff', m.viewsDiff);
 
-        document.getElementById('anaUniquePlays').textContent = (m.uniquePlays || 0).toLocaleString();
-        document.getElementById('anaTotalPlays').textContent = `${(m.plays || 0).toLocaleString()} reproduções`;
+        const elVisitors = document.getElementById('anaUniqueVisitors');
+        if (elVisitors) elVisitors.textContent = (m.uniqueVisitors || 0).toLocaleString();
+        updateAnalyticsDiffBadge('anaVisitorsDiff', m.uniqueVisitorsDiff);
 
-        document.getElementById('anaPitchViews').textContent = (m.pitchViews || 0).toLocaleString();
-        document.getElementById('anaPitchRate').textContent = `${m.pitchRate || '0.0'}% de alcance`;
+        const elPlayRate = document.getElementById('anaPlayRate');
+        if (elPlayRate) elPlayRate.textContent = `${m.playRate || '0.0'}%`;
+        updateAnalyticsDiffBadge('anaPlayRateDiff', m.playRateDiff);
 
-        document.getElementById('anaCtaClicks').textContent = (m.ctaClicks || 0).toLocaleString();
-        document.getElementById('anaCtaConversionRate').textContent = `${m.ctaClickRate || '0.0'}% taxa de clique`;
+        const elCtaClicks = document.getElementById('anaCtaClicks');
+        if (elCtaClicks) elCtaClicks.textContent = (m.ctaClicks || 0).toLocaleString();
+        const elCtaRate = document.getElementById('anaCtaConversionRate');
+        if (elCtaRate) elCtaRate.textContent = `${m.ctaClickRate || '0.0'}% taxa de clique`;
+
+        const elConversions = document.getElementById('anaConversions');
+        if (elConversions) elConversions.textContent = (m.conversions || 0).toLocaleString();
+        updateAnalyticsDiffBadge('anaConversionsDiff', m.conversionsDiff);
+
+        const elRevenue = document.getElementById('anaRevenue');
+        if (elRevenue) elRevenue.textContent = m.revenueFormatted || 'R$ 0,00';
+        updateAnalyticsDiffBadge('anaRevenueDiff', m.revenueDiff);
 
         renderRetentionChart(res.retentionCurve || []);
+        renderAudienceChart(res.audienceTimeline || []);
+        renderConversionsChart(m);
+        renderActionButtons(res.actionButtons || []);
       } catch (err) {
         showToast('Erro ao carregar métricas da VSL.', true);
       }
@@ -9290,6 +9506,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
 
     function renderRetentionChart(curve) {
       const container = document.getElementById('retentionBarsContainer');
+      if (!container) return;
       container.innerHTML = '';
 
       if (!curve || curve.length === 0) {
@@ -9309,6 +9526,114 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           <span class="retention-col-label">${pt.label}</span>
         `;
         container.appendChild(col);
+      });
+    }
+
+    function renderAudienceChart(timeline) {
+      const container = document.getElementById('audienceBarsContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (!timeline || timeline.length === 0) {
+        container.innerHTML = `<div style="margin: auto; color: var(--text-dim); font-size: 13px;">Sem dados de audiência para o período selecionado.</div>`;
+        return;
+      }
+
+      timeline.forEach(pt => {
+        const col = document.createElement('div');
+        col.className = 'retention-col';
+        const heightPct = Math.max(4, pt.pct || 0);
+
+        col.innerHTML = `
+          <div class="retention-col-bar" style="height: ${heightPct}%; background: #3b82f6;">
+            <span class="retention-val-tooltip">${pt.viewers} leads</span>
+          </div>
+          <span class="retention-col-label">${pt.label} (${pt.pct}%)</span>
+        `;
+        container.appendChild(col);
+      });
+    }
+
+    function renderConversionsChart(m) {
+      const container = document.getElementById('conversionsChartContainer');
+      if (!container) return;
+
+      const convCount = m.conversions || 0;
+      const revTotal = m.revenueFormatted || 'R$ 0,00';
+      const cRate = m.conversionRate || '0.00';
+      const avgTicket = convCount > 0 ? (m.revenue / convCount) : 0;
+      const avgTicketFormatted = `R$ ${avgTicket.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+      container.innerHTML = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 8px;">
+          <div style="padding: 14px; background: var(--bg-main); border: 1px solid var(--border-subtle); border-radius: 8px;">
+            <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-dim);">Total de Vendas</div>
+            <div style="font-size: 20px; font-weight: 800; color: var(--text-main); margin-top: 4px;">${convCount}</div>
+            <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">Conversões confirmadas</div>
+          </div>
+          <div style="padding: 14px; background: var(--bg-main); border: 1px solid var(--border-subtle); border-radius: 8px;">
+            <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-dim);">Faturamento Total</div>
+            <div style="font-size: 20px; font-weight: 800; color: #10b981; margin-top: 4px;">${revTotal}</div>
+            <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">Receita gerada pela VSL</div>
+          </div>
+          <div style="padding: 14px; background: var(--bg-main); border: 1px solid var(--border-subtle); border-radius: 8px;">
+            <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-dim);">Taxa de Conversão</div>
+            <div style="font-size: 20px; font-weight: 800; color: var(--primary); margin-top: 4px;">${cRate}%</div>
+            <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">Por visualização única</div>
+          </div>
+          <div style="padding: 14px; background: var(--bg-main); border: 1px solid var(--border-subtle); border-radius: 8px;">
+            <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-dim);">Ticket Médio</div>
+            <div style="font-size: 20px; font-weight: 800; color: var(--text-main); margin-top: 4px;">${avgTicketFormatted}</div>
+            <div style="font-size: 11.5px; color: var(--text-muted); margin-top: 2px;">Valor médio por venda</div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderActionButtons(buttons) {
+      const container = document.getElementById('analyticsActionButtonsContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (!buttons || buttons.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 24px; color: var(--text-dim); font-size: 13px;">
+            Nenhum botão de ação (CTA) configurado neste vídeo.
+          </div>
+        `;
+        return;
+      }
+
+      buttons.forEach(btn => {
+        const row = document.createElement('div');
+        row.className = 'action-btn-row';
+        row.innerHTML = `
+          <div class="action-btn-main-info">
+            <div class="action-btn-color-dot" style="background: ${btn.color || 'var(--primary)'};"></div>
+            <div>
+              <div style="font-size: 13.5px; font-weight: 700; color: var(--text-main);">${escapeHtml(btn.title)}</div>
+              <div style="font-size: 11.5px; color: var(--text-dim); margin-top: 2px;">
+                Aparece em: <strong style="color: var(--text-main);">${btn.timeFormatted}</strong> (${btn.timeSeconds}s)
+                ${btn.url ? ` • <a href="${escapeHtml(btn.url)}" target="_blank" rel="noopener noreferrer" style="color: var(--primary); text-decoration: underline;">${escapeHtml(btn.url.replace(/^https?:\/\//, '').slice(0, 30))}...</a>` : ''}
+              </div>
+            </div>
+          </div>
+          <div class="action-btn-stats-grid">
+            <div class="action-btn-stat-box">
+              <div class="action-btn-stat-val">${(btn.views || 0).toLocaleString()}</div>
+              <div class="action-btn-stat-lbl">Exibições</div>
+            </div>
+            <div class="action-btn-stat-box">
+              <div class="action-btn-stat-val">${(btn.clicks || 0).toLocaleString()}</div>
+              <div class="action-btn-stat-lbl">Cliques</div>
+            </div>
+            <div class="action-btn-stat-box">
+              <div class="action-btn-stat-val" style="color: #10b981;">${btn.ctr || '0.0'}%</div>
+              <div class="action-btn-stat-lbl">Taxa de Clique</div>
+            </div>
+          </div>
+        `;
+        container.appendChild(row);
       });
     }
 
