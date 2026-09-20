@@ -67,9 +67,15 @@
             extraCss = '#settingsPaneAccount { display: none !important; } #settingsPaneWebhooks { display: block !important; } #btnSettingsAccount { color: var(--text-muted) !important; background: transparent !important; } #btnSettingsWebhooks { color: var(--color-primary) !important; background: var(--color-primary-soft) !important; }';
           }
         } else if (p.indexOf('/players/') === 0) {
-          tabId = 'viewEditor';
-          navId = 'navVideos';
-          title = 'Configurações de Vídeo';
+          if (p.indexOf('/analytics') !== -1) {
+            tabId = 'viewVideoAnalytics';
+            navId = 'navVideos';
+            title = 'Analytics do Vídeo';
+          } else {
+            tabId = 'viewEditor';
+            navId = 'navVideos';
+            title = 'Configurações de Vídeo';
+          }
         } else if (p.indexOf('/folders') === 0 || p === '/videos') {
           tabId = 'viewVideos';
           navId = 'navVideos';

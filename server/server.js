@@ -512,8 +512,8 @@ app.use((req, res, next) => {
   }
 
   const dashRoutes = ['/', '/login', '/cadastro', '/verificar-cadastro', '/recuperar-senha', '/videos', '/metricas', '/usuarios', '/servidor', '/analytics', '/configuracoes', '/settings'];
-  const isPlayerEditRoute = /^\/players\/[^/]+\/edit\/?$/.test(req.path);
-  if (dashRoutes.includes(req.path) || isPlayerEditRoute || req.path.startsWith('/settings/') || req.path.startsWith('/configuracoes/') || req.path.startsWith('/folders/')) {
+  const isPlayerUiRoute = req.path.startsWith('/players/') && req.path !== '/players/list';
+  if (dashRoutes.includes(req.path) || isPlayerUiRoute || req.path.startsWith('/settings/') || req.path.startsWith('/configuracoes/') || req.path.startsWith('/folders/')) {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
@@ -3539,7 +3539,6 @@ app.post('/api/analytics/event', (req, res) => {
   const cleanDevice = req.body.device || 'desktop';
   const cleanBrowser = req.body.browser || 'Chrome';
   const cleanOs = req.body.os || 'Windows';
-  const cleanCountry = req.body.country || 'Mozambique';
   const cleanDomain = req.body.domain || (req.headers.referer ? (() => { try { return new URL(req.headers.referer).hostname; } catch(e){ return null; } })() : null);
   const cleanUtmSource = req.body.utm_source || null;
   const cleanUtmMedium = req.body.utm_medium || null;
@@ -3556,12 +3555,36 @@ app.post('/api/analytics/event', (req, res) => {
   let geoRegion = null;
   let geoLat = null;
   let geoLng = null;
+  let detectedCountry = null;
+
+  const countryNameMap = {
+    'MZ': 'Moçambique',
+    'ZA': 'África do Sul',
+    'BR': 'Brasil',
+    'PT': 'Portugal',
+    'AO': 'Angola',
+    'CV': 'Cabo Verde',
+    'GW': 'Guiné-Bissau',
+    'ST': 'São Tomé e Príncipe',
+    'US': 'Estados Unidos',
+    'GB': 'Reino Unido',
+    'ES': 'Espanha',
+    'FR': 'França',
+    'DE': 'Alemanha',
+    'IT': 'Itália'
+  };
+
   if (cleanIp) {
     try {
       const geo = geoip.lookup(cleanIp);
       if (geo) {
         geoCity = geo.city || null;
         geoRegion = geo.region || null;
+        if (geo.country && countryNameMap[geo.country]) {
+          detectedCountry = countryNameMap[geo.country];
+        } else if (geo.country) {
+          detectedCountry = geo.country;
+        }
         if (geo.ll && geo.ll.length === 2) {
           geoLat = geo.ll[0];
           geoLng = geo.ll[1];
@@ -3569,6 +3592,9 @@ app.post('/api/analytics/event', (req, res) => {
       }
     } catch (e) {}
   }
+
+  const rawCountry = req.body.country || detectedCountry || 'Moçambique';
+  const cleanCountry = rawCountry === 'Mozambique' ? 'Moçambique' : (countryNameMap[rawCountry] || rawCountry);
 
   const cleanUserAgent = (req.body.user_agent || req.headers['user-agent'] || '').slice(0, 512) || null;
   const cleanScreenWidth = Number.isInteger(req.body.screen_width) ? req.body.screen_width : null;
@@ -4185,16 +4211,20 @@ app.get('/api/analytics/video/:id/live', authMiddleware, (req, res) => {
   `).all(vidId);
 
   const now = Date.now();
-  const recent = recentRows.map(r => ({
-    visitorShort: r.visitor_id ? r.visitor_id.slice(0, 8) : '?',
-    country: r.country || 'Desconhecido',
-    city: r.city || '',
-    device: r.device || 'desktop',
-    os: r.os || '',
-    browser: r.browser || '',
-    lastEvent: r.event_type,
-    minutesAgo: Math.round((now - new Date(r.last_seen + 'Z').getTime()) / 60000)
-  }));
+  const recent = recentRows.map(r => {
+    const rawC = r.country || '';
+    const normC = rawC === 'Mozambique' ? 'Moçambique' : (rawC || 'Moçambique');
+    return {
+      visitorShort: r.visitor_id ? r.visitor_id.slice(0, 8) : '?',
+      country: normC,
+      city: r.city || '',
+      device: r.device || 'desktop',
+      os: r.os || '',
+      browser: r.browser || '',
+      lastEvent: r.event_type,
+      minutesAgo: Math.round((now - new Date(r.last_seen + 'Z').getTime()) / 60000)
+    };
+  });
 
   res.json({
     activeNow: activeRows.c || 0,

@@ -7,9 +7,11 @@ module.exports = function createVturbAnalyticsRouter(db) {
     const vturbPaths = [
       '/conversions', '/events', '/times', '/clicks',
       '/headlines', '/turbo', '/sessions', '/traffic_origin',
-      '/players', '/custom_metrics', '/comparison_groups', '/quota'
+      '/custom_metrics', '/comparison_groups', '/quota'
     ];
-    if (!vturbPaths.some(p => req.path === p || req.path.startsWith(p + '/'))) {
+    const isVturbPath = vturbPaths.some(p => req.path === p || req.path.startsWith(p + '/')) ||
+                        req.path === '/players' || req.path === '/players/' || req.path === '/players/list';
+    if (!isVturbPath) {
       return next();
     }
 
