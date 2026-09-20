@@ -1819,36 +1819,281 @@
     .va-breakdown-bar-track { flex: 1; height: 8px; background: var(--border-subtle); border-radius: 4px; overflow: hidden; }
     .va-breakdown-bar-fill { height: 100%; background: var(--primary); border-radius: 4px; transition: width 0.4s; }
     .va-breakdown-count { font-size: 12px; font-weight: 700; color: var(--text-main); min-width: 32px; text-align: right; }
-    .va-funnel-step {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      padding: 18px 20px;
+    .va-funnel-card {
       background: var(--bg-card);
       border: 1px solid var(--border-subtle);
-      border-radius: 10px;
-      margin-bottom: 8px;
+      border-radius: 14px;
+      padding: 24px;
+      position: relative;
     }
-    .va-funnel-step-num { width: 28px; height: 28px; border-radius: 50%; background: var(--primary); color: #fff; font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .va-funnel-step-label { flex: 1; font-size: 13px; font-weight: 600; color: var(--text-main); }
-    .va-funnel-step-count { font-size: 22px; font-weight: 800; color: var(--text-main); }
-    .va-funnel-step-pct { font-size: 13px; font-weight: 700; color: var(--text-muted); min-width: 60px; text-align: right; }
-    .va-funnel-arrow { text-align: center; color: var(--text-dim); font-size: 18px; margin: -2px 0; }
-    .va-heatmap-grid { display: grid; grid-template-columns: 80px repeat(7, 1fr); gap: 3px; }
-    .va-heatmap-cell {
-      height: 32px;
+    .va-funnel-topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 28px;
+      position: relative;
+    }
+    .va-select-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .va-select-btn:hover {
+      background: rgba(255,255,255,0.07);
+      border-color: rgba(255,255,255,0.2);
+    }
+    .va-dropdown-panel {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      width: 260px;
+      background: #181b24;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 10px;
+      box-shadow: 0 14px 34px rgba(0,0,0,0.5);
+      z-index: 1000;
+      overflow: hidden;
+      display: none;
+    }
+    .va-dropdown-panel.active { display: block; }
+    .va-dropdown-search-wrap {
+      padding: 10px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .va-dropdown-search-wrap input {
+      background: transparent;
+      border: none;
+      outline: none;
+      font-size: 12.5px;
+      color: #fff;
+      width: 100%;
+    }
+    .va-dropdown-list {
+      max-height: 280px;
+      overflow-y: auto;
+      padding: 6px 0;
+    }
+    .va-dropdown-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 14px;
+      font-size: 13px;
+      color: var(--text-main);
+      cursor: pointer;
+      transition: background 0.12s;
+    }
+    .va-dropdown-item:hover {
+      background: rgba(255,255,255,0.06);
+    }
+    .va-dropdown-check {
+      width: 16px;
+      height: 16px;
       border-radius: 4px;
-      background: var(--border-subtle);
+      border: 1px solid rgba(255,255,255,0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.12s;
+    }
+    .va-dropdown-item.checked .va-dropdown-check {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+    .va-dropdown-check svg {
+      display: none;
+    }
+    .va-dropdown-item.checked .va-dropdown-check svg {
+      display: block;
+    }
+    .va-funnel-chart-container {
+      position: relative;
+      height: 340px;
+      display: flex;
+      margin-top: 10px;
+    }
+    .va-funnel-y-axis {
+      width: 48px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding-right: 12px;
+      font-size: 11px;
+      color: var(--text-dim);
+      height: 260px;
+      user-select: none;
+    }
+    .va-funnel-chart-stage {
+      flex: 1;
+      position: relative;
+      height: 260px;
+    }
+    .va-funnel-gridline {
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 1px;
+      border-bottom: 1px dashed rgba(255,255,255,0.07);
+    }
+    .va-funnel-columns-wrap {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-around;
+      padding: 0 16px;
+    }
+    .va-funnel-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100%;
+      justify-content: flex-end;
+      position: relative;
+    }
+    .va-funnel-bar-track {
+      width: 64px;
+      max-width: 80%;
+      height: 100%;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      position: relative;
+    }
+    .va-funnel-bar-fill {
+      width: 100%;
+      background: linear-gradient(180deg, rgba(37,99,235,0.7) 0%, rgba(37,99,235,0.18) 100%);
+      border-radius: 6px 6px 0 0;
+      border-top: 2px solid var(--primary);
+      transition: height 0.4s ease;
+      min-height: 4px;
+    }
+    .va-funnel-pill {
+      margin-bottom: 8px;
+      background: #141721;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      padding: 5px 10px;
+      text-align: center;
+      font-size: 11.5px;
+      line-height: 1.25;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+      white-space: nowrap;
+    }
+    .va-funnel-pill-pct { font-weight: 700; color: #fff; }
+    .va-funnel-pill-count { font-size: 11px; color: var(--text-dim); }
+    .va-funnel-labels-row {
+      display: flex;
+      margin-left: 48px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      padding-top: 14px;
+    }
+    .va-funnel-label-col {
+      flex: 1;
+      text-align: center;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-main);
+      padding: 0 8px;
+    }
+
+    .va-heatmap-grid {
+      display: grid;
+      grid-template-columns: 88px repeat(7, 1fr);
+      gap: 4px;
+    }
+    .va-heatmap-cell {
+      height: 28px;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.04);
       position: relative;
       cursor: default;
+      transition: transform 0.1s, border-color 0.1s;
     }
-    .va-heatmap-cell.level-zero { background: var(--border-subtle); opacity: 0.4; }
-    .va-heatmap-cell.level-low { background: rgba(37,99,235,0.18); }
-    .va-heatmap-cell.level-medium { background: rgba(37,99,235,0.45); }
-    .va-heatmap-cell.level-high { background: rgba(37,99,235,0.72); }
-    .va-heatmap-cell.level-peak { background: var(--primary); }
-    .va-heatmap-label { font-size: 11px; color: var(--text-dim); display: flex; align-items: center; height: 32px; }
-    .va-heatmap-head { font-size: 11px; font-weight: 700; color: var(--text-muted); text-align: center; padding-bottom: 4px; }
+    .va-heatmap-cell:hover {
+      transform: scale(1.08);
+      z-index: 2;
+      border-color: rgba(255,255,255,0.3);
+    }
+    .va-heatmap-cell.level-zero { background: rgba(255,255,255,0.02); opacity: 0.5; }
+    .va-heatmap-cell.level-low { background: rgba(37,99,235,0.22); border-color: rgba(37,99,235,0.3); }
+    .va-heatmap-cell.level-medium { background: rgba(37,99,235,0.48); border-color: rgba(37,99,235,0.5); }
+    .va-heatmap-cell.level-high { background: rgba(37,99,235,0.74); border-color: rgba(37,99,235,0.8); }
+    .va-heatmap-cell.level-peak { background: var(--primary); box-shadow: 0 0 10px rgba(37,99,235,0.5); }
+    .va-heatmap-time {
+      font-size: 11px;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      height: 28px;
+      font-family: monospace;
+    }
+    .va-heatmap-foot {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-align: center;
+      padding-top: 10px;
+    }
+
+    .va-globe-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 30px 10px 40px;
+      position: relative;
+      overflow: hidden;
+    }
+    .va-globe-header {
+      position: absolute;
+      top: 16px;
+      left: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13.5px;
+      color: var(--text-main);
+    }
+    .va-globe-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #ef4444;
+      animation: va-pulse 1.5s infinite;
+    }
+    .va-globe-badge {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 12.5px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+    }
+    .va-globe-canvas {
+      display: block;
+      cursor: grab;
+      border-radius: 50%;
+    }
+    .va-globe-canvas:active { cursor: grabbing; }
     .va-summary-chart-wrap { position: relative; height: 240px; margin-bottom: 24px; }
     .va-summary-legend { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 12px; }
     .va-summary-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-muted); cursor: pointer; }
@@ -1879,7 +2124,106 @@
       transition: color 0.15s;
     }
     .va-back-btn:hover { color: var(--primary); }
-
+    .va-retention-chart-box {
+      position: relative;
+      width: 100%;
+      height: 380px;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 24px;
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .va-retention-bg-video {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      pointer-events: none;
+      opacity: 0.85;
+      background: #000;
+    }
+    .va-retention-grid-overlay {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 24px 36px 36px 50px;
+      box-sizing: border-box;
+    }
+    .va-retention-grid-line {
+      width: 100%;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.12);
+      display: flex;
+      align-items: center;
+    }
+    .va-retention-grid-label {
+      position: absolute;
+      left: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.5);
+    }
+    .va-retention-svg-layer {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: all;
+    }
+    .va-retention-time-axis {
+      position: absolute;
+      bottom: 8px;
+      left: 50px;
+      right: 36px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.5);
+      pointer-events: none;
+    }
+    .va-retention-subtab-badge {
+      position: absolute;
+      top: 14px;
+      right: 18px;
+      background: rgba(0, 0, 0, 0.7);
+      backdrop-filter: blur(4px);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      z-index: 5;
+    }
+    .va-data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: left;
+    }
+    .va-data-table th {
+      padding: 12px 16px;
+      color: var(--text-dim);
+      font-weight: 600;
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--bg-card);
+    }
+    .va-data-table td {
+      padding: 14px 16px;
+      color: var(--text-main);
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .va-data-table tr:hover td {
+      background: var(--bg-hover);
+    }
     .metric-diff-badge {
       font-size: 11px;
       font-weight: 700;
@@ -4491,7 +4835,7 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
 
             <div class="metric-card">
               <div class="metric-title">Receita</div>
-              <div class="metric-value" id="anaRevenue" style="color: #10b981;">R$ 0,00</div>
+              <div class="metric-value" id="anaRevenue" style="color: #10b981;">0,00 MT</div>
               <div class="metric-sub" id="anaRevenueDiffWrap"><span id="anaRevenueDiff" class="metric-diff-badge neutral">0%</span> vs período anterior</div>
             </div>
           </div>
@@ -4602,12 +4946,28 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
                   <button class="va-subtab-btn" onclick="switchVaRetentionSubtab('browsers')">Navegadores</button>
                   <button class="va-subtab-btn" onclick="switchVaRetentionSubtab('traffic')">Origem do Tráfego</button>
                 </div>
-                <div id="vaRetSubpane-general"></div>
-                <div id="vaRetSubpane-countries" style="display:none;"></div>
-                <div id="vaRetSubpane-devices" style="display:none;"></div>
-                <div id="vaRetSubpane-os" style="display:none;"></div>
-                <div id="vaRetSubpane-browsers" style="display:none;"></div>
-                <div id="vaRetSubpane-traffic" style="display:none;"></div>
+
+                <div class="va-retention-chart-box" id="vaRetentionChartContainer">
+                  <video id="vaRetentionVideoBg" class="va-retention-bg-video" muted playsinline preload="auto"></video>
+                  <div class="va-retention-grid-overlay">
+                    <div class="va-retention-grid-line"><span class="va-retention-grid-label">100%</span></div>
+                    <div class="va-retention-grid-line"><span class="va-retention-grid-label">80%</span></div>
+                    <div class="va-retention-grid-line"><span class="va-retention-grid-label">60%</span></div>
+                    <div class="va-retention-grid-line"><span class="va-retention-grid-label">40%</span></div>
+                    <div class="va-retention-grid-line"><span class="va-retention-grid-label">20%</span></div>
+                    <div class="va-retention-grid-line"><span class="va-retention-grid-label">0%</span></div>
+                  </div>
+                  <svg id="vaRetentionSvg" class="va-retention-svg-layer" viewBox="0 0 1000 380" preserveAspectRatio="none"></svg>
+                  <div class="va-retention-time-axis" id="vaRetentionTimeAxis">
+                    <span>00:00</span>
+                    <span id="vaTimeAxisMid1">--:--</span>
+                    <span id="vaTimeAxisMid2">--:--</span>
+                    <span id="vaTimeAxisEnd">--:--</span>
+                  </div>
+                  <div id="vaRetentionSubtabBadge" class="va-retention-subtab-badge" style="display: none;"></div>
+                </div>
+
+                <div id="vaRetentionSubContentArea"></div>
               </div>
 
               <div class="va-tab-pane" id="vaPane-summary">
@@ -9997,7 +10357,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
             </div>
             <div class="metric-card">
               <div class="metric-title">Receita</div>
-              <div class="metric-value" style="color:#10b981;">${m.revenueFormatted || 'R$ 0,00'}</div>
+              <div class="metric-value" style="color:#10b981;">${m.revenueFormatted || '0,00 MT'}</div>
               <div class="metric-sub"><span class="metric-diff-badge ${m.revenueDiff?.positive ? 'positive' : 'neutral'}">${m.revenueDiff?.text || '0%'}</span> vs anterior</div>
             </div>
           </div>
@@ -10104,6 +10464,140 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       }
     }
 
+    let vaSelectedFunnelStages = ['views', 'plays', 'cta', 'conversions'];
+    let vaFunnelCachedStages = null;
+    let vaFunnelSearchTerm = '';
+
+    const vaAllFunnelStageDefinitions = [
+      { key: 'views', label: 'Visualizações Únicas' },
+      { key: 'plays', label: 'Plays Únicos' },
+      { key: 'cta', label: 'Cliques no Botão' },
+      { key: 'conversions', label: 'Conversões' },
+      { key: 'watch_10', label: 'Assistiu 10%' },
+      { key: 'watch_25', label: 'Assistiu 25%' },
+      { key: 'watch_50', label: 'Assistiu 50%' },
+      { key: 'watch_75', label: 'Assistiu 75%' },
+      { key: 'watch_100', label: 'Assistiu 100%' }
+    ];
+
+    function toggleVaFunnelDropdown(event) {
+      if (event) event.stopPropagation();
+      const panel = document.getElementById('vaFunnelDropdownPanel');
+      if (panel) panel.classList.toggle('active');
+    }
+
+    function vaFilterFunnelStages(query) {
+      vaFunnelSearchTerm = (query || '').toLowerCase().trim();
+      renderVaFunnelDropdownList();
+    }
+
+    function toggleVaFunnelStage(key) {
+      const idx = vaSelectedFunnelStages.indexOf(key);
+      if (idx >= 0) {
+        if (vaSelectedFunnelStages.length <= 1) {
+          showToast('Pelo menos uma etapa deve ser selecionada.', true);
+          return;
+        }
+        vaSelectedFunnelStages.splice(idx, 1);
+      } else {
+        vaSelectedFunnelStages.push(key);
+      }
+      renderVaFunnelDropdownList();
+      renderVaFunnelChart();
+    }
+
+    function renderVaFunnelDropdownList() {
+      const listEl = document.getElementById('vaFunnelDropdownList');
+      const btnText = document.getElementById('vaFunnelStagesBtnText');
+      if (btnText) btnText.textContent = `${vaSelectedFunnelStages.length} etapas selecionadas`;
+      if (!listEl) return;
+
+      const filtered = vaAllFunnelStageDefinitions.filter(s =>
+        !vaFunnelSearchTerm || s.label.toLowerCase().includes(vaFunnelSearchTerm)
+      );
+
+      listEl.innerHTML = filtered.map(s => {
+        const isChecked = vaSelectedFunnelStages.includes(s.key);
+        return `
+          <div class="va-dropdown-item ${isChecked ? 'checked' : ''}" onclick="toggleVaFunnelStage('${s.key}')">
+            <div class="va-dropdown-check">
+              <svg width="10" height="8" viewBox="0 0 10 8" fill="none" stroke="#fff" stroke-width="2"><path d="M1 4l3 3 5-6"/></svg>
+            </div>
+            <span>${escapeHtml(s.label)}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderVaFunnelChart() {
+      const chartContainer = document.getElementById('vaFunnelChartArea');
+      if (!chartContainer || !vaFunnelCachedStages) return;
+
+      const activeStages = vaSelectedFunnelStages.map(k => {
+        const def = vaAllFunnelStageDefinitions.find(d => d.key === k) || { key: k, label: k };
+        const data = vaFunnelCachedStages[k] || { count: 0 };
+        return { key: k, label: def.label, count: Number(data.count) || 0 };
+      });
+
+      const baseCount = activeStages.length > 0 ? activeStages[0].count : 0;
+
+      activeStages.forEach((s, idx) => {
+        if (idx === 0) {
+          s.pct = baseCount > 0 ? 100 : 0;
+          s.pctFormatted = baseCount > 0 ? '100,0%' : '0,0%';
+        } else {
+          const ratio = baseCount > 0 ? (s.count / baseCount) * 100 : 0;
+          s.pct = parseFloat(ratio.toFixed(1));
+          s.pctFormatted = ratio.toFixed(1).replace('.', ',') + '%';
+        }
+      });
+
+      const gridlines = [100, 75, 50, 25, 0].map(val => {
+        const topPct = 100 - val;
+        return `<div class="va-funnel-gridline" style="top: ${topPct}%;"></div>`;
+      }).join('');
+
+      const columnsHtml = activeStages.map(s => {
+        const heightPct = Math.max(2, Math.min(100, s.pct));
+        return `
+          <div class="va-funnel-col">
+            <div class="va-funnel-pill">
+              <div class="va-funnel-pill-pct">${s.pctFormatted}</div>
+              <div class="va-funnel-pill-count">${s.count.toLocaleString()}</div>
+            </div>
+            <div class="va-funnel-bar-track">
+              <div class="va-funnel-bar-fill" style="height: ${heightPct}%;"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const labelsHtml = activeStages.map((s, i) => `
+        <div class="va-funnel-label-col">${i + 1}. ${escapeHtml(s.label)}</div>
+      `).join('');
+
+      chartContainer.innerHTML = `
+        <div class="va-funnel-chart-container">
+          <div class="va-funnel-y-axis">
+            <span>100%</span>
+            <span>75%</span>
+            <span>50%</span>
+            <span>25%</span>
+            <span>0%</span>
+          </div>
+          <div class="va-funnel-chart-stage">
+            ${gridlines}
+            <div class="va-funnel-columns-wrap">
+              ${columnsHtml}
+            </div>
+          </div>
+        </div>
+        <div class="va-funnel-labels-row">
+          ${labelsHtml}
+        </div>
+      `;
+    }
+
     async function loadVaFunnel() {
       const container = document.getElementById('vaFunnelContent');
       if (!container) return;
@@ -10111,25 +10605,345 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       try {
         const qs = getVaQueryStr();
         const data = await api(`/api/analytics/video/${currentVaVideoId}/funnel?${qs}`);
-        const steps = data.steps || [];
+        vaFunnelCachedStages = data.stages || {};
 
         container.innerHTML = `
-          <div style="max-width:620px;">
-            <div style="font-size:13px;color:var(--text-dim);margin-bottom:18px;">4 etapas selecionadas</div>
-            ${steps.map((s, i) => `
-              <div class="va-funnel-step">
-                <div class="va-funnel-step-num">${i + 1}</div>
-                <div class="va-funnel-step-label">${escapeHtml(s.label)}</div>
-                <div class="va-funnel-step-count">${(s.count || 0).toLocaleString()}</div>
-                <div class="va-funnel-step-pct">${s.pct || 0}%</div>
+          <div class="va-funnel-card">
+            <div class="va-funnel-topbar">
+              <div style="position: relative;">
+                <button id="vaFunnelStagesBtn" class="va-select-btn" onclick="toggleVaFunnelDropdown(event)">
+                  <span id="vaFunnelStagesBtnText">${vaSelectedFunnelStages.length} etapas selecionadas</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"/></svg>
+                </button>
+                <div class="va-dropdown-panel" id="vaFunnelDropdownPanel" onclick="event.stopPropagation()">
+                  <div class="va-dropdown-search-wrap">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                    <input type="text" placeholder="Buscar etapas" oninput="vaFilterFunnelStages(this.value)">
+                  </div>
+                  <div class="va-dropdown-list" id="vaFunnelDropdownList"></div>
+                </div>
               </div>
-              ${i < steps.length - 1 ? `<div class="va-funnel-arrow">&#x2193;</div>` : ''}
-            `).join('')}
+              <div style="font-size:12px;color:var(--text-dim);display:inline-flex;align-items:center;gap:6px;">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.5"/></svg>
+                <span>Atualizado recentemente</span>
+              </div>
+            </div>
+            <div id="vaFunnelChartArea"></div>
           </div>
         `;
+
+        renderVaFunnelDropdownList();
+        renderVaFunnelChart();
       } catch (e) {
         container.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:20px;">Falha ao carregar funil.</div>';
       }
+    }
+
+    let vaCurrentBestTimesMetric = 'cta';
+
+    const vaBestTimesMetricOptions = [
+      { key: 'views', label: 'Visualizações' },
+      { key: 'unique_views', label: 'Visualizações Únicas' },
+      { key: 'plays', label: 'Plays' },
+      { key: 'unique_plays', label: 'Plays Únicos' },
+      { key: 'play_rate', label: 'Play Rate' },
+      { key: 'engagement', label: 'Engajamento' },
+      { key: 'cta', label: 'Cliques no Botão' },
+      { key: 'conversions', label: 'Conversões' },
+      { key: 'conversion_rate', label: 'Taxa de Conversão' },
+      { key: 'revenue', label: 'Receita' },
+      { key: 'rpv', label: 'RPV' }
+    ];
+
+    function toggleVaBestTimesDropdown(event) {
+      if (event) event.stopPropagation();
+      const panel = document.getElementById('vaBestTimesDropdownPanel');
+      if (panel) panel.classList.toggle('active');
+    }
+
+    function selectVaBestTimesMetric(metric) {
+      vaCurrentBestTimesMetric = metric;
+      const panel = document.getElementById('vaBestTimesDropdownPanel');
+      if (panel) panel.classList.remove('active');
+      loadVaBestTimes();
+    }
+
+    async function loadVaBestTimes() {
+      const container = document.getElementById('vaBestTimesContent');
+      if (!container) return;
+      container.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:20px;">Carregando mapa de horários...</div>';
+      try {
+        const qs = getVaQueryStr();
+        const data = await api(`/api/analytics/video/${currentVaVideoId}/best-times?${qs}&metric=${encodeURIComponent(vaCurrentBestTimesMetric)}`);
+        const bands = data.hourBands || [];
+        const days = data.weekdays || ['DOM','SEG','TER','QUA','QUI','SEX','SÁB'];
+        const heatmap = data.heatmap || [];
+
+        const currentOpt = vaBestTimesMetricOptions.find(o => o.key === vaCurrentBestTimesMetric) || vaBestTimesMetricOptions[6];
+
+        container.innerHTML = `
+          <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:22px;max-width:860px;overflow-x:auto;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+              <div style="display:flex;align-items:center;gap:8px;position:relative;">
+                <button class="va-select-btn" onclick="toggleVaBestTimesDropdown(event)">
+                  <span>${escapeHtml(currentOpt.label)}</span>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"/></svg>
+                </button>
+                <div class="va-dropdown-panel" id="vaBestTimesDropdownPanel" style="width:200px;" onclick="event.stopPropagation()">
+                  <div class="va-dropdown-list">
+                    ${vaBestTimesMetricOptions.map(opt => `
+                      <div class="va-dropdown-item ${opt.key === vaCurrentBestTimesMetric ? 'checked' : ''}" onclick="selectVaBestTimesMetric('${opt.key}')">
+                        <div class="va-dropdown-check">
+                          <svg width="10" height="8" viewBox="0 0 10 8" fill="none" stroke="#fff" stroke-width="2"><path d="M1 4l3 3 5-6"/></svg>
+                        </div>
+                        <span>${escapeHtml(opt.label)}</span>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+                <div title="Métrica exibida no mapa térmico" style="cursor:help;color:var(--text-dim);font-size:13px;display:flex;align-items:center;">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
+              </div>
+
+              <div style="display:flex;gap:14px;font-size:11.5px;color:var(--text-dim);align-items:center;">
+                <span>Legenda:</span>
+                <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:rgba(37,99,235,0.22);"></span> Baixo</span>
+                <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:rgba(37,99,235,0.48);"></span> Médio</span>
+                <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:rgba(37,99,235,0.74);"></span> Alto</span>
+                <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:var(--primary);"></span> Pico</span>
+              </div>
+            </div>
+
+            <div class="va-heatmap-grid">
+              ${bands.map(b => {
+                const cells = days.map((_, dayIdx) => {
+                  const item = heatmap.find(h => h.weekday === dayIdx && h.hour_band === b);
+                  const count = item ? item.count : 0;
+                  const level = item ? item.level : 'zero';
+                  const isCur = vaCurrentBestTimesMetric === 'revenue' ? `${count.toLocaleString('pt-BR')} MT` : count;
+                  return `<div class="va-heatmap-cell level-${level}" title="${isCur} em ${days[dayIdx]} (${b})"></div>`;
+                }).join('');
+                return `<div class="va-heatmap-time">${b}</div>${cells}`;
+              }).join('')}
+              <div></div>
+              ${days.map(d => `<div class="va-heatmap-foot">${d}</div>`).join('')}
+            </div>
+          </div>
+        `;
+      } catch (e) {
+        container.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:20px;">Falha ao carregar mapa de horários.</div>';
+      }
+    }
+
+    let vaGlobeAnimId = null;
+
+    async function loadVaLive() {
+      const container = document.getElementById('vaLiveContent');
+      if (!container) return;
+      if (vaGlobeAnimId) {
+        cancelAnimationFrame(vaGlobeAnimId);
+        vaGlobeAnimId = null;
+      }
+      container.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:20px;">Carregando visualização ao vivo...</div>';
+      try {
+        const data = await api(`/api/analytics/video/${currentVaVideoId}/live`);
+        const activeNow = data.activeNow || 0;
+        const activeViewers = data.activeViewers || [];
+        const recent = data.recent || [];
+
+        container.innerHTML = `
+          <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:14px;overflow:hidden;position:relative;max-width:860px;margin:0 auto;">
+            <div class="va-globe-container">
+              <div class="va-globe-header">
+                <span class="va-globe-dot"></span>
+                <span><strong>${activeNow}</strong> assistindo agora</span>
+              </div>
+              <div class="va-globe-badge">
+                ${activeNow === 0 ? 'Nenhum espectador ao vivo no momento' : `${activeNow} espectador${activeNow > 1 ? 'es' : ''} ao vivo no momento`}
+              </div>
+              <canvas id="vaGlobeCanvas" class="va-globe-canvas" width="420" height="420"></canvas>
+            </div>
+            <div style="border-top:1px solid var(--border-subtle);padding:16px 22px;background:rgba(255,255,255,0.01);">
+              <div style="font-size:13px;font-weight:700;color:var(--text-main);margin-bottom:12px;">Visitantes recentes (últimas 2 horas)</div>
+              ${!recent.length ? '<div style="padding:20px;text-align:center;color:var(--text-dim);font-size:12.5px;">Nenhum visitante nas últimas 2 horas.</div>' : recent.slice(0, 10).map(r => `
+                <div class="va-live-row">
+                  <div style="font-family:monospace;font-size:11.5px;color:var(--text-dim);min-width:65px;">#${r.visitorShort}</div>
+                  <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;font-weight:600;color:var(--text-main);">
+                    <span>${escapeHtml(r.country || 'Moçambique')}</span>
+                    ${r.city ? `<span style="font-size:11px;color:var(--text-dim);font-weight:400;">(${escapeHtml(r.city)})</span>` : ''}
+                  </div>
+                  <div style="font-size:11.5px;color:var(--text-muted);min-width:110px;">${escapeHtml(r.device)} • ${escapeHtml(r.browser || r.os || '')}</div>
+                  <div style="font-size:11.5px;color:var(--primary);font-weight:600;min-width:85px;text-align:right;">${r.minutesAgo === 0 ? 'Agora mesmo' : `há ${r.minutesAgo} min`}</div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+
+        initVa3DGlobe(activeViewers);
+      } catch (e) {
+        container.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:20px;">Falha ao carregar dados ao vivo.</div>';
+      }
+    }
+
+    function initVa3DGlobe(viewers) {
+      const canvas = document.getElementById('vaGlobeCanvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const width = canvas.width;
+      const height = canvas.height;
+      const cx = width / 2;
+      const cy = height / 2;
+      const radius = 175;
+
+      const continents = [
+        [-18, 35], [-25, 32], [-15, 39], [-12, 17], [0, 20], [10, 15], [-29, 24], [5, 38], [15, 32], [28, 30],
+        [-15, -50], [-22, -45], [-3, -60], [-8, -35], [-34, -58], [-12, -77], [4, -73], [10, -84],
+        [38, -98], [34, -118], [40, -74], [45, -75], [52, -106], [64, -150], [25, -80], [19, -99],
+        [48, 2], [51, 0], [40, -4], [41, 12], [52, 13], [55, 37], [60, 10], [59, 18],
+        [28, 77], [13, 80], [35, 104], [31, 121], [35, 139], [1, 103], [-6, 106], [14, 100],
+        [-25, 133], [-33, 151], [-37, 145], [-31, 115], [-41, 174]
+      ];
+
+      const globePoints = [];
+      for (const [lat, lon] of continents) {
+        const phi = (90 - lat) * (Math.PI / 180);
+        const theta = (lon + 180) * (Math.PI / 180);
+        for (let i = 0; i < 9; i++) {
+          const dPhi = (Math.random() - 0.5) * 0.28;
+          const dTheta = (Math.random() - 0.5) * 0.38;
+          const finalPhi = phi + dPhi;
+          const finalTheta = theta + dTheta;
+          globePoints.push({
+            x: radius * Math.sin(finalPhi) * Math.cos(finalTheta),
+            y: radius * Math.cos(finalPhi),
+            z: radius * Math.sin(finalPhi) * Math.sin(finalTheta)
+          });
+        }
+      }
+
+      for (let i = 0; i < 180; i++) {
+        const phi = Math.acos(2 * Math.random() - 1);
+        const theta = 2 * Math.PI * Math.random();
+        globePoints.push({
+          x: radius * Math.sin(phi) * Math.cos(theta),
+          y: radius * Math.cos(phi),
+          z: radius * Math.sin(phi) * Math.sin(theta),
+          isAmbient: true
+        });
+      }
+
+      let rotationY = 0;
+      let rotationX = 0.25;
+      let isDragging = false;
+      let lastX = 0;
+      let lastY = 0;
+
+      canvas.onmousedown = (e) => {
+        isDragging = true;
+        lastX = e.clientX;
+        lastY = e.clientY;
+      };
+      window.onmouseup = () => { isDragging = false; };
+      window.onmousemove = (e) => {
+        if (!isDragging) return;
+        const dx = e.clientX - lastX;
+        const dy = e.clientY - lastY;
+        rotationY += dx * 0.008;
+        rotationX += dy * 0.008;
+        lastX = e.clientX;
+        lastY = e.clientY;
+      };
+
+      let pulseTick = 0;
+
+      function draw() {
+        ctx.clearRect(0, 0, width, height);
+
+        if (!isDragging) {
+          rotationY += 0.004;
+        }
+        pulseTick += 0.05;
+
+        const grad = ctx.createRadialGradient(cx, cy, radius * 0.5, cx, cy, radius);
+        grad.addColorStop(0, '#0f172a');
+        grad.addColorStop(0.85, '#070b14');
+        grad.addColorStop(1, '#030712');
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        const cosY = Math.cos(rotationY), sinY = Math.sin(rotationY);
+        const cosX = Math.cos(rotationX), sinX = Math.sin(rotationX);
+
+        for (const pt of globePoints) {
+          const x1 = pt.x * cosY - pt.z * sinY;
+          const z1 = pt.z * cosY + pt.x * sinY;
+          const y2 = pt.y * cosX - z1 * sinX;
+          const z2 = z1 * cosX + pt.y * sinX;
+
+          if (z2 > -radius * 0.2) {
+            const screenX = cx + x1;
+            const screenY = cy + y2;
+            const alpha = Math.max(0.1, (z2 + radius) / (2 * radius));
+            const size = pt.isAmbient ? 1 : 1.8;
+
+            ctx.beginPath();
+            ctx.arc(screenX, screenY, size, 0, Math.PI * 2);
+            ctx.fillStyle = pt.isAmbient
+              ? `rgba(148, 163, 184, ${alpha * 0.3})`
+              : `rgba(34, 211, 238, ${alpha * 0.9})`;
+            ctx.fill();
+          }
+        }
+
+        if (viewers && viewers.length > 0) {
+          for (const v of viewers) {
+            const phi = (90 - (v.lat || -18)) * (Math.PI / 180);
+            const theta = ((v.lon || 35) + 180) * (Math.PI / 180);
+            const vx = radius * Math.sin(phi) * Math.cos(theta);
+            const vy = radius * Math.cos(phi);
+            const vz = radius * Math.sin(phi) * Math.sin(theta);
+
+            const x1 = vx * cosY - vz * sinY;
+            const z1 = vz * cosY + vx * sinY;
+            const y2 = vy * cosX - z1 * sinX;
+            const z2 = z1 * cosX + vy * sinX;
+
+            if (z2 > 0) {
+              const screenX = cx + x1;
+              const screenY = cy + y2;
+              const pulseSize = 4 + Math.sin(pulseTick) * 3;
+
+              ctx.beginPath();
+              ctx.arc(screenX, screenY, pulseSize + 4, 0, Math.PI * 2);
+              ctx.strokeStyle = 'rgba(239, 68, 68, 0.4)';
+              ctx.lineWidth = 1.5;
+              ctx.stroke();
+
+              ctx.beginPath();
+              ctx.arc(screenX, screenY, 4, 0, Math.PI * 2);
+              ctx.fillStyle = '#ef4444';
+              ctx.shadowColor = '#ef4444';
+              ctx.shadowBlur = 8;
+              ctx.fill();
+              ctx.shadowBlur = 0;
+            }
+          }
+        }
+
+        vaGlobeAnimId = requestAnimationFrame(draw);
+      }
+
+      draw();
     }
 
     async function loadVaBenchmark() {
@@ -10152,87 +10966,6 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         `;
       } catch (e) {
         container.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:20px;">Falha ao carregar benchmark.</div>';
-      }
-    }
-
-    async function loadVaBestTimes() {
-      const container = document.getElementById('vaBestTimesContent');
-      if (!container) return;
-      container.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:20px;">Carregando mapa de horários...</div>';
-      try {
-        const qs = getVaQueryStr();
-        const data = await api(`/api/analytics/video/${currentVaVideoId}/best-times?${qs}`);
-        const bands = data.hourBands || [];
-        const days = data.weekdays || ['Dom','Seg','Ter','Qua','Qui','Sex','Sab'];
-        const heatmap = data.heatmap || [];
-
-        container.innerHTML = `
-          <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:22px;max-width:860px;overflow-x:auto;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-              <span style="font-size:14px;font-weight:700;color:var(--text-main);">Plays por Faixa de Horário</span>
-              <div style="display:flex;gap:14px;font-size:11.5px;color:var(--text-dim);align-items:center;">
-                <span>Legenda:</span>
-                <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:rgba(37,99,235,0.18);"></span> Baixo</span>
-                <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:rgba(37,99,235,0.45);"></span> Médio</span>
-                <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:rgba(37,99,235,0.72);"></span> Alto</span>
-                <span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:var(--primary);"></span> Pico</span>
-              </div>
-            </div>
-            <div class="va-heatmap-grid">
-              <div></div>
-              ${days.map(d => `<div class="va-heatmap-head">${d}</div>`).join('')}
-              ${bands.map(b => {
-                const cells = days.map((_, dayIdx) => {
-                  const item = heatmap.find(h => h.weekday === dayIdx && h.hour_band === b);
-                  const count = item ? item.count : 0;
-                  const level = item ? item.level : 'zero';
-                  return `<div class="va-heatmap-cell level-${level}" title="${count} plays em ${days[dayIdx]} (${b})"></div>`;
-                }).join('');
-                return `<div class="va-heatmap-label">${b}</div>${cells}`;
-              }).join('')}
-            </div>
-          </div>
-        `;
-      } catch (e) {
-        container.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:20px;">Falha ao carregar mapa de horários.</div>';
-      }
-    }
-
-    async function loadVaLive() {
-      const container = document.getElementById('vaLiveContent');
-      if (!container) return;
-      container.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:20px;">Carregando atividade recente...</div>';
-      try {
-        const data = await api(`/api/analytics/video/${currentVaVideoId}/live`);
-        const recent = data.recent || [];
-
-        container.innerHTML = `
-          <div style="max-width:760px;">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
-              <div style="display:flex;align-items:center;gap:12px;">
-                <div class="va-live-badge"><span class="va-live-pulse"></span> AO VIVO</div>
-                <div style="font-size:14px;color:var(--text-main);"><strong style="font-size:20px;font-weight:800;color:var(--primary);">${data.activeNow || 0}</strong> ativos nos últimos 30 min</div>
-              </div>
-              <button class="btn-clean-secondary" style="font-size:12px;padding:6px 12px;" onclick="loadVaLive()">Atualizar agora</button>
-            </div>
-            <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow:hidden;">
-              <div style="padding:14px 18px;border-bottom:1px solid var(--border-subtle);font-size:13px;font-weight:700;color:var(--text-main);">Visitantes recentes (últimas 2 horas)</div>
-              ${!recent.length ? '<div style="padding:30px;text-align:center;color:var(--text-dim);font-size:13px;">Nenhum visitante registrado nas últimas 2 horas.</div>' : recent.map(r => `
-                <div class="va-live-row">
-                  <div style="font-family:monospace;font-size:11.5px;color:var(--text-dim);min-width:65px;">#${r.visitorShort}</div>
-                  <div style="flex:1;min-width:0;display:flex;align-items:center;gap:8px;font-weight:600;color:var(--text-main);">
-                    <span>${escapeHtml(r.country || 'Desconhecido')}</span>
-                    ${r.city ? `<span style="font-size:11px;color:var(--text-dim);font-weight:400;">(${escapeHtml(r.city)})</span>` : ''}
-                  </div>
-                  <div style="font-size:11.5px;color:var(--text-muted);min-width:110px;">${escapeHtml(r.device)} • ${escapeHtml(r.browser || r.os || '')}</div>
-                  <div style="font-size:11.5px;color:var(--primary);font-weight:600;min-width:85px;text-align:right;">${r.minutesAgo === 0 ? 'Agora mesmo' : `há ${r.minutesAgo} min`}</div>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        `;
-      } catch (e) {
-        container.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:20px;">Falha ao carregar dados ao vivo.</div>';
       }
     }
 
@@ -10351,7 +11084,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         updateAnalyticsDiffBadge('anaConversionsDiff', m.conversionsDiff);
 
         const elRevenue = document.getElementById('anaRevenue');
-        if (elRevenue) elRevenue.textContent = m.revenueFormatted || 'R$ 0,00';
+        if (elRevenue) elRevenue.textContent = m.revenueFormatted || '0,00 MT';
         updateAnalyticsDiffBadge('anaRevenueDiff', m.revenueDiff);
 
         renderRetentionChart(res.retentionCurve || []);
@@ -10428,10 +11161,10 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       if (!container) return;
 
       const convCount = m.conversions || 0;
-      const revTotal = m.revenueFormatted || 'R$ 0,00';
+      const revTotal = m.revenueFormatted || '0,00 MT';
       const cRate = m.conversionRate || '0.00';
       const avgTicket = convCount > 0 ? (m.revenue / convCount) : 0;
-      const avgTicketFormatted = `R$ ${avgTicket.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+      const avgTicketFormatted = `${avgTicket.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MT`;
 
       container.innerHTML = `
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 8px;">
@@ -12624,6 +13357,21 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       if (menu && menu.style.display !== 'none') {
         if (!menu.contains(e.target) && (!btn || !btn.contains(e.target))) {
           menu.style.display = 'none';
+        }
+      }
+
+      const funnelPanel = document.getElementById('vaFunnelDropdownPanel');
+      const funnelBtn = document.getElementById('vaFunnelStagesBtn');
+      if (funnelPanel && funnelPanel.classList.contains('active')) {
+        if (!funnelPanel.contains(e.target) && (!funnelBtn || !funnelBtn.contains(e.target))) {
+          funnelPanel.classList.remove('active');
+        }
+      }
+
+      const btPanel = document.getElementById('vaBestTimesDropdownPanel');
+      if (btPanel && btPanel.classList.contains('active')) {
+        if (!btPanel.contains(e.target) && !e.target.closest('.va-select-btn')) {
+          btPanel.classList.remove('active');
         }
       }
     });

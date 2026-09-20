@@ -3835,7 +3835,7 @@ app.get('/api/analytics/video/:id', authMiddleware, (req, res) => {
 
       revenue,
       prevRevenue,
-      revenueFormatted: `R$ ${revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+      revenueFormatted: `${revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MT`,
       revenueDiff: calcDiff(revenue, prevRevenue),
 
       pitchViews,
@@ -3947,14 +3947,25 @@ app.get('/api/analytics/video/:id/funnel', authMiddleware, (req, res) => {
   const uniqueCtaClicks = db.prepare(`SELECT COUNT(DISTINCT visitor_id) as c FROM analytics_events WHERE video_id = ? AND event_type = 'cta_clicked' AND ${dc}`).get(vidId).c;
   const conversions = db.prepare(`SELECT COUNT(*) as c FROM analytics_events WHERE video_id = ? AND conversion_amount > 0 AND ${dc}`).get(vidId).c;
 
-  const steps = [
-    { label: 'Visualizações Únicas', count: uniqueViews, pct: 100 },
-    { label: 'Plays Únicos', count: uniquePlays, pct: uniqueViews > 0 ? parseFloat(((uniquePlays / uniqueViews) * 100).toFixed(1)) : 0 },
-    { label: 'Cliques no Botão', count: uniqueCtaClicks, pct: uniqueViews > 0 ? parseFloat(((uniqueCtaClicks / uniqueViews) * 100).toFixed(1)) : 0 },
-    { label: 'Conversões', count: conversions, pct: uniqueViews > 0 ? parseFloat(((conversions / uniqueViews) * 100).toFixed(1)) : 0 }
-  ];
+  const w10 = db.prepare(`SELECT COUNT(DISTINCT session_id) as c FROM analytics_events WHERE video_id = ? AND event_type = 'progress' AND milestone = 10 AND ${dc}`).get(vidId).c;
+  const w25 = db.prepare(`SELECT COUNT(DISTINCT session_id) as c FROM analytics_events WHERE video_id = ? AND event_type = 'progress' AND milestone = 25 AND ${dc}`).get(vidId).c;
+  const w50 = db.prepare(`SELECT COUNT(DISTINCT session_id) as c FROM analytics_events WHERE video_id = ? AND event_type = 'progress' AND milestone = 50 AND ${dc}`).get(vidId).c;
+  const w75 = db.prepare(`SELECT COUNT(DISTINCT session_id) as c FROM analytics_events WHERE video_id = ? AND event_type = 'progress' AND milestone = 75 AND ${dc}`).get(vidId).c;
+  const w100 = db.prepare(`SELECT COUNT(DISTINCT session_id) as c FROM analytics_events WHERE video_id = ? AND event_type = 'progress' AND milestone = 100 AND ${dc}`).get(vidId).c;
 
-  res.json({ steps });
+  const stages = {
+    views: { key: 'views', label: 'Visualizações Únicas', count: uniqueViews },
+    plays: { key: 'plays', label: 'Plays Únicos', count: uniquePlays },
+    cta: { key: 'cta', label: 'Cliques no Botão', count: uniqueCtaClicks },
+    conversions: { key: 'conversions', label: 'Conversões', count: conversions },
+    watch_10: { key: 'watch_10', label: 'Assistiu 10%', count: w10 },
+    watch_25: { key: 'watch_25', label: 'Assistiu 25%', count: w25 },
+    watch_50: { key: 'watch_50', label: 'Assistiu 50%', count: w50 },
+    watch_75: { key: 'watch_75', label: 'Assistiu 75%', count: w75 },
+    watch_100: { key: 'watch_100', label: 'Assistiu 100%', count: w100 }
+  };
+
+  res.json({ stages });
 });
 
 app.get('/api/analytics/video/:id/benchmark', authMiddleware, (req, res) => {
@@ -3977,25 +3988,65 @@ app.get('/api/analytics/video/:id/best-times', authMiddleware, (req, res) => {
   if (req.user.role !== 'owner' && video.user_id !== req.user.id) return res.status(403).json({ error: 'Permissão negada.' });
 
   const { dc } = buildDateCondition(req.query.period || '30d', req.query.startDate, req.query.endDate);
+  const metric = (req.query.metric || 'cta').toLowerCase();
+
+  let eventFilter = "event_type = 'cta_clicked'";
+  let countExpr = "COUNT(*) as count";
+
+  if (metric === 'views') {
+    eventFilter = "event_type = 'page_view'";
+    countExpr = "COUNT(*) as count";
+  } else if (metric === 'unique_views') {
+    eventFilter = "event_type = 'page_view'";
+    countExpr = "COUNT(DISTINCT visitor_id) as count";
+  } else if (metric === 'plays') {
+    eventFilter = "event_type = 'play'";
+    countExpr = "COUNT(*) as count";
+  } else if (metric === 'unique_plays') {
+    eventFilter = "event_type = 'play'";
+    countExpr = "COUNT(DISTINCT visitor_id) as count";
+  } else if (metric === 'cta') {
+    eventFilter = "event_type = 'cta_clicked'";
+    countExpr = "COUNT(DISTINCT visitor_id) as count";
+  } else if (metric === 'conversions') {
+    eventFilter = "conversion_amount > 0";
+    countExpr = "COUNT(*) as count";
+  } else if (metric === 'revenue') {
+    eventFilter = "conversion_amount > 0";
+    countExpr = "COALESCE(SUM(conversion_amount), 0) as count";
+  } else if (metric === 'play_rate') {
+    eventFilter = "event_type IN ('play', 'page_view')";
+    countExpr = "ROUND(CAST(SUM(CASE WHEN event_type = 'play' THEN 1 ELSE 0 END) AS FLOAT) / MAX(1, SUM(CASE WHEN event_type = 'page_view' THEN 1 ELSE 0 END)) * 100, 1) as count";
+  } else if (metric === 'engagement') {
+    eventFilter = "event_type = 'progress'";
+    countExpr = "COUNT(DISTINCT session_id) as count";
+  } else if (metric === 'conversion_rate') {
+    eventFilter = "event_type IN ('play', 'conversion')";
+    countExpr = "ROUND(CAST(SUM(CASE WHEN conversion_amount > 0 THEN 1 ELSE 0 END) AS FLOAT) / MAX(1, SUM(CASE WHEN event_type = 'play' THEN 1 ELSE 0 END)) * 100, 1) as count";
+  } else if (metric === 'rpv') {
+    eventFilter = "event_type IN ('play', 'conversion')";
+    countExpr = "ROUND(COALESCE(SUM(conversion_amount), 0) / MAX(1, SUM(CASE WHEN event_type = 'play' THEN 1 ELSE 0 END)), 2) as count";
+  }
 
   const rows = db.prepare(`
     SELECT
       CAST(strftime('%H', created_at, '+2 hours') AS INTEGER) as hour_num,
       CAST(strftime('%w', created_at, '+2 hours') AS INTEGER) as weekday,
-      COUNT(*) as count
+      ${countExpr}
     FROM analytics_events
-    WHERE video_id = ? AND event_type = 'play' AND ${dc}
+    WHERE video_id = ? AND ${eventFilter} AND ${dc}
     GROUP BY hour_num, weekday
     ORDER BY weekday, hour_num
   `).all(vidId);
 
   const heatmap = [];
-  const hourBands = ['0h-2h','2h-4h','4h-6h','6h-8h','8h-10h','10h-12h','12h-14h','14h-16h','16h-18h','18h-20h','20h-22h','22h-24h'];
+  const hourBands = ['00h-02h','02h-04h','04h-06h','06h-08h','08h-10h','10h-12h','12h-14h','14h-16h','16h-18h','18h-20h','20h-22h','22h-24h'];
   for (let w = 0; w < 7; w++) {
     for (let b = 0; b < 12; b++) {
       const startH = b * 2;
       const endH = startH + 2;
-      const count = rows.filter(r => r.weekday === w && r.hour_num >= startH && r.hour_num < endH).reduce((s, r) => s + r.count, 0);
+      const matching = rows.filter(r => r.weekday === w && r.hour_num >= startH && r.hour_num < endH);
+      const count = matching.reduce((s, r) => s + (Number(r.count) || 0), 0);
       heatmap.push({ weekday: w, hour_band: hourBands[b], count });
     }
   }
@@ -4006,7 +4057,12 @@ app.get('/api/analytics/video/:id/best-times', authMiddleware, (req, res) => {
     h.level = ratio === 0 ? 'zero' : ratio < 0.25 ? 'low' : ratio < 0.55 ? 'medium' : ratio < 0.85 ? 'high' : 'peak';
   });
 
-  res.json({ heatmap, hourBands, weekdays: ['Dom','Seg','Ter','Qua','Qui','Sex','Sab'] });
+  res.json({
+    metric,
+    heatmap,
+    hourBands,
+    weekdays: ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB']
+  });
 });
 
 app.get('/api/analytics/video/:id/live', authMiddleware, (req, res) => {
@@ -4018,8 +4074,37 @@ app.get('/api/analytics/video/:id/live', authMiddleware, (req, res) => {
   const activeRows = db.prepare(`
     SELECT COUNT(DISTINCT session_id) as c
     FROM analytics_events
-    WHERE video_id = ? AND created_at >= datetime('now', '-30 minutes')
+    WHERE video_id = ? AND created_at >= datetime('now', '-5 minutes')
   `).get(vidId);
+
+  const countryLocations = {
+    'Mozambique': { lat: -18.66, lon: 35.52, code: 'MZ' },
+    'Moçambique': { lat: -18.66, lon: 35.52, code: 'MZ' },
+    'Brazil': { lat: -14.23, lon: -51.92, code: 'BR' },
+    'Brasil': { lat: -14.23, lon: -51.92, code: 'BR' },
+    'Portugal': { lat: 39.39, lon: -8.22, code: 'PT' },
+    'Angola': { lat: -11.20, lon: 17.87, code: 'AO' },
+    'United States': { lat: 37.09, lon: -95.71, code: 'US' },
+    'Estados Unidos': { lat: 37.09, lon: -95.71, code: 'US' },
+    'Spain': { lat: 40.46, lon: -3.74, code: 'ES' },
+    'Espanha': { lat: 40.46, lon: -3.74, code: 'ES' }
+  };
+
+  const activeViewers = db.prepare(`
+    SELECT country, city, COUNT(DISTINCT session_id) as viewers
+    FROM analytics_events
+    WHERE video_id = ? AND created_at >= datetime('now', '-5 minutes')
+    GROUP BY country, city
+  `).all(vidId).map(v => {
+    const loc = countryLocations[v.country] || { lat: -18.66, lon: 35.52, code: 'MZ' };
+    return {
+      country: v.country || 'Moçambique',
+      city: v.city || '',
+      viewers: v.viewers || 1,
+      lat: loc.lat,
+      lon: loc.lon
+    };
+  });
 
   const recentRows = db.prepare(`
     SELECT visitor_id, country, device, os, browser, city,
@@ -4043,7 +4128,11 @@ app.get('/api/analytics/video/:id/live', authMiddleware, (req, res) => {
     minutesAgo: Math.round((now - new Date(r.last_seen + 'Z').getTime()) / 60000)
   }));
 
-  res.json({ activeNow: activeRows.c || 0, recent });
+  res.json({
+    activeNow: activeRows.c || 0,
+    activeViewers,
+    recent
+  });
 });
 
 app.delete('/api/analytics/video/:id/reset', authMiddleware, (req, res) => {
