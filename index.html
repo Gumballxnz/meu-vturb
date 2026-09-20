@@ -6665,6 +6665,12 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       } catch (err) {}
     }
 
+    setInterval(() => {
+      if (token && !document.hidden) {
+        loadUserNotifications();
+      }
+    }, 60000);
+
     async function markAllNotifsRead() {
       const dot = document.getElementById('notifBadgeDot');
       if (dot) dot.style.display = 'none';
