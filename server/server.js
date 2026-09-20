@@ -3658,7 +3658,8 @@ const ALLOWED_ANALYTICS_EVENTS = [
 ];
 
 app.post('/api/analytics/event', (req, res) => {
-  const { videoId, visitorId, sessionId, eventType, milestone, watchTime } = req.body || {};
+  try {
+    const { videoId, visitorId, sessionId, eventType, milestone, watchTime } = req.body || {};
 
   if (!videoId || !visitorId || !sessionId || !eventType) {
     return res.status(400).json({ error: 'Dados analíticos insuficientes.' });
@@ -3733,6 +3734,7 @@ app.post('/api/analytics/event', (req, res) => {
 
   const cleanDevice = req.body.device || 'desktop';
   const cleanBrowser = req.body.browser || 'Chrome';
+  const cleanOs = req.body.os || 'Windows';
   const rawDomain = req.body.domain || (req.headers.referer ? (() => { try { return new URL(req.headers.referer).hostname; } catch(e){ return null; } })() : null);
   let cleanDomain = null;
   if (rawDomain && !rawDomain.startsWith('dash.') && !rawDomain.includes('localhost') && !rawDomain.includes('127.0.0.1')) {
@@ -3872,7 +3874,11 @@ app.post('/api/analytics/event', (req, res) => {
     `).run(cleanVidId, cleanVidId);
   }
 
-  res.json({ success: true });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[ANALYTICS_EVENT_ERROR]:', err);
+    res.status(500).json({ error: 'Erro ao processar evento analítico.' });
+  }
 });
 
 app.get('/api/analytics/overview', authMiddleware, (req, res) => {
