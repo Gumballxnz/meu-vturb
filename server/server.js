@@ -782,15 +782,33 @@ function processVideoHLS(vidId) {
 
 function autoCheckPendingHls() {
   try {
-    const pending = db.prepare("SELECT id, file_path, video_url, hls_ready, hls_manifest FROM videos WHERE deleted_at IS NULL AND (hls_ready = 0 OR hls_ready IS NULL)").all();
-    for (const v of pending) {
+    const allVids = db.prepare("SELECT id, file_path, video_url, hls_ready, hls_manifest FROM videos WHERE deleted_at IS NULL").all();
+    for (const v of allVids) {
       const videoDir = path.join(VIDEOS_DIR, v.id);
       const masterPlaylist = path.join(videoDir, 'main.m3u8');
       if (fs.existsSync(masterPlaylist)) {
-        const manifestUrl = `/videos/${v.id}/main.m3u8`;
-        db.prepare('UPDATE videos SET hls_ready = 1, hls_manifest = ? WHERE id = ?').run(manifestUrl, v.id);
+        if (!v.hls_ready) {
+          const manifestUrl = `/videos/${v.id}/main.m3u8`;
+          db.prepare('UPDATE videos SET hls_ready = 1, hls_manifest = ? WHERE id = ?').run(manifestUrl, v.id);
+        }
       } else {
         processVideoHLS(v.id);
+      }
+
+      const posterPath = path.join(videoDir, 'poster.jpg');
+      if (!fs.existsSync(posterPath)) {
+        let inputPath = v.file_path;
+        if (!inputPath || !fs.existsSync(inputPath)) {
+          if (v.video_url && v.video_url.startsWith('/videos/')) {
+            const candidate = path.join(VIDEOS_DIR, path.basename(v.video_url));
+            if (fs.existsSync(candidate)) inputPath = candidate;
+          }
+        }
+        if (inputPath && fs.existsSync(inputPath)) {
+          try {
+            spawn('ffmpeg', ['-y', '-ss', '0.5', '-i', inputPath, '-vframes', '1', '-q:v', '2', posterPath]);
+          } catch (e) {}
+        }
       }
     }
   } catch (e) {}
