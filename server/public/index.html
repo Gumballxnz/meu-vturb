@@ -7778,7 +7778,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         const videoCell = `<td>
           <div class="table-vsl-cell">
             <div class="table-vsl-thumb" onclick="openStoragePreview('${v.id}')" title="Visualizar ${escapeHtml(v.title)}">
-              ${thumbUrl ? `<video src="${escapeHtml(thumbUrl)}" preload="metadata" muted playsinline></video>` : ''}
+              ${thumbUrl ? `<video src="${escapeHtml(thumbUrl)}" preload="metadata" muted playsinline onerror="this.remove()"></video>` : ''}
               <div class="table-vsl-thumb-play">
                 <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
               </div>
@@ -8598,7 +8598,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           <td>
             <div class="table-vsl-cell">
               <div class="table-vsl-thumb" onclick="openEditor('${v.id}')" title="Editar ${escapeHtml(v.title)}">
-                <video src="${escapeHtml(thumbUrl)}" preload="metadata" muted playsinline></video>
+                <video src="${escapeHtml(thumbUrl)}" preload="metadata" muted playsinline onerror="this.remove()"></video>
                 <div class="table-vsl-thumb-play">
                   <svg viewBox="0 0 24 24"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                 </div>
@@ -9396,7 +9396,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       el.className = 'video-card';
       el.innerHTML = `
         <div class="video-thumb-stage">
-          <video src="${v.video_url}#t=0.5" preload="metadata" muted playsinline></video>
+          <video src="${v.video_url ? v.video_url + '#t=0.5' : ''}" preload="metadata" muted playsinline onerror="this.remove()"></video>
           ${v.blocked_at ? `<div class="thumb-badge-source" style="background:#ef4444;color:#fff;" title="Bloqueado: ${escapeHtml(v.blocked_reason || '')}">Bloqueado</div>` : ''}
           ${v.duration ? `<div class="thumb-badge-duration">${escapeHtml(v.duration)}</div>` : ''}
           <div class="thumb-play-hover" onclick="openEditor('${v.id}')">

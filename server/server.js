@@ -1761,6 +1761,10 @@ app.post('/api/admin/users/:id/action', authMiddleware, ownerMiddleware, async (
   res.json({ success: true });
 });
 
+app.get('/api/user/notifications/stream', (req, res) => {
+  res.status(204).end();
+});
+
 app.get('/api/user/notifications', authMiddleware, (req, res) => {
   const notifs = db.prepare('SELECT * FROM user_notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT 30').all(req.user.id);
   const unreadCount = db.prepare('SELECT COUNT(*) as c FROM user_notifications WHERE user_id = ? AND read = 0').get(req.user.id);
@@ -4109,7 +4113,32 @@ app.get('/videos/:id/:file', (req, res) => {
 
 app.get('/videos/:filename', (req, res) => {
   const safeFilename = path.basename(req.params.filename);
-  const filePath = path.join(VIDEOS_DIR, safeFilename);
+  let filePath = path.join(VIDEOS_DIR, safeFilename);
+
+  if (!fs.existsSync(filePath)) {
+    try {
+      const v = db.prepare("SELECT id, file_path FROM videos WHERE video_url LIKE ? OR file_path LIKE ?").get(`%${safeFilename}%`, `%${safeFilename}%`);
+      if (v) {
+        if (v.file_path && fs.existsSync(v.file_path)) {
+          filePath = v.file_path;
+        } else {
+          const inSub = path.join(VIDEOS_DIR, v.id, safeFilename);
+          if (fs.existsSync(inSub)) {
+            filePath = inSub;
+          } else {
+            const hlsDir = path.join(VIDEOS_DIR, v.id);
+            if (fs.existsSync(hlsDir)) {
+              const files = fs.readdirSync(hlsDir);
+              const mp4 = files.find(f => f.endsWith('.mp4'));
+              if (mp4 && fs.existsSync(path.join(hlsDir, mp4))) {
+                filePath = path.join(hlsDir, mp4);
+              }
+            }
+          }
+        }
+      }
+    } catch (e) {}
+  }
 
   if (!fs.existsSync(filePath)) {
     return res.status(404).send('Vídeo não encontrado.');
