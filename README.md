@@ -114,3 +114,90 @@ npm start
 | `RESEND_FROM_EMAIL` | Remetente autenticado do Resend | `CloudVTurb <onboarding@resend.dev>` |
 | `DATA_DIR` | Diretorio do banco de dados SQLite e avatares | `/app/data` ou `./server/data` |
 | `VIDEOS_DIR` | Diretorio de armazenamento de videos | `/app/videos` ou `./server/videos` |
+
+---
+
+## Otimizacao para Alta Escala e Maxima Performance (Custo R$ 0,00)
+
+Para rodar dezenas de ofertas em escala com centenas ou milhares de pessoas assistindo simultaneamente sem gastar nada com CDNs pagas e sem sobrecarregar a largura de banda da VPS, siga estas recomendacoes essenciais:
+
+### 1. DNS e Proxy no Cloudflare (Gratuito)
+
+1. Aponte seus dominios para o IP da sua VPS:
+   - `@` ou `meudominio.com` (Tipo `A` -> IP da VPS, Nuvem Laranja **Ativada**)
+   - `player.meudominio.com` (Tipo `CNAME` ou `A` -> IP da VPS, Nuvem Laranja **Ativada**)
+   - `dash.meudominio.com` (Tipo `CNAME` ou `A` -> IP da VPS, Nuvem Laranja **Ativada**)
+2. O **Proxy Laranja (Proxied)** oculta o IP real do seu servidor, oferece protecao anti-DDoS e permite que a rede global da Cloudflare sirva seus arquivos diretamente dos servidores de borda (Edge) em Sao Paulo, Rio de Janeiro e outras capitais.
+
+---
+
+### 2. Regra de Cache para Seguranca e Escala de Videos HLS (Obrigatorio para Trafego Pesado)
+
+Por padrao, o plano gratuito da Cloudflare nao armazena em cache arquivos de video fragmentado (`.ts`). Para habilitar o cache dos segmentos de streaming e economizar mais de 95% do consumo de banda do seu servidor:
+
+1. No painel da **Cloudflare**, selecione seu dominio.
+2. No menu lateral, acesse **Caching** ➡️ **Cache Rules** (Regras de Cache).
+3. Clique em **Criar regra** (Create rule) e selecione **Cache Rules**.
+4. Configure os campos exatamente assim:
+   - **Nome da regra**: `Cache HLS Videos`
+   - **Se as solicitacoes recebidas coincidirem**: `Personalizar expressao do filtro`
+   - **Campo**: `Caminho do URI` (ou `URI Path`)
+   - **Operador**: `comeca com` (ou `starts with`)
+   - **Valor**: `/videos/`
+   *(Ou no editor de expressao: `starts_with(http.request.uri.path, "/videos/")`)*
+   - **Elegibilidade de cache**: `Qualificado para cache` (Eligible for cache)
+   - **TTL da borda**: Clique em `+ Adicionar configuracao` e selecione `Use o cabecalho de controle de cache, se presente, e ignore o cache, caso contrario` (ou *Respect origin*)
+5. Clique em **Implantar** (Deploy).
+
+**Resultado**: O primeiro visitante que solicita um trecho de video faz o download da sua VPS uma unica vez. Todos os proximos milhares de visitantes baixam os pedacos diretamente do cache da Cloudflare em milissegundos, com consumo zero de banda do seu servidor.
+
+---
+
+### 3. Ajustes de Rede e Velocidade no Painel Cloudflare
+
+Acesse o menu **Speed** (Velocidade) e **Network** (Rede) no Cloudflare e garanta que as seguintes opcoes gratuitas estejam ativadas:
+- **HTTP/2** e **HTTP/3 (com QUIC)**: Entrega paralela de pacotes de dados, essencial para o buffer instantaneo do player.
+- **Brotli**: Compressao superior para scripts HTML/JS/CSS.
+- **0-RTT Connection Resumption**: Acelera o handshake TLS em conexoes recorrentes de visitantes mobile.
+- **Early Hints**: Antecipa o carregamento de scripts criticos do player.
+
+---
+
+### 4. Ajustes do Servidor Linux/VPS (Para Milhares de Conexoes Concorrentes)
+
+Se estiver rodando em Linux direto ou Docker, certifique-se de que o limite de descritores de arquivos abertos suporta conexoes concorrentes macicas:
+
+```bash
+# Verificar limite atual
+ulimit -n
+
+# Aumentar temporariamente para a sessao atual
+ulimit -n 65535
+```
+
+Para tornar permanente, adicione ao final de `/etc/security/limits.conf`:
+```ini
+* soft nofile 65535
+* hard nofile 65535
+```
+
+Se utilizar **Nginx** como Proxy Reverso na frente do Node.js:
+```nginx
+# Permitir uploads grandes de video
+client_max_body_size 2048M;
+
+# Manter timeouts adequados para processamento de video
+proxy_connect_timeout 300s;
+proxy_send_timeout 300s;
+proxy_read_timeout 300s;
+
+# Desativar bufferizacao de proxy para streaming continuo
+location /videos/ {
+    proxy_pass http://127.0.0.1:4000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_buffering off;
+}
+```
