@@ -9214,7 +9214,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
     }
 
     async function submitOnbStep1() {
-      const title = document.getElementById('onbVidTitle').value.trim() || 'Minha Primeira VSL';
+      const title = (document.getElementById('onbVidTitle').value.trim() || 'Minha Primeira VSL').slice(0, 70);
       const btn = document.getElementById('btnOnbNextStep1');
 
       if (tempOnboardingVideo) {

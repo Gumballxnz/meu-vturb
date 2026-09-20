@@ -5509,7 +5509,7 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
               <label class="form-label" style="margin-bottom: 0;">Título da VSL</label>
               <a href="javascript:void(0)" id="onbToggleRemoteUrlBtn" onclick="toggleOnbRemoteUrlSection()" style="font-size: 12px; color: var(--primary); text-decoration: none; font-weight: 600;">+ Adicionar por Link (Cloudflare R2 / URL)</a>
             </div>
-            <input type="text" id="onbVidTitle" class="form-input-text" placeholder="Ex: Minha VSL de Alta Conversão">
+            <input type="text" id="onbVidTitle" class="form-input-text" placeholder="Ex: Minha VSL de Alta Conversão" maxlength="70">
           </div>
 
           <div id="onbRemoteSection" style="display: none; margin-bottom: 12px;">
@@ -9214,7 +9214,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
     }
 
     async function submitOnbStep1() {
-      const title = document.getElementById('onbVidTitle').value.trim() || 'Minha Primeira VSL';
+      const title = (document.getElementById('onbVidTitle').value.trim() || 'Minha Primeira VSL').slice(0, 70);
       const btn = document.getElementById('btnOnbNextStep1');
 
       if (tempOnboardingVideo) {
