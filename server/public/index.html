@@ -2557,25 +2557,41 @@
       background: var(--bg-card);
       display: flex;
       justify-content: flex-end;
-      flex-shrink: 0;
-    }
       gap: 10px;
+      flex-shrink: 0;
     }
 
     .btn-clean-secondary {
-      background: transparent;
-      border: 1px solid var(--border-subtle);
-      color: var(--text-muted);
+      appearance: none;
+      -webkit-appearance: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      background: var(--bg-surface, #1e2124);
+      border: 1px solid var(--border-subtle, #2e3238);
+      color: var(--text-main, #e2e8f0);
       padding: 8px 16px;
-      border-radius: var(--radius-sm);
+      border-radius: var(--radius-sm, 6px);
       font-size: 13px;
       font-weight: 600;
+      font-family: inherit;
       cursor: pointer;
+      line-height: 1.4;
+      text-decoration: none;
+      outline: none;
+      transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
     }
 
     .btn-clean-secondary:hover {
-      background: var(--bg-surface);
-      color: var(--text-main);
+      background: var(--bg-card, #2b3036);
+      border-color: var(--border-focus, #3b82f6);
+      color: #ffffff;
+    }
+
+    .btn-clean-secondary:focus-visible {
+      outline: 2px solid var(--border-focus, #3b82f6);
+      outline-offset: 2px;
     }
 
     .import-drop-zone {
@@ -3580,12 +3596,36 @@
       .btn-mobile-toggle {
         display: block;
       }
+      .btn-sidebar-mobile-close {
+        display: flex;
+      }
       .editor-grid-wrapper {
         grid-template-columns: 1fr;
       }
       .preview-sticky-box {
         position: static;
       }
+    }
+
+    .btn-sidebar-mobile-close {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm, 6px);
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0;
+      transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+    }
+
+    .btn-sidebar-mobile-close:hover {
+      background: var(--bg-surface);
+      border-color: var(--border-focus, #3b82f6);
+      color: var(--text-main);
     }
 
     .sidebar-backdrop {
@@ -3595,6 +3635,10 @@
       background: rgba(0, 0, 0, 0.65);
       backdrop-filter: blur(2px);
       z-index: 140;
+    }
+
+    .sidebar-backdrop.active {
+      display: block;
     }
     .library-nav-tabs {
       display: flex;
@@ -4303,6 +4347,12 @@
           </div>
           <div class="brand-name" id="sidebarAppName">CloudVTurb</div>
         </a>
+        <button type="button" class="btn-sidebar-mobile-close" onclick="toggleSidebar(false)" aria-label="Fechar menu" title="Fechar menu">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
       </div>
 
       <nav class="sidebar-nav">
