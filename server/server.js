@@ -751,14 +751,20 @@ function pushNotificationToUser(userId, notification) {
   }
 }
 
+function getSystemFromEmail() {
+  const custom = (process.env.RESEND_FROM_EMAIL || '').trim();
+  if (custom && !custom.includes('onboarding@resend.dev')) {
+    return custom;
+  }
+  const domain = BASE_DOMAIN || 'localhost';
+  return `${APP_NAME} <nao-responda@${domain}>`;
+}
+
 async function sendUserActionEmail({ to, name, action, reason, adminName }) {
   const apiKey = (process.env.RESEND_API_KEY || '').trim();
   if (!apiKey) return;
 
-  let fromEmail = (process.env.RESEND_FROM_EMAIL || '').trim();
-  if (!fromEmail || fromEmail.includes('onboarding@resend.dev')) {
-    fromEmail = 'CloudVTurb <nao-responda@roleta-sorte.online>';
-  }
+  const fromEmail = getSystemFromEmail();
 
   const labels = {
     block: { subject: 'Sua conta foi bloqueada', title: 'Conta Bloqueada', color: '#ef4444', icon: 'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01', desc: 'O acesso à sua conta na plataforma CloudVTurb foi suspenso pelo administrador.' },
@@ -3551,7 +3557,7 @@ app.post('/api/analytics/event', (req, res) => {
   const cleanDevice = req.body.device || 'desktop';
   const cleanBrowser = req.body.browser || 'Chrome';
   const cleanOs = req.body.os || 'Windows';
-  const cleanCountry = req.body.country || 'Brazil';
+  const cleanCountry = req.body.country || 'Mozambique';
   const cleanDomain = req.body.domain || (req.headers.referer ? (() => { try { return new URL(req.headers.referer).hostname; } catch(e){ return null; } })() : null);
   const cleanUtmSource = req.body.utm_source || null;
   const cleanUtmMedium = req.body.utm_medium || null;
@@ -3642,15 +3648,15 @@ app.get('/api/analytics/video/:id', authMiddleware, (req, res) => {
   const startDate = req.query.startDate;
   const endDate = req.query.endDate;
 
-  let dateCondition = "date(created_at, '-3 hours') = date('now', '-3 hours')";
-  let prevCondition = "date(created_at, '-3 hours') = date('now', '-3 hours', '-1 day')";
+  let dateCondition = "date(created_at, '+2 hours') = date('now', '+2 hours')";
+  let prevCondition = "date(created_at, '+2 hours') = date('now', '+2 hours', '-1 day')";
 
   if (period === 'today') {
-    dateCondition = "date(created_at, '-3 hours') = date('now', '-3 hours')";
-    prevCondition = "date(created_at, '-3 hours') = date('now', '-3 hours', '-1 day')";
+    dateCondition = "date(created_at, '+2 hours') = date('now', '+2 hours')";
+    prevCondition = "date(created_at, '+2 hours') = date('now', '+2 hours', '-1 day')";
   } else if (period === 'yesterday') {
-    dateCondition = "date(created_at, '-3 hours') = date('now', '-3 hours', '-1 day')";
-    prevCondition = "date(created_at, '-3 hours') = date('now', '-3 hours', '-2 days')";
+    dateCondition = "date(created_at, '+2 hours') = date('now', '+2 hours', '-1 day')";
+    prevCondition = "date(created_at, '+2 hours') = date('now', '+2 hours', '-2 days')";
   } else if (period === '7d') {
     dateCondition = "created_at >= datetime('now', '-7 days')";
     prevCondition = "created_at >= datetime('now', '-14 days') AND created_at < datetime('now', '-7 days')";
@@ -3658,19 +3664,19 @@ app.get('/api/analytics/video/:id', authMiddleware, (req, res) => {
     dateCondition = "created_at >= datetime('now', '-30 days')";
     prevCondition = "created_at >= datetime('now', '-60 days') AND created_at < datetime('now', '-30 days')";
   } else if (period === 'month') {
-    dateCondition = "strftime('%Y-%m', created_at, '-3 hours') = strftime('%Y-%m', 'now', '-3 hours')";
-    prevCondition = "strftime('%Y-%m', created_at, '-3 hours') = strftime('%Y-%m', 'now', '-3 hours', 'start of month', '-1 month')";
+    dateCondition = "strftime('%Y-%m', created_at, '+2 hours') = strftime('%Y-%m', 'now', '+2 hours')";
+    prevCondition = "strftime('%Y-%m', created_at, '+2 hours') = strftime('%Y-%m', 'now', '+2 hours', 'start of month', '-1 month')";
   } else if (period === 'all') {
     dateCondition = "1=1";
     prevCondition = "0=1";
   } else if (period === 'custom' && startDate && endDate) {
     const sDate = String(startDate).slice(0, 10);
     const eDate = String(endDate).slice(0, 10);
-    dateCondition = `date(created_at, '-3 hours') >= date('${sDate}') AND date(created_at, '-3 hours') <= date('${eDate}')`;
+    dateCondition = `date(created_at, '+2 hours') >= date('${sDate}') AND date(created_at, '+2 hours') <= date('${eDate}')`;
     const sTime = new Date(sDate).getTime();
     const eTime = new Date(eDate).getTime();
     const diffDays = Math.max(1, Math.round(Math.abs((eTime - sTime) / (1000 * 60 * 60 * 24)))) + 1;
-    prevCondition = `date(created_at, '-3 hours') >= date('${sDate}', '-${diffDays} days') AND date(created_at, '-3 hours') < date('${sDate}')`;
+    prevCondition = `date(created_at, '+2 hours') >= date('${sDate}', '-${diffDays} days') AND date(created_at, '+2 hours') < date('${sDate}')`;
   }
 
   function calcDiff(curr, prev) {
