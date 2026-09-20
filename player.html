@@ -75,9 +75,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.45);
-      backdrop-filter: blur(3px);
-      -webkit-backdrop-filter: blur(3px);
+      background: transparent;
       z-index: 30;
       display: flex;
       align-items: center;
@@ -162,13 +160,14 @@
     .pulse-badge-wrapper.style-square .pulse-badge {
       flex-direction: column;
       align-items: center;
-      justify-content: space-between;
-      aspect-ratio: 1 / 1;
-      width: min(220px, 80vw);
-      height: min(220px, 80vw);
-      padding: 24px 16px;
+      justify-content: center;
+      width: min(240px, 85vw);
+      padding: 20px 16px;
       gap: 12px;
-      border-radius: 8px;
+      border-radius: 9px;
+      border: 2.25px solid rgb(255, 255, 255);
+      background: rgba(255, 0, 0, 0.85);
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
     }
     .pulse-badge-wrapper.style-square .pulse-text-top {
       order: 1;
@@ -363,57 +362,105 @@
       box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.8);
       background: rgba(255, 255, 255, 0.4);
     }
-    .resume-modal {
+    .resume-overlay {
       position: absolute;
-      top: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(18, 18, 21, 0.94);
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      backdrop-filter: blur(8px);
-      padding: 12px 20px;
-      border-radius: 12px;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      background-color: var(--resume-bg, rgba(0, 0, 0, 0.7));
+      color: var(--resume-color, #ffffff);
       display: flex;
       align-items: center;
-      gap: 14px;
-      color: #fff;
-      font-size: 13px;
-      z-index: 40;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      justify-content: center;
+      z-index: 50;
       opacity: 0;
       visibility: hidden;
-      transition: all 0.3s ease;
-      white-space: nowrap;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+      padding: 16px;
+      box-sizing: border-box;
     }
-    .resume-modal.active {
+    .resume-overlay.active {
       opacity: 1;
       visibility: visible;
     }
-    .resume-btn-confirm {
-      background: #2563EB;
-      color: white;
-      border: none;
-      padding: 6px 14px;
-      border-radius: 6px;
-      font-weight: 600;
-      font-size: 12px;
-      cursor: pointer;
-      transition: background 0.2s;
+    .resume__content {
+      text-align: center;
+      width: 100%;
+      max-width: 360px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
     }
-    .resume-btn-confirm:hover {
-      background: #1D4ED8;
+    .resume__title {
+      color: var(--resume-color, #ffffff);
+      font-size: clamp(16px, 4.5vw, 22px);
+      font-weight: 700;
+      line-height: 1.3;
+      margin: 0 0 6px 0;
+      text-align: center;
+      max-width: 100%;
+      word-break: break-word;
     }
-    .resume-btn-dismiss {
+    .resume__actions {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 14px;
+      margin: 0 auto;
+    }
+    .resume__action-btn {
       background: transparent;
-      color: #a1a1aa;
       border: none;
-      padding: 6px 10px;
-      border-radius: 6px;
-      font-size: 12px;
+      color: var(--resume-color, #ffffff);
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 8px;
+      user-select: none;
+      text-decoration: none;
+      transition: transform 0.15s ease, opacity 0.2s ease;
     }
-    .resume-btn-dismiss:hover {
-      color: #ffffff;
+    .resume__action-btn:hover {
+      transform: scale(1.04);
+      opacity: 0.9;
+    }
+    .resume__action-btn:active {
+      transform: scale(0.98);
+    }
+    .resume__icon {
+      border: 2px solid var(--resume-color, #ffffff);
+      border-radius: 50%;
+      box-sizing: border-box;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px;
+      height: 38px;
+      margin-right: 12px;
+      flex-shrink: 0;
+      fill: var(--resume-color, #ffffff);
+    }
+    .resume__icon svg {
+      width: 18px;
+      height: 18px;
+      display: block;
+      fill: currentColor;
+    }
+    .resume__play .resume__icon svg {
+      margin-left: 2px;
+    }
+    .resume__text {
+      font-size: clamp(14px, 3.8vw, 17px);
+      font-weight: 700;
+      line-height: 1.2;
+      text-align: left;
+      color: var(--resume-color, #ffffff);
     }
     .cta-container {
       width: 100%;
@@ -435,19 +482,33 @@
       padding: 12px 16px 14px;
       pointer-events: auto;
     }
+    .cta-container.position-inside {
+      position: absolute;
+      bottom: 20px;
+      left: 0;
+      right: 0;
+      z-index: 35;
+      background: transparent;
+      padding: 0 16px;
+    }
+    .cta-container.position-inside.visible {
+      padding: 0 16px;
+    }
     .cta-button {
       width: 100%;
-      background: #10b981;
+      max-width: 400px;
+      background: #00cd3c;
       color: #ffffff;
       text-decoration: none;
       text-align: center;
-      padding: 16px 24px;
+      padding: 15px 24px;
       border-radius: 12px;
-      font-weight: 800;
+      font-family: 'Inter', -apple-system, sans-serif;
+      font-weight: 700;
       font-size: 18px;
       letter-spacing: 0.5px;
       text-transform: uppercase;
-      box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.5), 0 0 20px rgba(16, 185, 129, 0.4);
+      box-shadow: 0 10px 25px -5px rgba(0, 205, 60, 0.5), 0 0 20px rgba(0, 205, 60, 0.3);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -542,10 +603,26 @@
       </div>
     </div>
 
-    <div class="resume-modal" id="resumeModal">
-      <span>Continuar de onde você parou? (<span id="resumeTimeLabel">00:00</span>)</span>
-      <button class="resume-btn-confirm" id="btnResumeYes">Sim, continuar</button>
-      <button class="resume-btn-dismiss" id="btnResumeNo">Recomeçar</button>
+    <div class="resume-overlay pointer" id="resumeModal">
+      <div class="resume__content">
+        <div class="resume__title" id="resumeTitle">Já começou a ver este vídeo</div>
+        <div class="resume__actions">
+          <div class="resume__play resume__action-btn" id="btnResumeYes">
+            <span class="resume__icon">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><g><path fill-rule="evenodd" clip-rule="evenodd" d="M5 21.7232L22.0156 12L5 2.27685L5 21.7232Z"></path></g></svg>
+            </span>
+            <span class="resume__text" id="resumePlayText">Continuar Assistindo</span>
+          </div>
+          <div class="resume__rewind resume__action-btn" id="btnResumeNo">
+            <span class="resume__icon">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 24 24">
+                <path fill="currentColor" d="M12.567 1.258A10.822 10.822 0 0 0 2.818 8.4a.25.25 0 0 1-.271.163L.858 8.309a.514.514 0 0 0-.485.213.5.5 0 0 0-.021.53l2.679 4.7a.5.5 0 0 0 .786.107l3.77-3.746a.5.5 0 0 0-.279-.85l-1.715-.256a.25.25 0 0 1-.192-.35 8.26 8.26 0 1 1 7.866 11.59 1.25 1.25 0 0 0 .045 2.5h.047a10.752 10.752 0 1 0-.792-21.487v-.002Z"/>
+              </svg>
+            </span>
+            <span class="resume__text" id="resumeReplayText">Reiniciar o vídeo</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="progress-bar-container" id="progressBarContainer">
@@ -765,18 +842,26 @@
       const fakeProgress = params.has('fake_progress') ? params.get('fake_progress') !== '0' : (dbSettings.fakeProgress !== false);
       const blockSeek = params.has('block_seek') ? params.get('block_seek') !== '0' : (dbSettings.blockSeek !== false);
       const resumeEnabled = params.has('resume') ? params.get('resume') !== '0' : (dbSettings.resume !== false);
+      const resumeTitle = params.get('res_title') || dbSettings.resumeTitle || 'Já começou a ver este vídeo';
+      const resumePlayText = params.get('res_play') || dbSettings.resumePlayText || 'Continuar Assistindo';
+      const resumeReplayText = params.get('res_replay') || dbSettings.resumeReplayText || 'Reiniciar o vídeo';
+      const resumeBgColor = params.get('res_bg') || dbSettings.resumeBgColor || 'rgba(0, 0, 0, 0.7)';
+      const resumeTextColor = params.get('res_color') || dbSettings.resumeTextColor || '#ffffff';
       const rawCtaUrl = params.get('cta_url') || dbSettings.ctaUrl || '';
       const validCtaUrl = (rawCtaUrl && rawCtaUrl.trim() !== '' && rawCtaUrl !== 'https://seusite.com/checkout') ? rawCtaUrl.trim() : '';
       const ctaEnabled = (params.has('cta') ? params.get('cta') === '1' : (dbSettings.ctaEnabled === true)) && Boolean(validCtaUrl);
       const ctaTime = params.has('cta_time') ? parseFloat(params.get('cta_time')) : (dbSettings.ctaTime || 0);
+      const ctaPosition = params.get('cta_pos') || dbSettings.ctaPosition || 'outside';
+      const ctaAnimation = params.get('cta_anim') || dbSettings.ctaAnimation || 'pulse';
+      const ctaNewTab = (params.get('cta_new_tab') || dbSettings.ctaNewTab) !== '0';
       const ctaUrl = validCtaUrl;
-      const ctaText = params.get('cta_text') || dbSettings.ctaText || '';
-      const ctaColor = params.get('cta_color') || dbSettings.ctaColor || '#10b981';
+      const ctaText = params.get('cta_text') || dbSettings.ctaText || 'Quero Este SEGREDO';
+      const ctaColor = params.get('cta_color') || dbSettings.ctaColor || '#00cd3c';
       const ctaSub = params.get('cta_subtext') || dbSettings.ctaSubtext || '';
       const pixelsEnabled = params.has('pixels') ? params.get('pixels') === '1' : (dbSettings.pixels === true);
 
       const AUDIO_ICONS = {
-        'volume-muted': '<svg viewBox="0 0 28 28" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M11 6L6 10H2V18H6L11 22V6Z" fill="currentColor" stroke="currentColor" stroke-width="1.5"/><path d="M15.5 10.5C16.8 11.6 17.5 12.8 17.5 14C17.5 15.2 16.8 16.4 15.5 17.5" stroke="currentColor" stroke-width="2.2"/><path d="M19 7.5C21 9.5 22 11.7 22 14C22 16.3 21 18.5 19 20.5" stroke="currentColor" stroke-width="2.2"/><path d="M22.5 4.5C25.2 7.2 26.5 10.5 26.5 14C26.5 17.5 25.2 20.8 22.5 23.5" stroke="currentColor" stroke-width="2.2"/><line x1="2" y1="2" x2="26" y2="26" stroke="currentColor" stroke-width="2.8"/></svg>',
+        'volume-muted': '<svg version="1.1" fill="#FFFFFF" xmlns="http://www.w3.org/2000/svg" width="56px" height="38px" viewBox="7.999 9.062 46.75 32.563"><style>@keyframes BLINK { 0% { opacity: 0; } 33% { opacity: 1; } 66% { opacity: 1; } 100% { opacity: 0; } } .blink_1 { animation: BLINK 2s infinite; opacity: 0; } .blink_2 { animation: BLINK 2s infinite .3s; opacity: 0; } .blink_3 { animation: BLINK 2s infinite .6s; opacity: 0; } .smartplay-svg-color { fill: currentColor !important; }</style><g class="adjustable fg animation"><path class="smartplay-svg-color" d="M53.249,39.616c-0.186,0-0.371-0.051-0.537-0.157l-43.5-27.75c-0.466-0.297-0.603-0.916-0.306-1.381c0.298-0.466,0.917-0.601,1.381-0.306l43.5,27.75c0.467,0.297,0.604,0.916,0.307,1.381C53.901,39.453,53.579,39.616,53.249,39.616z"></path><path class="blink_3 smartplay-svg-color" d="M48.896,33.467l1.699,1.085c3.497-7.791,2.073-17.271-4.313-23.659c-0.391-0.391-1.023-0.391-1.414,0s-0.391,1.023,0,1.414C50.581,18.019,51.913,26.463,48.896,33.467z"></path><path class="blink_3 smartplay-svg-color" d="M46.926,36.956c-0.612,0.863-1.286,1.695-2.059,2.469c-0.392,0.391-0.392,1.023,0,1.414c0.194,0.195,0.45,0.293,0.707,0.293c0.256,0,0.512-0.098,0.706-0.293c0.878-0.878,1.642-1.824,2.333-2.807L46.926,36.956z"></path><path class="blink_2 smartplay-svg-color" d="M42.543,29.415l1.777,1.135c1.545-5.315,0.229-11.293-3.953-15.476c-0.392-0.391-1.023-0.391-1.414,0c-0.392,0.391-0.392,1.023,0,1.414C42.454,19.987,43.639,24.925,42.543,29.415z"></path><path class="blink_2 smartplay-svg-color" d="M41,33.174c-0.563,0.94-1.235,1.837-2.047,2.646c-0.391,0.392-0.391,1.023,0,1.414c0.195,0.195,0.451,0.293,0.707,0.293s0.512-0.098,0.707-0.293c0.916-0.914,1.676-1.924,2.317-2.984L41,33.174z"></path><path class="blink_1 smartplay-svg-color" d="M35.771,25.094l2.003,1.277c0.012-0.203,0.029-0.404,0.029-0.609c0-3.079-1.2-5.974-3.381-8.153c-0.391-0.391-1.022-0.391-1.414,0c-0.391,0.391-0.391,1.023,0,1.414C34.652,20.666,35.613,22.802,35.771,25.094z"></path><path class="blink_1 smartplay-svg-color" d="M35.084,29.401c-0.474,1.145-1.172,2.197-2.076,3.1c-0.391,0.391-0.391,1.023,0,1.414c0.195,0.195,0.451,0.293,0.707,0.293c0.257,0,0.513-0.098,0.707-0.293c1.008-1.006,1.795-2.17,2.361-3.43L35.084,29.401z"></path><polygon class="smartplay-svg-color" points="28.124,20.215 28.124,14.991 24.635,17.99"></polygon><path class="smartplay-svg-color" d="M20.921,20.366h-6.423c-0.553,0-1,0.508-1,1.135v8.229c0,0.627,0.447,1.135,1,1.135h7.375l6.25,5.875V24.96L20.921,20.366z"></path></g></svg>',
         'speaker-high': '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07" fill="none" stroke-width="2.2"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14" fill="none" stroke-width="2.2"></path></svg>',
         'volume-2': '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07" fill="none" stroke-width="2.2"></path></svg>',
         'sound-wave': '<svg viewBox="0 0 24 24" stroke="currentColor" fill="none"><line x1="12" y1="3" x2="12" y2="21" stroke-width="2.4" stroke-linecap="round"></line><line x1="7" y1="7" x2="7" y2="17" stroke-width="2.4" stroke-linecap="round"></line><line x1="2" y1="11" x2="2" y2="13" stroke-width="2.4" stroke-linecap="round"></line><line x1="17" y1="7" x2="17" y2="17" stroke-width="2.4" stroke-linecap="round"></line><line x1="22" y1="11" x2="22" y2="13" stroke-width="2.4" stroke-linecap="round"></line></svg>',
@@ -791,13 +876,13 @@
         position: params.get('an_pos') || dbSettings.audioNoticePosition || 'center',
         animation: params.get('an_anim') || dbSettings.audioNoticeAnimation || 'none',
         icon: params.get('an_icon') || dbSettings.audioNoticeIcon || 'volume-muted',
-        bgColor: params.get('an_bg') || dbSettings.audioNoticeBgColor || '#2563EB',
+        bgColor: params.get('an_bg') || dbSettings.audioNoticeBgColor || 'rgba(255, 0, 0, 0.85)',
         textColor: params.get('an_text_color') || dbSettings.audioNoticeTextColor || '#FFFFFF',
-        iconBgColor: params.get('an_icon_bg') || dbSettings.audioNoticeIconBgColor || '#2563EB',
+        iconBgColor: params.get('an_icon_bg') || dbSettings.audioNoticeIconBgColor || 'transparent',
         iconColor: params.get('an_icon_color') || dbSettings.audioNoticeIconColor || '#FFFFFF',
-        borderColor: params.get('an_border_color') || dbSettings.audioNoticeBorderColor || '#1D4ED8',
-        borderWidth: params.get('an_border_width') || dbSettings.audioNoticeBorderWidth || '0px',
-        borderRadius: params.get('an_border_radius') || dbSettings.audioNoticeBorderRadius || '8px',
+        borderColor: params.get('an_border_color') || dbSettings.audioNoticeBorderColor || '#FFFFFF',
+        borderWidth: params.get('an_border_width') || dbSettings.audioNoticeBorderWidth || '2.25px',
+        borderRadius: params.get('an_border_radius') || dbSettings.audioNoticeBorderRadius || '9px',
         glow: params.get('an_glow') || dbSettings.audioNoticeGlow || 'subtle'
       };
 
@@ -950,6 +1035,17 @@
 
       applyAudioNoticeSettings(audioNoticeConfig);
 
+      if (resumeModal) {
+        resumeModal.style.setProperty('--resume-bg', resumeBgColor);
+        resumeModal.style.setProperty('--resume-color', resumeTextColor);
+        const titleEl = document.getElementById('resumeTitle');
+        if (titleEl) titleEl.textContent = resumeTitle;
+        const playEl = document.getElementById('resumePlayText');
+        if (playEl) playEl.textContent = resumePlayText;
+        const replayEl = document.getElementById('resumeReplayText');
+        if (replayEl) replayEl.textContent = resumeReplayText;
+      }
+
       window.addEventListener('message', function (e) {
         if (!e.data) return;
         if (e.data.type === 'UPDATE_AUDIO_NOTICE') {
@@ -974,6 +1070,16 @@
         if (subWrap) subWrap.style.display = 'none';
       }
       if (ctaUrl) ctaBtn.href = ctaUrl;
+      if (ctaPosition === 'inside') {
+        ctaContainer.classList.add('position-inside');
+        playerWrapper.appendChild(ctaContainer);
+      }
+      if (ctaAnimation === 'none') {
+        ctaBtn.style.animation = 'none';
+      }
+      if (!ctaNewTab) {
+        ctaBtn.removeAttribute('target');
+      }
 
       document.addEventListener('contextmenu', function (e) {
         e.preventDefault();
@@ -1277,6 +1383,22 @@
               pixelFired.pitch = true;
               sendTrackingEvent('PitchViewed', { time: cur });
             }
+            if (window.parent) {
+              try {
+                window.parent.postMessage({
+                  type: 'vturb_pitch_revealed',
+                  videoId: vidId,
+                  cta: {
+                    position: ctaPosition,
+                    text: ctaText,
+                    url: ctaUrl,
+                    color: ctaColor,
+                    subtext: ctaSub,
+                    openInNewTab: ctaNewTab
+                  }
+                }, '*');
+              } catch (e) {}
+            }
           }
         }
 
@@ -1322,34 +1444,47 @@
       }
 
       if (resumeEnabled) {
-        video.addEventListener('loadedmetadata', function () {
+        let resumePrompted = false;
+        function checkResume() {
+          if (resumePrompted) return;
           try {
             const savedTime = parseFloat(localStorage.getItem(storageKey));
-            if (savedTime && savedTime > 5 && savedTime < (video.duration - 10)) {
-              const minutes = Math.floor(savedTime / 60).toString().padStart(2, '0');
-              const seconds = Math.floor(savedTime % 60).toString().padStart(2, '0');
-              resumeTimeLabel.textContent = `${minutes}:${seconds}`;
+            const dur = video.duration || 100;
+            if (savedTime && savedTime > 5 && savedTime < (dur - 10)) {
+              resumePrompted = true;
               resumeModal.classList.add('active');
+              video.pause();
+              if (smartOverlay) smartOverlay.classList.add('hidden');
 
-              btnResumeYes.onclick = function () {
-                video.currentTime = savedTime;
+              btnResumeYes.onclick = function (e) {
+                if (e) e.stopPropagation();
                 resumeModal.classList.remove('active');
-                if (!hasUserUnmuted && smartAutoplay) {
-                  unmuteAndRestart();
-                }
+                video.currentTime = savedTime;
+                video.muted = false;
+                video.volume = 1;
+                hasUserUnmuted = true;
+                if (smartOverlay) smartOverlay.classList.add('hidden');
+                video.play().catch(function () {});
               };
 
-              btnResumeNo.onclick = function () {
+              btnResumeNo.onclick = function (e) {
+                if (e) e.stopPropagation();
                 localStorage.removeItem(storageKey);
                 resumeModal.classList.remove('active');
+                video.currentTime = 0;
+                video.muted = false;
+                video.volume = 1;
+                hasUserUnmuted = true;
+                if (smartOverlay) smartOverlay.classList.add('hidden');
+                video.play().catch(function () {});
               };
-
-              setTimeout(function () {
-                resumeModal.classList.remove('active');
-              }, 10000);
             }
           } catch (e) {}
-        });
+        }
+
+        video.addEventListener('loadedmetadata', checkResume);
+        video.addEventListener('canplay', checkResume);
+        if (video.readyState >= 1) checkResume();
       }
 
       video.addEventListener('ended', function () {

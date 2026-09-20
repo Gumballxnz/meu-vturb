@@ -5555,6 +5555,20 @@
               </div>
             </div>
             <div class="form-row">
+              <label class="form-label">Posição do Botão</label>
+              <select id="edCtaPosition" class="form-input-text" onchange="liveUpdateSettings()">
+                <option value="outside">Abaixo do Vídeo (Outside Video - Padrão VTurb)</option>
+                <option value="inside">Sobre o Vídeo (Inside Player)</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label class="form-label">Animação do Botão</label>
+              <select id="edCtaAnimation" class="form-input-text" onchange="liveUpdateSettings()">
+                <option value="pulse">Pulsar (Pulse - Padrão VTurb)</option>
+                <option value="none">Sem animação</option>
+              </select>
+            </div>
+            <div class="form-row">
               <label class="form-label">Texto do Botão</label>
               <input type="text" id="edCtaText" class="form-input-text" value="" placeholder="Texto do botão" oninput="liveUpdateSettings()">
             </div>
@@ -5565,13 +5579,23 @@
             <div class="form-row">
               <label class="form-label">Cor do Botão CTA</label>
               <div style="display: flex; gap: 10px; align-items: center;">
-                <input type="color" id="edCtaColor" value="#10b981" oninput="syncColor('edCtaColor', 'edCtaColorHex')" style="width: 44px; height: 38px; border: 1px solid var(--border-subtle); background: var(--bg-card); border-radius: 6px; cursor: pointer;">
-                <input type="text" id="edCtaColorHex" value="#10b981" class="form-input-text" style="width: 120px;" oninput="syncColor('edCtaColorHex', 'edCtaColor')">
+                <input type="color" id="edCtaColor" value="#00cd3c" oninput="syncColor('edCtaColor', 'edCtaColorHex')" style="width: 44px; height: 38px; border: 1px solid var(--border-subtle); background: var(--bg-card); border-radius: 6px; cursor: pointer;">
+                <input type="text" id="edCtaColorHex" value="#00cd3c" class="form-input-text" style="width: 120px;" oninput="syncColor('edCtaColorHex', 'edCtaColor')">
               </div>
             </div>
-            <div class="form-row" style="margin-bottom: 0;">
+            <div class="form-row">
               <label class="form-label">Subtexto de Garantia</label>
               <input type="text" id="edCtaSubtext" class="form-input-text" value="" placeholder="Subtexto de garantia" oninput="liveUpdateSettings()">
+            </div>
+            <div class="toggle-row-clean" style="margin-top: 14px;">
+              <div>
+                <div class="toggle-info-title">Abrir em Nova Aba</div>
+                <div class="toggle-info-desc">Abre o link de checkout em uma nova aba do navegador</div>
+              </div>
+              <label class="switch-clean">
+                <input type="checkbox" id="edCtaNewTab" checked onchange="liveUpdateSettings()">
+                <span class="slider-clean"></span>
+              </label>
             </div>
           </div>
 
@@ -5600,7 +5624,33 @@
                 <span class="slider-clean"></span>
               </label>
             </div>
-            <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5; margin-top: 14px;">Se o visitante fechar a página e retornar depois, o vídeo continuará exatamente do mesmo segundo.</p>
+            <p style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5; margin-top: 14px; margin-bottom: 14px;">Se o visitante fechar a página e retornar depois, um modal centralizado no estilo VTurb perguntará se deseja continuar assistindo ou reiniciar o vídeo.</p>
+            <div class="form-row">
+              <label class="form-label">Título do Modal</label>
+              <input type="text" id="edResumeTitle" class="form-input-text" value="Já começou a ver este vídeo" placeholder="Já começou a ver este vídeo" oninput="liveUpdateSettings()">
+            </div>
+            <div class="form-row">
+              <label class="form-label">Texto de Continuar</label>
+              <input type="text" id="edResumePlayText" class="form-input-text" value="Continuar Assistindo" placeholder="Continuar Assistindo" oninput="liveUpdateSettings()">
+            </div>
+            <div class="form-row">
+              <label class="form-label">Texto de Reiniciar</label>
+              <input type="text" id="edResumeReplayText" class="form-input-text" value="Reiniciar o vídeo" placeholder="Reiniciar o vídeo" oninput="liveUpdateSettings()">
+            </div>
+            <div class="form-row">
+              <label class="form-label">Cor de Fundo do Card</label>
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="color" id="edResumeBgColor" value="#000000" oninput="syncColor('edResumeBgColor', 'edResumeBgColorHex')" style="width: 44px; height: 38px; border: 1px solid var(--border-subtle); background: var(--bg-card); border-radius: 6px; cursor: pointer;">
+                <input type="text" id="edResumeBgColorHex" value="rgba(0, 0, 0, 0.7)" class="form-input-text" style="width: 160px;" oninput="syncColor('edResumeBgColorHex', 'edResumeBgColor')">
+              </div>
+            </div>
+            <div class="form-row" style="margin-bottom: 0;">
+              <label class="form-label">Cor do Texto e Ícones</label>
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="color" id="edResumeTextColor" value="#ffffff" oninput="syncColor('edResumeTextColor', 'edResumeTextColorHex')" style="width: 44px; height: 38px; border: 1px solid var(--border-subtle); background: var(--bg-card); border-radius: 6px; cursor: pointer;">
+                <input type="text" id="edResumeTextColorHex" value="#ffffff" class="form-input-text" style="width: 120px;" oninput="syncColor('edResumeTextColorHex', 'edResumeTextColor')">
+              </div>
+            </div>
           </div>
 
           <div class="vturb-editor-panel" id="edPanelGanchos" style="display: none;">
@@ -13574,15 +13624,25 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       const isCtaOn = Boolean(s.ctaEnabled && s.ctaUrl && s.ctaUrl.trim() !== '' && s.ctaUrl !== 'https://seusite.com/checkout');
       setChecked('edCtaEnabled', isCtaOn);
       setVal('edCtaTime', s.ctaTime !== undefined ? s.ctaTime : 10);
+      setVal('edCtaPosition', s.ctaPosition || 'outside');
+      setVal('edCtaAnimation', s.ctaAnimation || 'pulse');
       setVal('edCtaText', isCtaOn ? (s.ctaText || '') : '');
       setVal('edCtaUrl', isCtaOn ? (s.ctaUrl || '') : '');
-      setVal('edCtaColor', s.ctaColor || '#10b981');
-      setVal('edCtaColorHex', s.ctaColor || '#10b981');
+      setVal('edCtaColor', s.ctaColor || '#00cd3c');
+      setVal('edCtaColorHex', s.ctaColor || '#00cd3c');
       setVal('edCtaSubtext', isCtaOn ? (s.ctaSubtext || '') : '');
+      setChecked('edCtaNewTab', s.ctaNewTab !== false);
 
       setChecked('edFakeProgress', s.fakeProgress !== false);
       setChecked('edBlockSeek', s.blockSeek !== false);
       setChecked('edResume', s.resume !== false);
+      setVal('edResumeTitle', s.resumeTitle || 'Já começou a ver este vídeo');
+      setVal('edResumePlayText', s.resumePlayText || 'Continuar Assistindo');
+      setVal('edResumeReplayText', s.resumeReplayText || 'Reiniciar o vídeo');
+      setVal('edResumeBgColor', (s.resumeBgColor && s.resumeBgColor.startsWith('#')) ? s.resumeBgColor : '#000000');
+      setVal('edResumeBgColorHex', s.resumeBgColor || 'rgba(0, 0, 0, 0.7)');
+      setVal('edResumeTextColor', s.resumeTextColor || '#ffffff');
+      setVal('edResumeTextColorHex', s.resumeTextColor || '#ffffff');
       setChecked('edPixels', !!s.pixels);
 
       setChecked('edTurboEnabled', !!s.turbo);
@@ -14165,11 +14225,19 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         blockSeek: getChecked('edBlockSeek', true),
         ctaEnabled: getChecked('edCtaEnabled', false),
         ctaTime: parseInt(getVal('edCtaTime', '10'), 10) || 0,
+        ctaPosition: getVal('edCtaPosition', 'outside'),
+        ctaAnimation: getVal('edCtaAnimation', 'pulse'),
         ctaText: getVal('edCtaText', ''),
         ctaUrl: getVal('edCtaUrl', ''),
-        ctaColor: getVal('edCtaColor', '#10b981'),
+        ctaColor: getVal('edCtaColor', '#00cd3c'),
         ctaSubtext: getVal('edCtaSubtext', ''),
+        ctaNewTab: getChecked('edCtaNewTab', true),
         resume: getChecked('edResume', true),
+        resumeTitle: getVal('edResumeTitle', 'Já começou a ver este vídeo'),
+        resumePlayText: getVal('edResumePlayText', 'Continuar Assistindo'),
+        resumeReplayText: getVal('edResumeReplayText', 'Reiniciar o vídeo'),
+        resumeBgColor: getVal('edResumeBgColorHex', 'rgba(0, 0, 0, 0.7)'),
+        resumeTextColor: getVal('edResumeTextColorHex', '#ffffff'),
         pixels: getChecked('edPixels', false),
         turbo: getChecked('edTurboEnabled', false),
         headlines: getChecked('edHeadlineEnabled', false),
@@ -14412,10 +14480,12 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
 
       let snippet = '';
       if (currentEmbedSnippetTab === 'js') {
+        const desktopMaxW = isVertical ? ' max-width: 400px;' : '';
+        const mobileMaxW = mobilePadding === '177.77%' ? ' max-width: 400px;' : '';
         if (!isResponsive) {
-          snippet = `<vturb-smartplayer id="vid-${v.id}" style="display: block; margin: 0 auto; width: 100%;"><div class="vturb-player-placeholder" style="position: relative; width: 100%; padding: ${padding} 0 0; z-index: 0; background: #000 url('${posterUrl}') center/cover no-repeat;"><iframe id="ifr_${v.id}" src="${fullUrl}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" allow="autoplay; fullscreen" loading="lazy"></iframe></div></vturb-smartplayer><script type="text/javascript"> var s=document.createElement("script"); s.src="${playerHost}/player.js"; s.async=!0; document.head.appendChild(s); <\/script>`;
+          snippet = `<vturb-smartplayer id="vid-${v.id}" data-vertical="${isVertical}" data-poster="${posterUrl}" style="display: block; margin: 0 auto; width: 100%;${desktopMaxW}"><div class="vturb-player-placeholder" style="position: relative; width: 100%; padding: ${padding} 0 0; z-index: 0; background: #000 url('${posterUrl}') center/cover no-repeat;"><iframe id="ifr_${v.id}" src="${fullUrl}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" allow="autoplay; fullscreen" loading="lazy"></iframe></div></vturb-smartplayer><script type="text/javascript"> var s=document.createElement("script"); s.src="${playerHost}/player.js"; s.async=!0; document.head.appendChild(s); <\/script>`;
         } else {
-          snippet = `<div class="vturb-responsive-container">\n  <div id="vid_desktop_${v.id}_wrap" class="vturb-desktop-player" style="display: block;">\n    <vturb-smartplayer id="vid-${v.id}" style="display: block; margin: 0 auto; width: 100%;"><div class="vturb-player-placeholder" style="position: relative; width: 100%; padding: ${padding} 0 0; z-index: 0; background: #000 url('${posterUrl}') center/cover no-repeat;"><iframe id="ifr_${v.id}" src="${fullUrl}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" allow="autoplay; fullscreen" loading="lazy"></iframe></div></vturb-smartplayer>\n  </div>\n  <div id="vid_mobile_${mobileV.id}_wrap" class="vturb-mobile-player" style="display: none;">\n    <vturb-smartplayer id="vid-${mobileV.id}" style="display: block; margin: 0 auto; width: 100%;"><div class="vturb-player-placeholder" style="position: relative; width: 100%; padding: ${mobilePadding} 0 0; z-index: 0; background: #000 url('${mobilePosterUrl}') center/cover no-repeat;"><iframe id="ifr_${mobileV.id}" src="${mobileFullUrl}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" allow="autoplay; fullscreen" loading="lazy"></iframe></div></vturb-smartplayer>\n  </div>\n</div>\n<style>\n  @media (max-width: 767px) {\n    #vid_desktop_${v.id}_wrap { display: none !important; }\n    #vid_mobile_${mobileV.id}_wrap { display: block !important; }\n  }\n  @media (min-width: 768px) {\n    #vid_desktop_${v.id}_wrap { display: block !important; }\n    #vid_mobile_${mobileV.id}_wrap { display: none !important; }\n  }\n</style>\n<script type="text/javascript"> var s=document.createElement("script"); s.src="${playerHost}/player.js"; s.async=!0; document.head.appendChild(s); <\/script>`;
+          snippet = `<div class="vturb-responsive-container">\n  <div id="vid_desktop_${v.id}_wrap" class="vturb-desktop-player" style="display: block;">\n    <vturb-smartplayer id="vid-${v.id}" data-vertical="${isVertical}" data-poster="${posterUrl}" style="display: block; margin: 0 auto; width: 100%;${desktopMaxW}"><div class="vturb-player-placeholder" style="position: relative; width: 100%; padding: ${padding} 0 0; z-index: 0; background: #000 url('${posterUrl}') center/cover no-repeat;"><iframe id="ifr_${v.id}" src="${fullUrl}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" allow="autoplay; fullscreen" loading="lazy"></iframe></div></vturb-smartplayer>\n  </div>\n  <div id="vid_mobile_${mobileV.id}_wrap" class="vturb-mobile-player" style="display: none;">\n    <vturb-smartplayer id="vid-${mobileV.id}" data-vertical="${mobilePadding === '177.77%'}" data-poster="${mobilePosterUrl}" style="display: block; margin: 0 auto; width: 100%;${mobileMaxW}"><div class="vturb-player-placeholder" style="position: relative; width: 100%; padding: ${mobilePadding} 0 0; z-index: 0; background: #000 url('${mobilePosterUrl}') center/cover no-repeat;"><iframe id="ifr_${mobileV.id}" src="${mobileFullUrl}" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;" allow="autoplay; fullscreen" loading="lazy"></iframe></div></vturb-smartplayer>\n  </div>\n</div>\n<style>\n  @media (max-width: 767px) {\n    #vid_desktop_${v.id}_wrap { display: none !important; }\n    #vid_mobile_${mobileV.id}_wrap { display: block !important; }\n  }\n  @media (min-width: 768px) {\n    #vid_desktop_${v.id}_wrap { display: block !important; }\n    #vid_mobile_${mobileV.id}_wrap { display: none !important; }\n  }\n</style>\n<script type="text/javascript"> var s=document.createElement("script"); s.src="${playerHost}/player.js"; s.async=!0; document.head.appendChild(s); <\/script>`;
         }
       } else {
         if (!isResponsive) {
