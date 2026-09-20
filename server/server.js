@@ -3905,7 +3905,7 @@ app.get('/api/analytics/video/:id/summary', authMiddleware, (req, res) => {
   if (!video) return res.status(404).json({ error: 'Vídeo não encontrado.' });
   if (req.user.role !== 'owner' && video.user_id !== req.user.id) return res.status(403).json({ error: 'Permissão negada.' });
 
-  const period = req.query.period || '7d';
+  const period = req.query.period || 'today';
   const { dc } = buildDateCondition(period, req.query.startDate, req.query.endDate);
 
   let groupFmt = "date(created_at, '+2 hours')";
@@ -3915,23 +3915,91 @@ app.get('/api/analytics/video/:id/summary', authMiddleware, (req, res) => {
     labelFmt = groupFmt;
   }
 
-  const playsRows = db.prepare(`SELECT ${labelFmt} as label, COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'play' AND ${dc} GROUP BY label ORDER BY label`).all(vidId);
   const viewsRows = db.prepare(`SELECT ${labelFmt} as label, COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'page_view' AND ${dc} GROUP BY label ORDER BY label`).all(vidId);
+  const uViewsRows = db.prepare(`SELECT ${labelFmt} as label, COUNT(DISTINCT visitor_id) as count FROM analytics_events WHERE video_id = ? AND event_type = 'page_view' AND ${dc} GROUP BY label ORDER BY label`).all(vidId);
+  const playsRows = db.prepare(`SELECT ${labelFmt} as label, COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'play' AND ${dc} GROUP BY label ORDER BY label`).all(vidId);
+  const uPlaysRows = db.prepare(`SELECT ${labelFmt} as label, COUNT(DISTINCT visitor_id) as count FROM analytics_events WHERE video_id = ? AND event_type = 'play' AND ${dc} GROUP BY label ORDER BY label`).all(vidId);
   const ctaRows = db.prepare(`SELECT ${labelFmt} as label, COUNT(*) as count FROM analytics_events WHERE video_id = ? AND event_type = 'cta_clicked' AND ${dc} GROUP BY label ORDER BY label`).all(vidId);
+  const convRows = db.prepare(`SELECT ${labelFmt} as label, COUNT(*) as count FROM analytics_events WHERE video_id = ? AND (conversion_amount > 0 OR event_type IN ('conversion', 'sale', 'purchase', 'lead')) AND ${dc} GROUP BY label ORDER BY label`).all(vidId);
+  const revRows = db.prepare(`SELECT ${labelFmt} as label, COALESCE(SUM(conversion_amount), 0) as count FROM analytics_events WHERE video_id = ? AND ${dc} GROUP BY label ORDER BY label`).all(vidId);
+  const engRows = db.prepare(`SELECT ${labelFmt} as label, AVG(milestone) as count FROM analytics_events WHERE video_id = ? AND event_type = 'progress' AND milestone IS NOT NULL AND ${dc} GROUP BY label ORDER BY label`).all(vidId);
 
-  const allLabels = [...new Set([...playsRows, ...viewsRows, ...ctaRows].map(r => r.label))].sort();
-  const toMap = rows => Object.fromEntries(rows.map(r => [r.label, r.count]));
-
-  const playsMap = toMap(playsRows);
+  const toMap = rows => Object.fromEntries(rows.map(r => [r.label, Number(r.count || 0)]));
   const viewsMap = toMap(viewsRows);
+  const uViewsMap = toMap(uViewsRows);
+  const playsMap = toMap(playsRows);
+  const uPlaysMap = toMap(uPlaysRows);
   const ctaMap = toMap(ctaRows);
+  const convMap = toMap(convRows);
+  const revMap = toMap(revRows);
+  const engMap = toMap(engRows);
 
-  const labels = allLabels;
-  const plays = labels.map(l => playsMap[l] || 0);
-  const views = labels.map(l => viewsMap[l] || 0);
-  const ctaClicks = labels.map(l => ctaMap[l] || 0);
+  let labels = [];
+  if (period === 'today' || period === 'yesterday') {
+    for (let h = 0; h < 24; h++) {
+      labels.push(String(h).padStart(2, '0'));
+    }
+  } else if (period === '7d' || period === '30d') {
+    const days = period === '7d' ? 7 : 30;
+    const now = new Date();
+    for (let i = days - 1; i >= 0; i--) {
+      const d = new Date(now.getTime() - i * 86400000);
+      labels.push(d.toISOString().slice(0, 10));
+    }
+  } else {
+    const allLabels = [...new Set([
+      ...viewsRows, ...uViewsRows, ...playsRows, ...uPlaysRows, ...ctaRows, ...convRows, ...revRows, ...engRows
+    ].map(r => r.label))].sort();
+    labels = allLabels.length > 0 ? allLabels : [new Date().toISOString().slice(0, 10)];
+  }
 
-  res.json({ labels, series: { plays, views, ctaClicks } });
+  const series = {
+    views: labels.map(l => viewsMap[l] || 0),
+    unique_views: labels.map(l => uViewsMap[l] || 0),
+    plays: labels.map(l => playsMap[l] || 0),
+    unique_plays: labels.map(l => uPlaysMap[l] || 0),
+    play_rate: labels.map(l => {
+      const uv = uViewsMap[l] || 0;
+      const up = uPlaysMap[l] || 0;
+      return uv > 0 ? Math.min(100, Number(((up / uv) * 100).toFixed(1))) : 0;
+    }),
+    engagement: labels.map(l => Math.min(100, Math.round(engMap[l] || 0))),
+    cta_clicks: labels.map(l => ctaMap[l] || 0),
+    conversions: labels.map(l => convMap[l] || 0),
+    conversion_rate: labels.map(l => {
+      const up = uPlaysMap[l] || 0;
+      const cv = convMap[l] || 0;
+      return up > 0 ? Math.min(100, Number(((cv / up) * 100).toFixed(1))) : 0;
+    }),
+    revenue: labels.map(l => Number(Number(revMap[l] || 0).toFixed(2)))
+  };
+
+  const totalViews = series.views.reduce((a, b) => a + b, 0);
+  const totalUViews = series.unique_views.reduce((a, b) => a + b, 0);
+  const totalPlays = series.plays.reduce((a, b) => a + b, 0);
+  const totalUPlays = series.unique_plays.reduce((a, b) => a + b, 0);
+  const totalCta = series.cta_clicks.reduce((a, b) => a + b, 0);
+  const totalConv = series.conversions.reduce((a, b) => a + b, 0);
+  const totalRev = Number(series.revenue.reduce((a, b) => a + b, 0).toFixed(2));
+  const overallPlayRate = totalUViews > 0 ? Math.min(100, Number(((totalUPlays / totalUViews) * 100).toFixed(1))) : 0;
+  const overallConvRate = totalUPlays > 0 ? Math.min(100, Number(((totalConv / totalUPlays) * 100).toFixed(1))) : 0;
+  const engValues = series.engagement.filter(v => v > 0);
+  const overallEngagement = engValues.length > 0 ? Math.round(engValues.reduce((a, b) => a + b, 0) / engValues.length) : 0;
+
+  const totals = {
+    views: totalViews,
+    unique_views: totalUViews,
+    plays: totalPlays,
+    unique_plays: totalUPlays,
+    play_rate: overallPlayRate,
+    engagement: overallEngagement,
+    cta_clicks: totalCta,
+    conversions: totalConv,
+    conversion_rate: overallConvRate,
+    revenue: totalRev
+  };
+
+  res.json({ labels, series, totals, period });
 });
 
 app.get('/api/analytics/video/:id/funnel', authMiddleware, (req, res) => {

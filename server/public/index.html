@@ -2093,12 +2093,147 @@
       cursor: grab;
       border-radius: 50%;
     }
-    .va-globe-canvas:active { cursor: grabbing; }
-    .va-summary-chart-wrap { position: relative; height: 240px; margin-bottom: 24px; }
-    .va-summary-legend { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 12px; }
-    .va-summary-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--text-muted); cursor: pointer; }
-    .va-summary-legend-dot { width: 10px; height: 10px; border-radius: 50%; }
-    .va-live-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; background: rgba(239,68,68,0.1); color: #ef4444; font-size: 12px; font-weight: 700; border-radius: 20px; }
+    .va-summary-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .va-metrics-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 14px;
+      background: rgba(59, 130, 246, 0.08);
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      border-radius: 8px;
+      color: #3b82f6;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+    }
+    .va-metrics-btn:hover {
+      background: rgba(59, 130, 246, 0.16);
+      border-color: #60a5fa;
+      color: #93c5fd;
+    }
+    .va-summary-legend {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .va-summary-legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12.5px;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .va-summary-legend-item:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+    }
+    .va-summary-legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .va-summary-chart-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 22px;
+      margin-bottom: 20px;
+      position: relative;
+    }
+    .va-summary-svg-wrap {
+      position: relative;
+      width: 100%;
+      height: 320px;
+    }
+    .va-summary-svg-chart {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .va-summary-tooltip {
+      position: absolute;
+      pointer-events: none;
+      background: #181b24;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 8px;
+      padding: 10px 14px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+      font-size: 12px;
+      color: var(--text-main);
+      z-index: 50;
+      white-space: nowrap;
+      display: none;
+      transform: translate(-50%, -115%);
+      transition: opacity 0.1s ease;
+    }
+    .va-summary-kpis-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    .va-summary-kpi-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      transition: border-color 0.15s, transform 0.15s;
+    }
+    .va-summary-kpi-card:hover {
+      border-color: var(--border-focus, #3b82f6);
+      transform: translateY(-1px);
+    }
+    .va-summary-kpi-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .va-summary-kpi-value {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-main);
+      line-height: 1.2;
+    }
+    .va-summary-kpi-sub {
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+    .va-summary-table-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 20px;
+    }
+    .va-summary-table-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text-main);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
     .va-live-pulse { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; animation: va-pulse 1.4s infinite; }
     @keyframes va-pulse { 0%,100%{ opacity:1; } 50%{ opacity:0.3; } }
     .va-live-row {
@@ -10571,6 +10706,317 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       `;
     }
 
+    let vaSummaryCachedData = null;
+    let vaSelectedSummaryMetrics = ['plays'];
+
+    const vaAllSummaryMetricDefinitions = [
+      { key: 'views', label: 'Visualizações', color: '#3b82f6', unit: 'num' },
+      { key: 'unique_views', label: 'Visualizações Únicas', color: '#6366f1', unit: 'num' },
+      { key: 'plays', label: 'Plays', color: '#f43f5e', unit: 'num' },
+      { key: 'unique_plays', label: 'Plays Únicos', color: '#ec4899', unit: 'num' },
+      { key: 'play_rate', label: 'Play Rate', color: '#10b981', unit: 'pct' },
+      { key: 'engagement', label: 'Engajamento', color: '#f59e0b', unit: 'pct' },
+      { key: 'cta_clicks', label: 'Cliques no Botão', color: '#06b6d4', unit: 'num' },
+      { key: 'conversions', label: 'Conversões', color: '#8b5cf6', unit: 'num' },
+      { key: 'conversion_rate', label: 'Taxa de Conversão', color: '#e11d48', unit: 'pct' },
+      { key: 'revenue', label: 'Receita', color: '#14b8a6', unit: 'currency' }
+    ];
+
+    function toggleVaSummaryMetricsDropdown(event) {
+      if (event) event.stopPropagation();
+      const panel = document.getElementById('vaSummaryMetricsDropdown');
+      if (panel) panel.classList.toggle('active');
+    }
+
+    function toggleVaSummaryMetric(key) {
+      const idx = vaSelectedSummaryMetrics.indexOf(key);
+      if (idx >= 0) {
+        if (vaSelectedSummaryMetrics.length <= 1) {
+          showToast('Pelo menos uma métrica deve permanecer selecionada.', true);
+          return;
+        }
+        vaSelectedSummaryMetrics.splice(idx, 1);
+      } else {
+        vaSelectedSummaryMetrics.push(key);
+      }
+      renderVaSummaryDropdownItems();
+      renderVaSummaryView();
+    }
+
+    function renderVaSummaryDropdownItems() {
+      const listEl = document.getElementById('vaSummaryDropdownList');
+      if (!listEl) return;
+      listEl.innerHTML = vaAllSummaryMetricDefinitions.map(m => {
+        const isChecked = vaSelectedSummaryMetrics.includes(m.key);
+        return `
+          <div class="va-dropdown-item ${isChecked ? 'checked' : ''}" onclick="toggleVaSummaryMetric('${m.key}')">
+            <div class="va-dropdown-check">
+              <svg width="10" height="8" viewBox="0 0 10 8" fill="none" stroke="#fff" stroke-width="2"><path d="M1 4l3 3 5-6"/></svg>
+            </div>
+            <span style="display:inline-flex;align-items:center;gap:8px;">
+              <span style="width:8px;height:8px;border-radius:50%;background:${m.color};flex-shrink:0;"></span>
+              ${escapeHtml(m.label)}
+            </span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function formatSummaryMetricValue(val, unit) {
+      const num = Number(val) || 0;
+      if (unit === 'pct') return `${num.toFixed(1).replace('.', ',')}%`;
+      if (unit === 'currency') return `${num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MT`;
+      return num.toLocaleString('pt-BR');
+    }
+
+    function renderVaSummaryView() {
+      const container = document.getElementById('vaSummaryContent');
+      if (!container || !vaSummaryCachedData) return;
+
+      const data = vaSummaryCachedData;
+      const labels = data.labels || [];
+      const series = data.series || {};
+      const totals = data.totals || {};
+      const n = labels.length;
+
+      if (!n) {
+        container.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:40px;text-align:center;">Nenhuma atividade no período para traçar o resumo.</div>';
+        return;
+      }
+
+      const activeDefs = vaAllSummaryMetricDefinitions.filter(d => vaSelectedSummaryMetrics.includes(d.key));
+      const padL = 55;
+      const padR = 30;
+      const padT = 25;
+      const padB = 45;
+      const chartW = 1000 - padL - padR;
+      const chartH = 320 - padT - padB;
+
+      let maxVal = 0;
+      activeDefs.forEach(def => {
+        const arr = series[def.key] || [];
+        arr.forEach(v => {
+          if (v > maxVal) maxVal = v;
+        });
+      });
+      if (maxVal <= 0) maxVal = 10;
+      const ySteps = 4;
+      const stepVal = Math.ceil(maxVal / ySteps) || 1;
+      const finalMax = stepVal * ySteps;
+
+      let gridLinesHtml = '';
+      for (let s = 0; s <= ySteps; s++) {
+        const val = (ySteps - s) * stepVal;
+        const y = padT + (s / ySteps) * chartH;
+        gridLinesHtml += `
+          <line x1="${padL}" y1="${y}" x2="${1000 - padR}" y2="${y}" stroke="rgba(255,255,255,0.08)" stroke-dasharray="3 3"/>
+          <text x="${padL - 10}" y="${y + 4}" fill="var(--text-dim)" font-size="11" text-anchor="end">${val >= 1000 ? (val/1000).toFixed(1) + 'k' : val}</text>
+        `;
+      }
+
+      const bottomY = 320 - padB;
+      const xAxisLineHtml = `<line x1="${padL}" y1="${bottomY}" x2="${1000 - padR}" y2="${bottomY}" stroke="rgba(255,255,255,0.18)"/>`;
+
+      let xAxisLabelsHtml = '';
+      const stepInterval = n <= 8 ? 1 : n <= 16 ? 2 : n <= 24 ? 3 : Math.ceil(n / 8);
+      labels.forEach((l, i) => {
+        if (i % stepInterval === 0 || i === n - 1) {
+          const x = n > 1 ? padL + (i / (n - 1)) * chartW : padL + chartW / 2;
+          const displayLabel = (data.period === 'today' || data.period === 'yesterday')
+            ? `${l}:00`
+            : l.includes('-') ? l.split('-').reverse().join('/') : l;
+          xAxisLabelsHtml += `<text x="${x}" y="${bottomY + 22}" fill="var(--text-dim)" font-size="11" text-anchor="middle">${escapeHtml(displayLabel)}</text>`;
+        }
+      });
+
+      let pathsHtml = '';
+      activeDefs.forEach(def => {
+        const arr = series[def.key] || [];
+        const pts = arr.map((v, i) => {
+          const x = n > 1 ? padL + (i / (n - 1)) * chartW : padL + chartW / 2;
+          const y = padT + (1 - (v / finalMax)) * chartH;
+          return { x, y, v };
+        });
+
+        let lineD = '';
+        pts.forEach((pt, i) => {
+          if (i === 0) {
+            lineD += `M ${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`;
+          } else {
+            const prev = pts[i - 1];
+            const cpx = (prev.x + pt.x) / 2;
+            lineD += ` C ${cpx.toFixed(1)} ${prev.y.toFixed(1)}, ${cpx.toFixed(1)} ${pt.y.toFixed(1)}, ${pt.x.toFixed(1)} ${pt.y.toFixed(1)}`;
+          }
+        });
+
+        const areaD = `${lineD} L ${pts[pts.length - 1].x.toFixed(1)} ${bottomY} L ${pts[0].x.toFixed(1)} ${bottomY} Z`;
+        pathsHtml += `
+          <defs>
+            <linearGradient id="grad_${def.key}" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="${def.color}" stop-opacity="0.25"/>
+              <stop offset="100%" stop-color="${def.color}" stop-opacity="0.0"/>
+            </linearGradient>
+          </defs>
+          <path d="${areaD}" fill="url(#grad_${def.key})"/>
+          <path d="${lineD}" fill="none" stroke="${def.color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        `;
+
+        pts.forEach(pt => {
+          pathsHtml += `<circle cx="${pt.x.toFixed(1)}" cy="${pt.y.toFixed(1)}" r="3.5" fill="${def.color}" stroke="var(--bg-card)" stroke-width="1.8"/>`;
+        });
+      });
+
+      container.innerHTML = `
+        <div class="va-summary-toolbar">
+          <div style="position: relative;">
+            <button type="button" class="va-metrics-btn" id="vaSummaryMetricsBtn" onclick="toggleVaSummaryMetricsDropdown(event)">
+              <span>Adicionar métricas</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M7 15l5 5 5-5M7 9l5-5 5 5"/></svg>
+            </button>
+            <div class="va-dropdown-panel" id="vaSummaryMetricsDropdown" onclick="event.stopPropagation()">
+              <div class="va-dropdown-list" id="vaSummaryDropdownList" style="max-height: 320px; overflow-y: auto;"></div>
+            </div>
+          </div>
+
+          <div class="va-summary-legend">
+            ${activeDefs.map(d => `
+              <div class="va-summary-legend-item" onclick="toggleVaSummaryMetric('${d.key}')" title="Clique para ocultar ${escapeHtml(d.label)}">
+                <span class="va-summary-legend-dot" style="background:${d.color};"></span>
+                <span>${escapeHtml(d.label)}</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
+        <div class="va-summary-chart-card">
+          <div class="va-summary-svg-wrap" id="vaSummarySvgWrap">
+            <svg class="va-summary-svg-chart" id="vaSummarySvg" viewBox="0 0 1000 320" preserveAspectRatio="none">
+              ${gridLinesHtml}
+              ${xAxisLineHtml}
+              ${xAxisLabelsHtml}
+              ${pathsHtml}
+              <line id="vaSummaryCrosshair" x1="0" y1="${padT}" x2="0" y2="${bottomY}" stroke="rgba(255,255,255,0.3)" stroke-width="1" stroke-dasharray="3 3" style="display:none;"/>
+              <rect x="${padL}" y="${padT}" width="${chartW}" height="${chartH}" fill="transparent" style="cursor:crosshair;" id="vaSummaryOverlay"/>
+            </svg>
+            <div class="va-summary-tooltip" id="vaSummaryTooltip"></div>
+          </div>
+        </div>
+
+        <div class="va-summary-kpis-grid">
+          ${activeDefs.map(def => {
+            const tot = totals[def.key] !== undefined ? totals[def.key] : 0;
+            return `
+              <div class="va-summary-kpi-card" style="border-top: 3px solid ${def.color};">
+                <div class="va-summary-kpi-header">
+                  <span class="va-summary-legend-dot" style="background:${def.color};"></span>
+                  <span>${escapeHtml(def.label)}</span>
+                </div>
+                <div class="va-summary-kpi-value">${formatSummaryMetricValue(tot, def.unit)}</div>
+                <div class="va-summary-kpi-sub">Total no período selecionado</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+
+        <div class="va-summary-table-card">
+          <div class="va-summary-table-title">
+            <span>Desempenho Detalhado</span>
+            <span style="font-size:12px;color:var(--text-dim);font-weight:400;">${labels.length} intervalos registrados</span>
+          </div>
+          <div class="table-responsive" style="max-height: 380px; overflow-y: auto;">
+            <table class="dark-table" style="font-size: 12.5px;">
+              <thead>
+                <tr>
+                  <th style="position: sticky; top: 0; z-index: 10;">Intervalo</th>
+                  ${activeDefs.map(d => `<th style="position: sticky; top: 0; z-index: 10; text-align: right;">${escapeHtml(d.label)}</th>`).join('')}
+                </tr>
+              </thead>
+              <tbody>
+                ${labels.map((l, i) => {
+                  const rowHasData = activeDefs.some(d => (series[d.key]?.[i] || 0) > 0);
+                  const timeLabel = (data.period === 'today' || data.period === 'yesterday')
+                    ? `${l}:00`
+                    : l.includes('-') ? l.split('-').reverse().join('/') : l;
+                  return `
+                    <tr style="${rowHasData ? 'font-weight: 600;' : 'opacity: 0.65;'}">
+                      <td>${escapeHtml(timeLabel)}</td>
+                      ${activeDefs.map(d => {
+                        const val = series[d.key]?.[i] || 0;
+                        return `<td style="text-align: right;">${formatSummaryMetricValue(val, d.unit)}</td>`;
+                      }).join('')}
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+              <tfoot>
+                <tr style="background: rgba(255,255,255,0.04); font-weight: 700; border-top: 2px solid var(--border-subtle);">
+                  <td>TOTAL / MÉDIA</td>
+                  ${activeDefs.map(d => {
+                    const tot = totals[d.key] !== undefined ? totals[d.key] : 0;
+                    return `<td style="text-align: right; color: ${d.color};">${formatSummaryMetricValue(tot, d.unit)}</td>`;
+                  }).join('')}
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      `;
+
+      renderVaSummaryDropdownItems();
+      attachVaSummaryChartEvents(labels, series, activeDefs, padL, chartW, n);
+    }
+
+    function attachVaSummaryChartEvents(labels, series, activeDefs, padL, chartW, n) {
+      const overlay = document.getElementById('vaSummaryOverlay');
+      const wrap = document.getElementById('vaSummarySvgWrap');
+      const crosshair = document.getElementById('vaSummaryCrosshair');
+      const tooltip = document.getElementById('vaSummaryTooltip');
+      if (!overlay || !wrap || !crosshair || !tooltip) return;
+
+      overlay.addEventListener('mousemove', (e) => {
+        const rect = overlay.getBoundingClientRect();
+        const wrapRect = wrap.getBoundingClientRect();
+        const relX = (e.clientX - rect.left) / rect.width;
+        const idx = Math.min(n - 1, Math.max(0, Math.round(relX * (n - 1))));
+        const ptX = n > 1 ? padL + (idx / (n - 1)) * chartW : padL + chartW / 2;
+
+        crosshair.setAttribute('x1', ptX);
+        crosshair.setAttribute('x2', ptX);
+        crosshair.style.display = 'block';
+
+        const l = labels[idx];
+        const displayLabel = (vaSummaryCachedData.period === 'today' || vaSummaryCachedData.period === 'yesterday')
+          ? `${l}:00`
+          : l.includes('-') ? l.split('-').reverse().join('/') : l;
+
+        tooltip.innerHTML = `
+          <div style="font-weight:700;margin-bottom:6px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:4px;">${escapeHtml(displayLabel)}</div>
+          ${activeDefs.map(d => {
+            const v = series[d.key]?.[idx] || 0;
+            return `
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:3px;">
+                <span style="display:inline-flex;align-items:center;gap:6px;color:${d.color};">
+                  <span style="width:7px;height:7px;border-radius:50%;background:${d.color};"></span>
+                  ${escapeHtml(d.label)}:
+                </span>
+                <strong style="color:#ffffff;">${formatSummaryMetricValue(v, d.unit)}</strong>
+              </div>
+            `;
+          }).join('')}
+        `;
+
+        const pixelX = (ptX / 1000) * wrapRect.width;
+        tooltip.style.left = `${pixelX}px`;
+        tooltip.style.top = `${e.clientY - wrapRect.top - 12}px`;
+        tooltip.style.display = 'block';
+      });
+
+      overlay.addEventListener('mouseleave', () => {
+        crosshair.style.display = 'none';
+        tooltip.style.display = 'none';
+      });
+    }
+
     async function loadVaSummary() {
       const container = document.getElementById('vaSummaryContent');
       if (!container) return;
@@ -10578,46 +11024,8 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       try {
         const qs = getVaQueryStr();
         const data = await api(`/api/analytics/video/${currentVaVideoId}/summary?${qs}`);
-        const labels = data.labels || [];
-        const plays = data.series?.plays || [];
-        const views = data.series?.views || [];
-        const ctaClicks = data.series?.ctaClicks || [];
-
-        if (!labels.length) {
-          container.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:40px;text-align:center;">Nenhuma atividade no período para traçar o resumo.</div>';
-          return;
-        }
-
-        const maxVal = Math.max(1, ...plays, ...views, ...ctaClicks);
-        container.innerHTML = `
-          <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:22px;">
-            <div class="va-summary-legend">
-              <div class="va-summary-legend-item"><span class="va-summary-legend-dot" style="background:#ef4444;"></span> Plays</div>
-              <div class="va-summary-legend-item"><span class="va-summary-legend-dot" style="background:#3b82f6;"></span> Visualizações</div>
-              <div class="va-summary-legend-item"><span class="va-summary-legend-dot" style="background:#10b981;"></span> Cliques no Botão</div>
-            </div>
-            <div style="display:flex;align-items:flex-end;gap:12px;height:200px;border-bottom:1px solid var(--border-subtle);padding-bottom:8px;overflow-x:auto;">
-              ${labels.map((l, i) => {
-                const pVal = plays[i] || 0;
-                const vVal = views[i] || 0;
-                const cVal = ctaClicks[i] || 0;
-                const pHeight = Math.max(2, Math.round((pVal / maxVal) * 180));
-                const vHeight = Math.max(2, Math.round((vVal / maxVal) * 180));
-                const cHeight = Math.max(2, Math.round((cVal / maxVal) * 180));
-                return `
-                  <div style="display:flex;flex-direction:column;align-items:center;min-width:38px;height:100%;justify-content:flex-end;gap:4px;">
-                    <div style="display:flex;align-items:flex-end;gap:2px;height:180px;">
-                      <div title="Plays: ${pVal}" style="width:7px;height:${pHeight}px;background:#ef4444;border-radius:2px 2px 0 0;"></div>
-                      <div title="Views: ${vVal}" style="width:7px;height:${vHeight}px;background:#3b82f6;border-radius:2px 2px 0 0;"></div>
-                      <div title="CTA: ${cVal}" style="width:7px;height:${cHeight}px;background:#10b981;border-radius:2px 2px 0 0;"></div>
-                    </div>
-                    <span style="font-size:10px;color:var(--text-dim);">${escapeHtml(l)}</span>
-                  </div>
-                `;
-              }).join('')}
-            </div>
-          </div>
-        `;
+        vaSummaryCachedData = data;
+        renderVaSummaryView();
       } catch (e) {
         container.innerHTML = '<div style="color:#ef4444;font-size:13px;padding:20px;">Falha ao carregar resumo.</div>';
       }
@@ -13524,6 +13932,14 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       if (funnelPanel && funnelPanel.classList.contains('active')) {
         if (!funnelPanel.contains(e.target) && (!funnelBtn || !funnelBtn.contains(e.target))) {
           funnelPanel.classList.remove('active');
+        }
+      }
+
+      const summaryMetricsPanel = document.getElementById('vaSummaryMetricsDropdown');
+      const summaryMetricsBtn = document.getElementById('vaSummaryMetricsBtn');
+      if (summaryMetricsPanel && summaryMetricsPanel.classList.contains('active')) {
+        if (!summaryMetricsPanel.contains(e.target) && (!summaryMetricsBtn || !summaryMetricsBtn.contains(e.target))) {
+          summaryMetricsPanel.classList.remove('active');
         }
       }
 
