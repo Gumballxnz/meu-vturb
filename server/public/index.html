@@ -10688,7 +10688,13 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           }
         }
 
-        renderVaRetentionOverlaySvg(retRes.retentionCurve || res.retentionCurve || []);
+        if (currentVaRetSubtab === 'general') {
+          renderVaRetentionOverlaySvg(retRes.retentionCurve || res.retentionCurve || []);
+        } else if (vaCurrentRetentionFilter && vaCurrentRetentionFilter.value) {
+          renderVaRetentionOverlaySvg(retRes.retentionCurve || []);
+        } else {
+          renderVaRetentionOverlaySvg([]);
+        }
 
         const durSec = vidObj && vidObj.duration ? parseDurationToSeconds(vidObj.duration) : 60;
         formatVaTimeAxis(durSec);
@@ -10726,7 +10732,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
     function renderVaRetentionOverlaySvg(curve) {
       const svg = document.getElementById('vaRetentionSvg');
       if (!svg) return;
-      if (!curve || !curve.length) {
+      if (!curve || !curve.length || !curve.some(p => (Number(p.sessions) || 0) > 0 || (Number(p.percent) || 0) > 0)) {
         svg.innerHTML = '';
         return;
       }
@@ -10783,6 +10789,13 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           ? `/players/${encodeURIComponent(currentVaVideoId)}/analytics?returnTo=%2Ffolders`
           : `/players/${encodeURIComponent(currentVaVideoId)}/analytics/${sub}?returnTo=%2Ffolders`;
         history.pushState({ tab: 'videoAnalytics', videoId: currentVaVideoId, vaTab: 'retention', subtab: sub }, '', targetUrl);
+      }
+
+      vaCurrentRetentionFilter = null;
+      if (sub === 'general') {
+        renderVaRetentionOverlaySvg(currentVaData?.retentionCurve || []);
+      } else {
+        renderVaRetentionOverlaySvg([]);
       }
 
       renderVaCurrentSubtabView();
@@ -10844,10 +10857,12 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
     function toggleVaRetentionSegmentFilter(sub, val) {
       if (vaCurrentRetentionFilter && vaCurrentRetentionFilter.type === sub && vaCurrentRetentionFilter.value === val) {
         vaCurrentRetentionFilter = null;
+        renderVaRetentionOverlaySvg([]);
+        renderVaCurrentSubtabView();
       } else {
         vaCurrentRetentionFilter = { type: sub, value: val };
+        loadVaRetention();
       }
-      loadVaRetention();
     }
 
     function vaShareRetentionLink() {
