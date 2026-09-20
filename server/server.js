@@ -391,6 +391,11 @@ try {
   `).run();
 } catch (e) {}
 
+try {
+  db.prepare("UPDATE analytics_events SET country = 'África do Sul' WHERE LOWER(city) LIKE '%johannesburg%'").run();
+  db.prepare("UPDATE analytics_events SET conversion_currency = 'MT' WHERE conversion_currency = 'BRL'").run();
+} catch (e) {}
+
 const getSetting = (key, defaultVal) => {
   const row = db.prepare('SELECT value FROM system_settings WHERE key = ?').get(key);
   return row ? row.value : defaultVal;
@@ -3546,7 +3551,7 @@ app.post('/api/analytics/event', (req, res) => {
   const cleanUtmContent = req.body.utm_content || null;
   const cleanUtmTerm = req.body.utm_term || null;
   const cleanAmount = typeof req.body.conversion_amount === 'number' ? req.body.conversion_amount : 0;
-  const cleanCurrency = req.body.conversion_currency || 'BRL';
+  const cleanCurrency = req.body.conversion_currency || 'MT';
   const cleanPlatform = req.body.platform || null;
 
   const rawIp = (req.headers['x-forwarded-for'] || req.ip || '').split(',')[0].trim();
@@ -3593,8 +3598,17 @@ app.post('/api/analytics/event', (req, res) => {
     } catch (e) {}
   }
 
-  const rawCountry = req.body.country || detectedCountry || 'Moçambique';
-  const cleanCountry = rawCountry === 'Mozambique' ? 'Moçambique' : (countryNameMap[rawCountry] || rawCountry);
+  let cleanCountry;
+  if (geoCity && geoCity.toLowerCase().includes('johannesburg')) {
+    cleanCountry = 'África do Sul';
+  } else if (detectedCountry) {
+    cleanCountry = detectedCountry;
+  } else if (req.body.country) {
+    const rawCountry = req.body.country;
+    cleanCountry = rawCountry === 'Mozambique' ? 'Moçambique' : (countryNameMap[rawCountry] || rawCountry);
+  } else {
+    cleanCountry = 'Moçambique';
+  }
 
   const cleanUserAgent = (req.body.user_agent || req.headers['user-agent'] || '').slice(0, 512) || null;
   const cleanScreenWidth = Number.isInteger(req.body.screen_width) ? req.body.screen_width : null;
@@ -4027,9 +4041,18 @@ app.get('/api/analytics/video/:id/retention', authMiddleware, (req, res) => {
   let trafficSearchClause = '';
   if (search) {
     const escaped = search.replace(/'/g, "''");
-    trafficSearchClause = `AND (COALESCE(${activeTrafficCol}, 'Direto') LIKE '%${escaped}%' OR domain LIKE '%${escaped}%')`;
+    trafficSearchClause = `AND (COALESCE(${activeTrafficCol}, 'Direto') LIKE '%${escaped}%')`;
   }
-  const traffic = queryDimensionRows(`COALESCE(${activeTrafficCol}, CASE WHEN domain IS NOT NULL AND domain != '' THEN domain ELSE 'Direto' END)`, trafficSearchClause);
+
+  const trafficExpr = activeTrafficCol === 'domain'
+    ? `CASE
+        WHEN domain IS NOT NULL AND domain != '' AND domain NOT LIKE 'dash.%' AND domain NOT LIKE '%roleta-sorte.online'
+        THEN domain
+        ELSE 'Direto'
+      END`
+    : `COALESCE(NULLIF(${activeTrafficCol}, ''), 'Direto')`;
+
+  const traffic = queryDimensionRows(trafficExpr, trafficSearchClause);
 
   res.json({
     totalPlays,
@@ -4294,6 +4317,8 @@ app.get('/api/analytics/video/:id/live', authMiddleware, (req, res) => {
   const countryLocations = {
     'Mozambique': { lat: -18.66, lon: 35.52, code: 'MZ' },
     'Moçambique': { lat: -18.66, lon: 35.52, code: 'MZ' },
+    'South Africa': { lat: -26.20, lon: 28.04, code: 'ZA' },
+    'África do Sul': { lat: -26.20, lon: 28.04, code: 'ZA' },
     'Brazil': { lat: -14.23, lon: -51.92, code: 'BR' },
     'Brasil': { lat: -14.23, lon: -51.92, code: 'BR' },
     'Portugal': { lat: 39.39, lon: -8.22, code: 'PT' },
@@ -4310,13 +4335,21 @@ app.get('/api/analytics/video/:id/live', authMiddleware, (req, res) => {
     WHERE video_id = ? AND created_at >= datetime('now', '-5 minutes')
     GROUP BY country, city
   `).all(vidId).map(v => {
-    const loc = countryLocations[v.country] || { lat: -18.66, lon: 35.52, code: 'MZ' };
+    let cName = v.country || 'Moçambique';
+    let lat = null;
+    let lon = null;
+    if (v.city && v.city.toLowerCase().includes('johannesburg')) {
+      cName = 'África do Sul';
+      lat = -26.20;
+      lon = 28.04;
+    }
+    const loc = countryLocations[cName] || { lat: -18.66, lon: 35.52, code: 'MZ' };
     return {
-      country: v.country || 'Moçambique',
+      country: cName,
       city: v.city || '',
       viewers: v.viewers || 1,
-      lat: loc.lat,
-      lon: loc.lon
+      lat: lat !== null ? lat : loc.lat,
+      lon: lon !== null ? lon : loc.lon
     };
   });
 
@@ -4333,7 +4366,10 @@ app.get('/api/analytics/video/:id/live', authMiddleware, (req, res) => {
   const now = Date.now();
   const recent = recentRows.map(r => {
     const rawC = r.country || '';
-    const normC = rawC === 'Mozambique' ? 'Moçambique' : (rawC || 'Moçambique');
+    let normC = rawC === 'Mozambique' ? 'Moçambique' : (rawC || 'Moçambique');
+    if (r.city && r.city.toLowerCase().includes('johannesburg')) {
+      normC = 'África do Sul';
+    }
     return {
       visitorShort: r.visitor_id ? r.visitor_id.slice(0, 8) : '?',
       country: normC,

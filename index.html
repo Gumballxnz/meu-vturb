@@ -11834,69 +11834,98 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       const cy = height / 2;
       const radius = 175;
 
-      const landBoxes = [
-        { latMin: -35, latMax: 37, lonMin: -18, lonMax: 51, step: 2.2 },
-        { latMin: 5, latMax: 12, lonMin: -84, lonMax: -77, step: 2.5 },
-        { latMin: -56, latMax: 13, lonMin: -81, lonMax: -34, step: 2.2 },
-        { latMin: 25, latMax: 70, lonMin: -130, lonMax: -60, step: 2.5 },
-        { latMin: 14, latMax: 32, lonMin: -118, lonMax: -86, step: 2.5 },
-        { latMin: 36, latMax: 71, lonMin: -10, lonMax: 40, step: 2.2 },
-        { latMin: 50, latMax: 70, lonMin: -5, lonMax: 32, step: 2.5 },
-        { latMin: 10, latMax: 75, lonMin: 40, lonMax: 145, step: 2.5 },
-        { latMin: 8, latMax: 35, lonMin: 68, lonMax: 90, step: 2.2 },
-        { latMin: 20, latMax: 45, lonMin: 100, lonMax: 125, step: 2.2 },
-        { latMin: 30, latMax: 45, lonMin: 128, lonMax: 146, step: 2.5 },
-        { latMin: -10, latMax: 6, lonMin: 95, lonMax: 141, step: 2.5 },
-        { latMin: -44, latMax: -10, lonMin: 112, lonMax: 154, step: 2.2 },
-        { latMin: -47, latMax: -34, lonMin: 166, lonMax: 178, step: 2.5 },
-        { latMin: -26, latMax: -12, lonMin: 43, lonMax: 51, step: 2.2 },
-        { latMin: 60, latMax: 83, lonMin: -73, lonMax: -12, step: 3.5 }
+      const continentPolygons = [
+        [
+          [-5.8, 35.8], [3.0, 36.8], [11.0, 37.0], [15.0, 31.0], [20.0, 30.5],
+          [23.5, 32.0], [30.0, 31.5], [32.5, 30.0], [33.5, 27.5], [36.5, 22.0],
+          [38.5, 18.0], [43.0, 12.5], [51.0, 11.8], [50.5, 9.5], [48.0, 5.0],
+          [42.0, 0.5], [39.5, -4.5], [39.0, -10.0], [40.5, -15.0], [35.5, -19.5],
+          [34.0, -24.0], [32.6, -26.0], [31.5, -29.5], [28.0, -33.0], [25.5, -34.0],
+          [20.0, -34.8], [18.5, -34.3], [17.5, -30.0], [15.0, -26.5], [14.5, -23.0],
+          [12.0, -17.0], [13.0, -12.5], [13.0, -8.5], [12.0, -6.0], [9.5, 0.0],
+          [9.5, 4.0], [4.0, 6.0], [1.0, 6.0], [-4.0, 5.0], [-7.5, 4.3],
+          [-11.5, 7.0], [-13.0, 9.0], [-17.5, 14.7], [-16.5, 21.0], [-13.0, 27.5],
+          [-9.8, 30.5], [-6.5, 34.0]
+        ],
+        [
+          [49.5, -12.0], [50.5, -15.5], [48.5, -21.0], [47.0, -25.2],
+          [44.0, -25.2], [43.5, -21.0], [44.5, -16.0], [47.0, -13.5]
+        ],
+        [
+          [-76, 8], [-72, 11], [-61, 10], [-52, 5], [-45, -2], [-35, -5],
+          [-37, -11], [-39, -18], [-43, -23], [-49, -29], [-53, -34],
+          [-57, -38], [-65, -45], [-68, -54], [-74, -50], [-73, -40],
+          [-71, -30], [-70, -20], [-77, -12], [-81, -5], [-80, 1], [-77, 6]
+        ],
+        [
+          [-165, 65], [-140, 70], [-120, 68], [-95, 69], [-82, 60], [-60, 55],
+          [-65, 44], [-75, 37], [-80, 25], [-83, 30], [-90, 30], [-97, 26],
+          [-97, 20], [-90, 20], [-87, 21], [-88, 16], [-83, 9], [-77, 8],
+          [-83, 10], [-90, 14], [-96, 16], [-105, 20], [-110, 24], [-117, 32],
+          [-124, 40], [-125, 48], [-130, 55], [-135, 58], [-140, 60], [-160, 58]
+        ],
+        [
+          [-9, 36], [-9, 43], [-1, 43], [3, 42], [0, 38], [-4, 48],
+          [-1, 50], [3, 51], [8, 54], [10, 58], [12, 55], [14, 54], [19, 54],
+          [25, 60], [30, 60], [38, 55], [42, 45], [35, 45], [29, 41], [23, 38],
+          [20, 40], [16, 41], [18, 40], [16, 38], [15, 40], [12, 44], [9, 44],
+          [4, 43], [0, 36]
+        ],
+        [
+          [5, 58], [10, 60], [18, 60], [24, 65], [28, 70], [20, 70], [14, 67], [6, 62]
+        ],
+        [
+          [-5, 50], [1, 51], [0, 54], [-2, 58], [-5, 58], [-4, 55], [-5, 53]
+        ],
+        [
+          [35, 29], [40, 20], [45, 13], [53, 16], [59, 23], [50, 26], [48, 30], [38, 31]
+        ],
+        [
+          [42, 45], [50, 45], [50, 36], [60, 35], [68, 23], [73, 15], [77, 8],
+          [80, 13], [85, 20], [88, 22], [98, 10], [103, 1], [105, 10], [108, 15],
+          [106, 21], [101, 21], [98, 16], [108, 22], [118, 25], [122, 30],
+          [122, 38], [129, 36], [130, 42], [133, 47], [142, 53], [160, 55],
+          [170, 65], [170, 70], [140, 72], [110, 75], [80, 73], [60, 68], [45, 55]
+        ],
+        [
+          [114, -22], [115, -34], [135, -35], [138, -38], [147, -38], [153, -28],
+          [145, -15], [142, -11], [136, -12], [130, -12], [123, -16]
+        ],
+        [
+          [130, 32], [136, 35], [141, 41], [145, 44], [141, 45], [139, 37], [131, 33]
+        ]
       ];
 
-      function isRealLand(lat, lon) {
-        if (lat < -10 && lat > -35 && lon > 30 && lon < 41) return true;
-        if (lat < 35 && lat > -35 && lon > -18 && lon < 52) {
-          if (lat < -5 && lon > 42) return false;
-          if (lat > 15 && lon < -12) return false;
-          return true;
+      function pointInPolygon(lon, lat, poly) {
+        let inside = false;
+        for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+          const xi = poly[i][0], yi = poly[i][1];
+          const xj = poly[j][0], yj = poly[j][1];
+          const intersect = ((yi > lat) !== (yj > lat)) && (lon < (xj - xi) * (lat - yi) / (yj - yi) + xi);
+          if (intersect) inside = !inside;
         }
-        if (lat < 13 && lat > -56 && lon > -82 && lon < -34) {
-          if (lat < -20 && lon > -40) return false;
-          if (lat > 5 && lon < -75) return false;
-          return true;
-        }
-        if (lat >= 14 && lat <= 72 && lon >= -168 && lon <= -52) {
-          if (lat < 30 && lon < -115) return false;
-          if (lat < 25 && lon > -80) return false;
-          return true;
-        }
-        if (lat >= 36 && lat <= 71 && lon >= -10 && lon <= 45) {
-          return true;
-        }
-        if (lat >= 5 && lat <= 75 && lon >= 40 && lon <= 150) {
-          if (lat < 20 && lon > 45 && lon < 65) return false;
-          return true;
-        }
-        if (lat <= -10 && lat >= -44 && lon >= 112 && lon <= 154) {
-          return true;
-        }
-        return false;
+        return inside;
       }
 
       const globePoints = [];
-      for (const box of landBoxes) {
-        for (let lat = box.latMin; lat <= box.latMax; lat += box.step) {
-          for (let lon = box.lonMin; lon <= box.lonMax; lon += box.step) {
-            if (isRealLand(lat, lon)) {
-              const phi = (90 - lat) * (Math.PI / 180);
-              const theta = lon * (Math.PI / 180);
-              globePoints.push({
-                x: radius * Math.sin(phi) * Math.sin(theta),
-                y: -radius * Math.cos(phi),
-                z: radius * Math.sin(phi) * Math.cos(theta),
-                isAmbient: false
-              });
+      for (let lat = -55; lat <= 70; lat += 2.8) {
+        for (let lon = -180; lon <= 180; lon += 2.8) {
+          let isLand = false;
+          for (let p = 0; p < continentPolygons.length; p++) {
+            if (pointInPolygon(lon, lat, continentPolygons[p])) {
+              isLand = true;
+              break;
             }
+          }
+          if (isLand) {
+            const phi = (90 - lat) * (Math.PI / 180);
+            const theta = lon * (Math.PI / 180);
+            globePoints.push({
+              x: radius * Math.sin(phi) * Math.sin(theta),
+              y: -radius * Math.cos(phi),
+              z: radius * Math.sin(phi) * Math.cos(theta),
+              isAmbient: false
+            });
           }
         }
       }
@@ -11912,8 +11941,8 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         });
       }
 
-      let rotationY = -0.6;
-      let rotationX = 0.2;
+      let rotationY = -0.55;
+      let rotationX = -0.2;
       let isDragging = false;
       let lastX = 0;
       let lastY = 0;
@@ -11929,10 +11958,29 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         const dx = e.clientX - lastX;
         const dy = e.clientY - lastY;
         rotationY += dx * 0.006;
-        rotationX += dy * 0.006;
+        rotationX -= dy * 0.006;
         rotationX = Math.max(-1.1, Math.min(1.1, rotationX));
         lastX = e.clientX;
         lastY = e.clientY;
+      };
+
+      canvas.ontouchstart = (e) => {
+        if (e.touches.length === 1) {
+          isDragging = true;
+          lastX = e.touches[0].clientX;
+          lastY = e.touches[0].clientY;
+        }
+      };
+      window.ontouchend = () => { isDragging = false; };
+      window.ontouchmove = (e) => {
+        if (!isDragging || e.touches.length !== 1) return;
+        const dx = e.touches[0].clientX - lastX;
+        const dy = e.touches[0].clientY - lastY;
+        rotationY += dx * 0.006;
+        rotationX -= dy * 0.006;
+        rotationX = Math.max(-1.1, Math.min(1.1, rotationX));
+        lastX = e.touches[0].clientX;
+        lastY = e.touches[0].clientY;
       };
 
       let pulseTick = 0;
@@ -12729,6 +12777,10 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         } else {
           p.set('cta_time', '999999');
         }
+
+        const tok = token || localStorage.getItem('cloudvturb_token') || '';
+        if (tok) p.set('token', tok);
+        p.set('preview', '1');
 
         const newSrc = '/player?' + p.toString();
         iframes.forEach(iframe => {

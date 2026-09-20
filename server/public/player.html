@@ -629,7 +629,7 @@
         utm_term: params.get('utm_term') || null,
       };
 
-      if (vidId && !videoSrc) {
+      if (vidId) {
         try {
           const fetchUrl = `/api/videos/${encodeURIComponent(vidId)}/public${tokenParam ? '?token=' + encodeURIComponent(tokenParam) : ''}`;
           const res = await fetch(fetchUrl);
