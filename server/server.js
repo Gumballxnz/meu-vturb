@@ -3543,8 +3543,11 @@ app.post('/api/analytics/event', (req, res) => {
 
   const cleanDevice = req.body.device || 'desktop';
   const cleanBrowser = req.body.browser || 'Chrome';
-  const cleanOs = req.body.os || 'Windows';
-  const cleanDomain = req.body.domain || (req.headers.referer ? (() => { try { return new URL(req.headers.referer).hostname; } catch(e){ return null; } })() : null);
+  const rawDomain = req.body.domain || (req.headers.referer ? (() => { try { return new URL(req.headers.referer).hostname; } catch(e){ return null; } })() : null);
+  let cleanDomain = null;
+  if (rawDomain && !rawDomain.startsWith('dash.') && !rawDomain.includes('localhost') && !rawDomain.includes('127.0.0.1')) {
+    cleanDomain = rawDomain;
+  }
   const cleanUtmSource = req.body.utm_source || null;
   const cleanUtmMedium = req.body.utm_medium || null;
   const cleanUtmCampaign = req.body.utm_campaign || null;
