@@ -3141,27 +3141,41 @@
     }
     .folders-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
       gap: 14px;
-      margin-bottom: 24px;
+      margin-bottom: 0;
     }
+
+    .folders-grid.is-compact-view {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
     .folder-card {
-      background: var(--bg-surface);
+      background: var(--bg-card);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-md);
-      padding: 14px 16px;
+      padding: 12px 16px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 12px;
       cursor: pointer;
-      transition: all 0.2s ease;
+      transition: all 0.15s ease;
     }
+
     .folder-card:hover {
-      border-color: var(--primary);
+      border-color: var(--border-hover);
       background: var(--bg-card-hover);
       transform: translateY(-1px);
     }
+
+    .folders-grid.is-compact-view .folder-card {
+      padding: 8px 16px;
+      min-height: 52px;
+    }
+
     .folder-card-main {
       display: flex;
       align-items: center;
@@ -3169,6 +3183,7 @@
       min-width: 0;
       flex: 1;
     }
+
     .folder-icon-box {
       width: 36px;
       height: 36px;
@@ -3180,32 +3195,49 @@
       justify-content: center;
       flex-shrink: 0;
     }
-    .folder-card-info {
-      min-width: 0;
-      flex: 1;
-    }
+
     .folder-card-name {
       font-size: 13.5px;
-      font-weight: 700;
+      font-weight: 600;
       color: var(--text-main);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
     }
-    .folder-card-count {
-      font-size: 11.5px;
-      color: var(--text-dim);
-      margin-top: 2px;
+
+    .folder-stats-info {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      margin: 0 12px;
+      white-space: nowrap;
     }
+
     .folder-card-actions {
       display: flex;
-      gap: 4px;
+      gap: 6px;
       align-items: center;
-      opacity: 0.7;
-      transition: opacity 0.15s ease;
+      margin-left: auto;
     }
-    .folder-card:hover .folder-card-actions {
-      opacity: 1;
+
+    .content-section-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 16px 0 12px 0;
+    }
+
+    .content-section-divider .content-section-label {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+
+    .content-section-divider .content-section-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border-subtle);
     }
     .onboarding-fullscreen {
       position: fixed;
@@ -4031,18 +4063,16 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
             </div>
           </div>
 
-          <div id="overviewFoldersContainer" style="margin-bottom: 20px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-              <span style="font-size: 13px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Pastas</span>
-              <span style="font-size: 12px; color: var(--text-dim);" id="overviewFoldersCountLabel">0 pastas</span>
-            </div>
-            <div class="folders-grid" id="overviewFoldersGrid"></div>
+          <div id="overviewFoldersContainer" style="display: none; margin-bottom: 12px;">
+            <div class="folders-grid is-compact-view" id="overviewFoldersGrid"></div>
+          </div>
+
+          <div id="overviewFoldersVideosDivider" class="content-section-divider" style="display: none;">
+            <span class="content-section-label">Vídeos Recentes</span>
+            <div class="content-section-line"></div>
           </div>
 
           <div id="overviewVideosContainer">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-              <span style="font-size: 13px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Vídeos Recentes</span>
-            </div>
             <div class="video-grid is-compact-view" id="overviewRecentVideos"></div>
           </div>
         </div>
@@ -4090,14 +4120,6 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
             </div>
           </div>
 
-          <div id="foldersContainer" style="margin-bottom: 20px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-              <span style="font-size: 13px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Pastas</span>
-              <span style="font-size: 12px; color: var(--text-dim);" id="foldersCountLabel">0 pastas</span>
-            </div>
-            <div class="folders-grid" id="foldersGrid"></div>
-          </div>
-
           <div class="card-panel" id="videosFilterCardPanel" style="padding: 14px 18px; margin-bottom: 20px;">
             <div class="panel-header" style="margin-bottom: 0; flex-wrap: wrap; gap: 12px;">
               <div class="filter-bar" style="flex: 1; min-width: 260px;">
@@ -4140,6 +4162,15 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
                 <div style="font-size: 13px; color: var(--text-dim);" id="videosCountLabel">0 vídeos</div>
               </div>
             </div>
+          </div>
+
+          <div id="foldersContainer" style="display: none; margin-bottom: 12px;">
+            <div class="folders-grid is-compact-view" id="foldersGrid"></div>
+          </div>
+
+          <div id="foldersVideosDivider" class="content-section-divider" style="display: none;">
+            <span class="content-section-label">Vídeos</span>
+            <div class="content-section-line"></div>
           </div>
 
           <div class="video-grid is-compact-view" id="mainVideoGrid"></div>
@@ -5786,22 +5817,22 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
   </div>
 
   <div class="modal-overlay" id="modalStorageVideoPreview">
-    <div class="modal-box" style="max-width: 680px; width: 95%;">
+    <div class="modal-box" style="max-width: 800px; width: 95%;">
       <div class="modal-header-clean">
         <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
           <div style="width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: rgba(37,99,235,0.12); color: #2563eb; flex-shrink: 0;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
           </div>
           <div style="min-width: 0;">
-            <div class="modal-title-clean" id="storagePreviewTitle" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 480px;">Pré-visualização da VSL</div>
+            <div class="modal-title-clean" id="storagePreviewTitle" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 520px;">Pré-visualização da VSL</div>
             <div style="font-size: 11.5px; color: var(--text-dim);" id="storagePreviewSubtitle">-</div>
           </div>
         </div>
         <button class="btn-icon" onclick="closeStoragePreview()">&times;</button>
       </div>
-      <div class="modal-body-clean" style="padding: 12px; background: #090d16; border-radius: 0 0 var(--radius-md) var(--radius-md);">
+      <div class="modal-body-clean" style="padding: 10px; background: #090d16; border-radius: 0 0 var(--radius-md) var(--radius-md);">
         <div style="position: relative; width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-          <video id="storagePreviewPlayer" controls playsinline style="width: 100%; height: 100%; object-fit: contain;"></video>
+          <iframe id="storagePreviewFrame" style="width: 100%; height: 100%; border: 0; display: block;" allow="autoplay; fullscreen" allowfullscreen></iframe>
         </div>
       </div>
       <div class="modal-footer-clean" style="display: flex; justify-content: space-between; align-items: center;">
@@ -7618,8 +7649,9 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       document.getElementById('pageTitleLabel').textContent = target.title;
 
       if (tabName === 'analytics') {
-        populateAnalyticsSelector();
-        loadVideoAnalyticsData();
+        Promise.resolve(populateAnalyticsSelector()).then(() => {
+          loadVideoAnalyticsData();
+        });
       } else if (tabName === 'users') {
         loadUsersTable();
       } else if (tabName === 'videos') {
@@ -8066,7 +8098,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       const modal = document.getElementById('modalStorageVideoPreview');
       const titleEl = document.getElementById('storagePreviewTitle');
       const subEl = document.getElementById('storagePreviewSubtitle');
-      const player = document.getElementById('storagePreviewPlayer');
+      const frame = document.getElementById('storagePreviewFrame');
       const badgeEl = document.getElementById('storagePreviewBadge');
 
       if (titleEl) titleEl.textContent = v.title || 'Vídeo';
@@ -8082,10 +8114,8 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         }
       }
 
-      if (player && v.videoUrl) {
-        player.src = v.videoUrl;
-        player.load();
-        player.play().catch(() => {});
+      if (frame) {
+        frame.src = `/player.html?id=${encodeURIComponent(id)}&preview=1&token=${encodeURIComponent(token || '')}`;
       }
 
       if (modal) modal.classList.add('active');
@@ -8093,11 +8123,9 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
 
     function closeStoragePreview() {
       const modal = document.getElementById('modalStorageVideoPreview');
-      const player = document.getElementById('storagePreviewPlayer');
-      if (player) {
-        player.pause();
-        player.removeAttribute('src');
-        player.load();
+      const frame = document.getElementById('storagePreviewFrame');
+      if (frame) {
+        frame.src = 'about:blank';
       }
       if (modal) modal.classList.remove('active');
     }
@@ -8137,6 +8165,11 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         videos = vData.videos || [];
         renderVideosGrid();
         renderOverviewRecent();
+        populateAnalyticsSelector();
+        const activeAnalyticsTab = document.getElementById('viewAnalytics');
+        if (activeAnalyticsTab && activeAnalyticsTab.classList.contains('active')) {
+          loadVideoAnalyticsData();
+        }
 
         if (aData) {
           applyOverviewUI(aData);
@@ -9389,14 +9422,24 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       renderVideosGrid();
     }
 
-    function populateAnalyticsSelector() {
+    async function populateAnalyticsSelector() {
       const select = document.getElementById('analyticsVideoSelector');
       if (!select) return;
+      if (!videos || videos.length === 0) {
+        try {
+          const res = await api('/api/videos');
+          if (res && res.videos) videos = res.videos;
+        } catch (e) {}
+      }
       select.innerHTML = '';
+      if (!videos || videos.length === 0) {
+        select.innerHTML = '<option value="">Nenhum vídeo cadastrado</option>';
+        return;
+      }
       videos.forEach(v => {
         const opt = document.createElement('option');
         opt.value = v.id;
-        opt.textContent = v.title;
+        opt.textContent = v.title || 'Sem título';
         select.appendChild(opt);
       });
       const periodSelect = document.getElementById('analyticsPeriodSelector');
@@ -9405,10 +9448,11 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       }
     }
 
-    function openVideoAnalytics(id) {
+    async function openVideoAnalytics(id) {
       navigateTo('analytics');
+      await populateAnalyticsSelector();
       const select = document.getElementById('analyticsVideoSelector');
-      select.value = id;
+      if (select) select.value = id;
       loadVideoAnalyticsData();
     }
 
@@ -9453,8 +9497,21 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
 
     async function loadVideoAnalyticsData() {
       const select = document.getElementById('analyticsVideoSelector');
-      const vidId = select ? (select.value || (videos[0] ? videos[0].id : null)) : null;
-      if (!vidId) return;
+      if (!select) return;
+      if (!select.value || select.options.length === 0) {
+        await populateAnalyticsSelector();
+      }
+      const vidId = select.value || (videos && videos[0] ? videos[0].id : null);
+      if (!vidId) {
+        renderRetentionChart([]);
+        renderAudienceChart([]);
+        renderConversionsChart({});
+        renderActionButtons([]);
+        return;
+      }
+      if (!select.value && vidId) {
+        select.value = vidId;
+      }
 
       const periodSelect = document.getElementById('analyticsPeriodSelector');
       const period = periodSelect ? (periodSelect.value || 'today') : 'today';
@@ -9509,19 +9566,24 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       if (!container) return;
       container.innerHTML = '';
 
-      if (!curve || curve.length === 0) {
-        container.innerHTML = `<div style="margin: auto; color: var(--text-dim); font-size: 13px;">Sem dados de retenção para o período selecionado.</div>`;
+      const hasData = curve && curve.length > 0 && curve.some(x => (x.sessions || 0) > 0 || (x.percent || 0) > 0);
+      if (!hasData) {
+        container.style.alignItems = 'center';
+        container.style.justifyContent = 'center';
+        container.innerHTML = `<div style="color: var(--text-dim); font-size: 13px;">Nenhuma reprodução registrada para o período selecionado.</div>`;
         return;
       }
+      container.style.alignItems = 'flex-end';
+      container.style.justifyContent = 'flex-start';
 
       curve.forEach(pt => {
         const col = document.createElement('div');
         col.className = 'retention-col';
-        const heightPct = Math.max(4, pt.percent);
+        const heightPct = Math.max(4, pt.percent || 0);
 
         col.innerHTML = `
           <div class="retention-col-bar" style="height: ${heightPct}%;">
-            <span class="retention-val-tooltip">${pt.percent}%</span>
+            <span class="retention-val-tooltip">${pt.percent || 0}%</span>
           </div>
           <span class="retention-col-label">${pt.label}</span>
         `;
@@ -9534,10 +9596,15 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       if (!container) return;
       container.innerHTML = '';
 
-      if (!timeline || timeline.length === 0) {
-        container.innerHTML = `<div style="margin: auto; color: var(--text-dim); font-size: 13px;">Sem dados de audiência para o período selecionado.</div>`;
+      const hasData = timeline && timeline.length > 0 && timeline.some(x => (x.viewers || 0) > 0);
+      if (!hasData) {
+        container.style.alignItems = 'center';
+        container.style.justifyContent = 'center';
+        container.innerHTML = `<div style="color: var(--text-dim); font-size: 13px;">Nenhum dado de audiência para o período selecionado.</div>`;
         return;
       }
+      container.style.alignItems = 'flex-end';
+      container.style.justifyContent = 'flex-start';
 
       timeline.forEach(pt => {
         const col = document.createElement('div');

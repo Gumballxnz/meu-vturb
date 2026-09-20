@@ -3403,10 +3403,25 @@ app.post('/api/videos/:id/play', (req, res) => {
 app.get('/api/videos/:id/public', (req, res) => {
   const vidId = req.params.id;
   try {
-    const v = db.prepare('SELECT id, title, video_url, duration, settings_json, hls_ready, hls_manifest, smartautoplay_url, blocked_at, blocked_reason FROM videos WHERE id = ? AND deleted_at IS NULL').get(vidId);
+    const v = db.prepare('SELECT id, title, video_url, duration, settings_json, hls_ready, hls_manifest, smartautoplay_url, blocked_at, blocked_reason, user_id FROM videos WHERE id = ? AND deleted_at IS NULL').get(vidId);
     if (!v) return res.status(404).json({ error: 'Vídeo não encontrado ou indisponível.' });
     if (v.blocked_at) {
-      return res.status(403).json({ error: 'Vídeo bloqueado pela moderação.', blocked: true, reason: v.blocked_reason });
+      let isAuthorizedPreview = false;
+      const token = req.query.token || (req.headers.authorization ? req.headers.authorization.replace(/^Bearer\s+/i, '') : null);
+      if (token) {
+        try {
+          const session = db.prepare('SELECT user_id FROM sessions WHERE token = ?').get(token);
+          if (session) {
+            const user = db.prepare('SELECT id, role FROM users WHERE id = ?').get(session.user_id);
+            if (user && (user.role === 'owner' || user.id === v.user_id)) {
+              isAuthorizedPreview = true;
+            }
+          }
+        } catch (e) {}
+      }
+      if (!isAuthorizedPreview) {
+        return res.status(403).json({ error: 'Vídeo bloqueado pela moderação.', blocked: true, reason: v.blocked_reason });
+      }
     }
     let settings = {};
     try { settings = JSON.parse(v.settings_json || '{}'); } catch (e) {}
@@ -4073,7 +4088,7 @@ app.get('/videos/:filename', (req, res) => {
   if (range) {
     const parts = range.replace(/bytes=/, '').split('-');
     const start = parseInt(parts[0], 10);
-    const MAX_CHUNK = 1.5 * 1024 * 1024;
+    const MAX_CHUNK = 8 * 1024 * 1024;
     let end = parts[1] ? parseInt(parts[1], 10) : start + MAX_CHUNK - 1;
     if (end >= fileSize) end = fileSize - 1;
 
@@ -4095,7 +4110,7 @@ app.get('/videos/:filename', (req, res) => {
     res.writeHead(206, head);
     file.pipe(res);
   } else {
-    const MAX_INITIAL = Math.min(2 * 1024 * 1024, fileSize);
+    const MAX_INITIAL = Math.min(8 * 1024 * 1024, fileSize);
     const file = fs.createReadStream(filePath, { start: 0, end: MAX_INITIAL - 1 });
     const head = {
       'Content-Range': `bytes 0-${MAX_INITIAL - 1}/${fileSize}`,

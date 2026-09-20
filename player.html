@@ -574,6 +574,8 @@
       }
 
       const vidId = params.get('id') || pathnameId || '';
+      const tokenParam = params.get('token') || '';
+      const isPreview = params.get('preview') === '1';
       let videoSrc = params.get('v') || '';
       let hlsSrc = '';
       let smartAutoplaySrc = '';
@@ -581,7 +583,8 @@
 
       if (vidId && !videoSrc) {
         try {
-          const res = await fetch(`/api/videos/${encodeURIComponent(vidId)}/public`);
+          const fetchUrl = `/api/videos/${encodeURIComponent(vidId)}/public${tokenParam ? '?token=' + encodeURIComponent(tokenParam) : ''}`;
+          const res = await fetch(fetchUrl);
           if (res.status === 403) {
             const blockedData = await res.json().catch(() => ({}));
             if (blockedData && blockedData.blocked) {
@@ -616,7 +619,7 @@
         } catch (e) {}
       }
 
-      if (vidId) {
+      if (vidId && !isPreview) {
         let originDomain = '';
         try {
           if (window.self !== window.top && document.referrer) {
@@ -875,7 +878,7 @@
       });
 
       function emitAnalyticsEvent(eventType, milestone, watchTime) {
-        if (!vidId) return;
+        if (!vidId || isPreview) return;
         const payload = {
           videoId: vidId,
           visitorId: visitorId,
