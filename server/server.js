@@ -1749,9 +1749,10 @@ app.post('/api/admin/users/:id/action', authMiddleware, ownerMiddleware, async (
 
 app.get('/api/user/notifications/stream', authMiddleware, (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
   res.setHeader('X-Accel-Buffering', 'no');
+  res.setHeader('Transfer-Encoding', 'identity');
   res.flushHeaders();
 
   const userId = req.user.id;
@@ -1764,7 +1765,16 @@ app.get('/api/user/notifications/stream', authMiddleware, (req, res) => {
 
   res.write(': connected\n\n');
 
+  const heartbeat = setInterval(() => {
+    if (res.writableEnded) {
+      clearInterval(heartbeat);
+      return;
+    }
+    res.write(': ping\n\n');
+  }, 25000);
+
   req.on('close', () => {
+    clearInterval(heartbeat);
     if (sseClients.get(userId) === res) sseClients.delete(userId);
   });
 });

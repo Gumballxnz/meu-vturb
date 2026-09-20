@@ -5816,7 +5816,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       </div>
       <div class="modal-body-clean" style="padding: 10px; background: #090d16; border-radius: 0 0 var(--radius-md) var(--radius-md);">
         <div style="position: relative; width: 100%; aspect-ratio: 16/9; background: #000; border-radius: 8px; overflow: hidden; display: flex; align-items: center; justify-content: center;">
-          <iframe id="storagePreviewFrame" style="width: 100%; height: 100%; border: 0; display: block;" allow="autoplay; fullscreen" allowfullscreen></iframe>
+          <iframe id="storagePreviewFrame" style="width: 100%; height: 100%; border: 0; display: block;" allow="autoplay; fullscreen"></iframe>
         </div>
       </div>
       <div class="modal-footer-clean" style="display: flex; justify-content: space-between; align-items: center;">
@@ -6672,10 +6672,21 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       } catch (err) {}
     }
 
+    let _sseRetryDelay = 10000;
+    let _sseRetryTimer = null;
+
     function initNotificationSSE() {
       if (!token || notifEventSource) return;
+      if (_sseRetryTimer) {
+        clearTimeout(_sseRetryTimer);
+        _sseRetryTimer = null;
+      }
       try {
         notifEventSource = new EventSource(`/api/user/notifications/stream?token=${encodeURIComponent(token)}`);
+
+        notifEventSource.onopen = () => {
+          _sseRetryDelay = 10000;
+        };
 
         notifEventSource.onmessage = (e) => {
           try {
@@ -6708,7 +6719,13 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           if (notifEventSource) {
             notifEventSource.close();
             notifEventSource = null;
-            setTimeout(initNotificationSSE, 10000);
+          }
+          if (token) {
+            _sseRetryTimer = setTimeout(() => {
+              _sseRetryTimer = null;
+              initNotificationSSE();
+            }, _sseRetryDelay);
+            _sseRetryDelay = Math.min(_sseRetryDelay * 2, 120000);
           }
         };
       } catch (err) {}
@@ -8918,7 +8935,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           card.className = 'video-card';
           card.innerHTML = `
             <div class="video-thumb-stage">
-              <video src="${v.video_url}#t=0.5" preload="metadata" muted playsinline></video>
+              <video src="${v.video_url ? v.video_url + '#t=0.5' : ''}" preload="metadata" muted playsinline onerror="this.style.display='none'"></video>
               <div class="thumb-badge-duration" style="background: rgba(239, 68, 68, 0.85);">Na Lixeira</div>
             </div>
             <div class="video-card-body">
