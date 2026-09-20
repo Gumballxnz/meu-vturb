@@ -637,9 +637,21 @@ function getVideoDurationFormatted(filePath) {
 
 function processVideoHLS(vidId) {
   const v = db.prepare('SELECT * FROM videos WHERE id = ?').get(vidId);
-  if (!v || !v.file_path || !fs.existsSync(v.file_path)) return;
+  if (!v) return;
 
-  const realDuration = getVideoDurationFormatted(v.file_path);
+  let inputPath = v.file_path;
+  if (!inputPath || !fs.existsSync(inputPath)) {
+    if (v.video_url) {
+      const candidate = path.join(VIDEOS_DIR, path.basename(v.video_url));
+      if (fs.existsSync(candidate)) {
+        inputPath = candidate;
+        try { db.prepare('UPDATE videos SET file_path = ? WHERE id = ?').run(inputPath, vidId); } catch (e) {}
+      }
+    }
+  }
+  if (!inputPath || !fs.existsSync(inputPath)) return;
+
+  const realDuration = getVideoDurationFormatted(inputPath);
   if (realDuration && (v.duration === '10:00' || v.duration === '05:00' || !v.duration)) {
     try { db.prepare('UPDATE videos SET duration = ? WHERE id = ?').run(realDuration, vidId); } catch (e) {}
   }
@@ -652,7 +664,6 @@ function processVideoHLS(vidId) {
   const videoDir = path.join(VIDEOS_DIR, vidId);
   if (!fs.existsSync(videoDir)) fs.mkdirSync(videoDir, { recursive: true });
 
-  const inputPath = v.file_path;
   const smartautoplayPath = path.join(videoDir, 'smartautoplay-0s.mp4');
   const masterPlaylistPath = path.join(videoDir, 'main.m3u8');
 
@@ -675,14 +686,15 @@ function processVideoHLS(vidId) {
     '-t', '10',
     '-an',
     '-c:v', 'libx264',
-    '-preset', 'veryfast',
-    '-crf', '26',
+    '-preset', 'ultrafast',
+    '-crf', '28',
     '-movflags', '+faststart',
     smartautoplayPath
   ];
 
   try {
     const apProc = spawn('ffmpeg', apArgs);
+    apProc.on('error', () => {});
     apProc.on('close', (apCode) => {
       if (apCode === 0 && fs.existsSync(smartautoplayPath)) {
         const smartUrl = `/videos/${vidId}/smartautoplay-0s.mp4`;
@@ -694,9 +706,9 @@ function processVideoHLS(vidId) {
         '-y',
         '-i', inputPath,
         '-filter_complex', filterComplex,
-        '-map', '[v1out]', '-c:v:0', 'libx264', '-preset', 'veryfast', '-crf', '22',
-        '-map', '[v2out]', '-c:v:1', 'libx264', '-preset', 'veryfast', '-crf', '24',
-        '-map', '[v3out]', '-c:v:2', 'libx264', '-preset', 'veryfast', '-crf', '26'
+        '-map', '[v1out]', '-c:v:0', 'libx264', '-preset', 'ultrafast', '-crf', '22',
+        '-map', '[v2out]', '-c:v:1', 'libx264', '-preset', 'ultrafast', '-crf', '24',
+        '-map', '[v3out]', '-c:v:2', 'libx264', '-preset', 'ultrafast', '-crf', '26'
       ];
 
       if (hasAudio) {
@@ -724,6 +736,13 @@ function processVideoHLS(vidId) {
 
       try {
         const hlsProc = spawn('ffmpeg', hlsArgs);
+        hlsProc.on('error', () => {
+          dispatchWebhookEvent(v.user_id, 'video.failed', {
+            video_id: vidId,
+            name: v.title || '',
+            error: 'Erro ao iniciar transcodificação'
+          });
+        });
         hlsProc.on('close', (hlsCode) => {
           if (hlsCode === 0 && fs.existsSync(masterPlaylistPath)) {
             const manifestUrl = `/videos/${vidId}/main.m3u8`;
@@ -747,6 +766,23 @@ function processVideoHLS(vidId) {
     });
   } catch (err) {}
 }
+
+function autoCheckPendingHls() {
+  try {
+    const pending = db.prepare("SELECT id, file_path, video_url, hls_ready, hls_manifest FROM videos WHERE deleted_at IS NULL AND (hls_ready = 0 OR hls_ready IS NULL)").all();
+    for (const v of pending) {
+      const videoDir = path.join(VIDEOS_DIR, v.id);
+      const masterPlaylist = path.join(videoDir, 'main.m3u8');
+      if (fs.existsSync(masterPlaylist)) {
+        const manifestUrl = `/videos/${v.id}/main.m3u8`;
+        db.prepare('UPDATE videos SET hls_ready = 1, hls_manifest = ? WHERE id = ?').run(manifestUrl, v.id);
+      } else {
+        processVideoHLS(v.id);
+      }
+    }
+  } catch (e) {}
+}
+setTimeout(autoCheckPendingHls, 3000);
 
 function authMiddleware(req, res, next) {
   const authHeader = req.headers.authorization;
@@ -2997,7 +3033,7 @@ app.get('/api/videos', authMiddleware, (req, res) => {
 });
 
 app.get('/api/videos/top', authMiddleware, (req, res) => {
-  const videosQuery = 'SELECT id, title, video_url, duration, plays, settings_json, created_at FROM videos WHERE deleted_at IS NULL AND user_id = ? ORDER BY plays DESC LIMIT 20';
+  const videosQuery = 'SELECT id, title, video_url, duration, plays, settings_json, hls_ready, hls_manifest, created_at FROM videos WHERE deleted_at IS NULL AND user_id = ? ORDER BY plays DESC LIMIT 20';
   const rows = db.prepare(videosQuery).all(req.user.id);
   const topVideos = rows.map(v => {
     let settings = {};
@@ -3014,6 +3050,8 @@ app.get('/api/videos/top', authMiddleware, (req, res) => {
       thumbnail: settings.thumbnailUrl || (v.video_url ? `${v.video_url}#t=0.5` : null),
       duration: v.duration,
       plays: v.plays || 0,
+      hls_ready: Boolean(v.hls_ready),
+      hls_manifest: v.hls_manifest || null,
       ctaClicks,
       completes,
       completionRate,
@@ -3432,6 +3470,21 @@ app.get('/api/videos/:id/public', (req, res) => {
     const v = db.prepare('SELECT id, title, video_url, duration, settings_json, hls_ready, hls_manifest, smartautoplay_url, blocked_at, blocked_reason, user_id FROM videos WHERE id = ? AND deleted_at IS NULL').get(vidId);
     if (!v) return res.status(404).json({ error: 'Vídeo não encontrado ou indisponível.' });
 
+    if (!v.hls_ready) {
+      const videoDir = path.join(VIDEOS_DIR, vidId);
+      const masterPlaylist = path.join(videoDir, 'main.m3u8');
+      if (fs.existsSync(masterPlaylist)) {
+        const manifestUrl = `/videos/${vidId}/main.m3u8`;
+        try {
+          db.prepare('UPDATE videos SET hls_ready = 1, hls_manifest = ? WHERE id = ?').run(manifestUrl, vidId);
+          v.hls_ready = 1;
+          v.hls_manifest = manifestUrl;
+        } catch (e) {}
+      } else {
+        processVideoHLS(vidId);
+      }
+    }
+
     const token = req.query.token || (req.headers.authorization ? req.headers.authorization.replace(/^Bearer\s+/i, '') : null);
     let isOwnerPreview = false;
 
@@ -3740,10 +3793,25 @@ app.get('/api/analytics/overview', authMiddleware, (req, res) => {
 
 app.get('/api/analytics/video/:id', authMiddleware, (req, res) => {
   const vidId = req.params.id;
-  const video = db.prepare('SELECT id, title, user_id, plays, duration, settings_json FROM videos WHERE id = ?').get(vidId);
+  const video = db.prepare('SELECT id, title, user_id, plays, duration, settings_json, video_url, file_path, hls_ready, hls_manifest FROM videos WHERE id = ?').get(vidId);
   if (!video) return res.status(404).json({ error: 'Vídeo não encontrado.' });
   if (req.user.role !== 'owner' && video.user_id !== req.user.id) {
     return res.status(403).json({ error: 'Permissão negada.' });
+  }
+
+  if (!video.hls_ready) {
+    const videoDir = path.join(VIDEOS_DIR, vidId);
+    const masterPlaylist = path.join(videoDir, 'main.m3u8');
+    if (fs.existsSync(masterPlaylist)) {
+      const manifestUrl = `/videos/${vidId}/main.m3u8`;
+      try {
+        db.prepare('UPDATE videos SET hls_ready = 1, hls_manifest = ? WHERE id = ?').run(manifestUrl, vidId);
+        video.hls_ready = 1;
+        video.hls_manifest = manifestUrl;
+      } catch (e) {}
+    } else {
+      processVideoHLS(vidId);
+    }
   }
 
   const period = req.query.period || 'today';
@@ -3926,6 +3994,9 @@ app.get('/api/analytics/video/:id', authMiddleware, (req, res) => {
       pitchViews,
       pitchRate: basePlays > 0 ? ((pitchViews / basePlays) * 100).toFixed(1) : '0.0'
     },
+    video_url: video.video_url,
+    hls_ready: Boolean(video.hls_ready),
+    hls_manifest: video.hls_manifest,
     retentionCurve,
     audienceTimeline,
     actionButtons
@@ -4669,6 +4740,14 @@ app.post('/api/upload/google-drive', authMiddleware, checkStorageQuotaPre, async
   }
 });
 
+app.options('/videos/*', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Range, Accept-Ranges, Content-Type');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length, Content-Type');
+  res.status(204).end();
+});
+
 app.get('/videos/:id/:file', (req, res) => {
   const vidId = path.basename(req.params.id);
   const fileName = path.basename(req.params.file);
@@ -4680,11 +4759,15 @@ app.get('/videos/:id/:file', (req, res) => {
 
   const stat = fs.statSync(filePath);
 
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Range, Accept-Ranges, Content-Type');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length, Content-Type');
+
   if (fileName.endsWith('.m3u8')) {
     res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
     res.setHeader('Content-Length', stat.size);
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
-    res.setHeader('Access-Control-Allow-Origin', '*');
     return fs.createReadStream(filePath).pipe(res);
   }
 
@@ -4693,13 +4776,11 @@ app.get('/videos/:id/:file', (req, res) => {
     res.setHeader('Content-Length', stat.size);
     res.setHeader('Accept-Ranges', 'bytes');
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-    res.setHeader('Access-Control-Allow-Origin', '*');
     return fs.createReadStream(filePath).pipe(res);
   }
 
   if (fileName.endsWith('.mp4')) {
     res.setHeader('Content-Type', 'video/mp4');
-    res.setHeader('Access-Control-Allow-Origin', '*');
     const range = req.headers.range;
     if (range) {
       const parts = range.replace(/bytes=/, '').split('-');
@@ -4766,11 +4847,17 @@ app.get('/videos/:filename', (req, res) => {
   const fileSize = stat.size;
   const range = req.headers.range;
 
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Range, Accept-Ranges, Content-Type');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length, Content-Type');
+
+  const contentType = safeFilename.endsWith('.webm') ? 'video/webm' : 'video/mp4';
+
   if (range) {
     const parts = range.replace(/bytes=/, '').split('-');
     const start = parseInt(parts[0], 10);
-    const MAX_CHUNK = 8 * 1024 * 1024;
-    let end = parts[1] ? parseInt(parts[1], 10) : start + MAX_CHUNK - 1;
+    let end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
     if (end >= fileSize) end = fileSize - 1;
 
     if (start >= fileSize) {
@@ -4784,24 +4871,20 @@ app.get('/videos/:filename', (req, res) => {
       'Content-Range': `bytes ${start}-${end}/${fileSize}`,
       'Accept-Ranges': 'bytes',
       'Content-Length': chunksize,
-      'Content-Type': safeFilename.endsWith('.webm') ? 'video/webm' : 'video/mp4',
+      'Content-Type': contentType,
       'Cache-Control': 'public, max-age=31536000, immutable'
     };
 
     res.writeHead(206, head);
     file.pipe(res);
   } else {
-    const MAX_INITIAL = Math.min(8 * 1024 * 1024, fileSize);
-    const file = fs.createReadStream(filePath, { start: 0, end: MAX_INITIAL - 1 });
-    const head = {
-      'Content-Range': `bytes 0-${MAX_INITIAL - 1}/${fileSize}`,
+    res.writeHead(200, {
+      'Content-Length': fileSize,
+      'Content-Type': contentType,
       'Accept-Ranges': 'bytes',
-      'Content-Length': MAX_INITIAL,
-      'Content-Type': safeFilename.endsWith('.webm') ? 'video/webm' : 'video/mp4',
       'Cache-Control': 'public, max-age=31536000, immutable'
-    };
-    res.writeHead(206, head);
-    file.pipe(res);
+    });
+    fs.createReadStream(filePath).pipe(res);
   }
 });
 
