@@ -4029,6 +4029,7 @@ app.get('/videos/:id/:file', (req, res) => {
 
   if (fileName.endsWith('.m3u8')) {
     res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+    res.setHeader('Content-Length', stat.size);
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Access-Control-Allow-Origin', '*');
     return fs.createReadStream(filePath).pipe(res);
@@ -4036,6 +4037,8 @@ app.get('/videos/:id/:file', (req, res) => {
 
   if (fileName.endsWith('.ts')) {
     res.setHeader('Content-Type', 'video/MP2T');
+    res.setHeader('Content-Length', stat.size);
+    res.setHeader('Accept-Ranges', 'bytes');
     res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     res.setHeader('Access-Control-Allow-Origin', '*');
     return fs.createReadStream(filePath).pipe(res);
