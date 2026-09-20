@@ -535,13 +535,13 @@
 
     <div class="cta-container" id="ctaContainer">
       <a href="#" target="_blank" rel="noopener noreferrer" class="cta-button" id="ctaBtn">
-        <span id="ctaBtnText">QUERO GARANTIR MINHA VAGA</span>
+        <span id="ctaBtnText"></span>
       </a>
-      <div class="cta-subtext" id="ctaSubtextContainer">
+      <div class="cta-subtext" id="ctaSubtextContainer" style="display: none;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
           <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z"/>
         </svg>
-        <span id="ctaSubtext">Compra 100% Segura • Acesso Imediato</span>
+        <span id="ctaSubtext"></span>
       </div>
     </div>
   </div>
@@ -723,11 +723,12 @@
       const fakeProgress = params.has('fake_progress') ? params.get('fake_progress') === '1' : (dbSettings.fakeProgress === true);
       const blockSeek = params.has('block_seek') ? params.get('block_seek') !== '0' : (dbSettings.blockSeek !== false);
       const resumeEnabled = params.has('resume') ? params.get('resume') === '1' : (dbSettings.resume === true);
+      const ctaEnabled = params.has('cta') ? params.get('cta') === '1' : (dbSettings.ctaEnabled === true);
       const ctaTime = params.has('cta_time') ? parseFloat(params.get('cta_time')) : (dbSettings.ctaTime || 0);
       const ctaUrl = params.get('cta_url') || dbSettings.ctaUrl || '';
-      const ctaText = params.get('cta_text') || dbSettings.ctaText || 'QUERO GARANTIR MINHA VAGA';
-      const ctaColor = params.get('cta_color') || dbSettings.ctaColor || '#2563EB';
-      const ctaSub = params.get('cta_subtext') || dbSettings.ctaSubtext || 'Compra 100% Segura • Acesso Imediato';
+      const ctaText = params.get('cta_text') || dbSettings.ctaText || '';
+      const ctaColor = params.get('cta_color') || dbSettings.ctaColor || '#10b981';
+      const ctaSub = params.get('cta_subtext') || dbSettings.ctaSubtext || '';
       const pixelsEnabled = params.has('pixels') ? params.get('pixels') === '1' : (dbSettings.pixels === true);
 
       const AUDIO_ICONS = {
@@ -870,7 +871,7 @@
         }
 
         if (cfg.text) {
-          const lines = cfg.text.split('\n');
+          const lines = cfg.text.split(/\\n|\n/);
           if (lines.length > 1) {
             if (overlayTextTop) overlayTextTop.textContent = lines[0];
             if (overlayTextBottom) {
@@ -911,7 +912,14 @@
         ctaBtn.style.boxShadow = `0 10px 25px -5px ${ctaColor}80, 0 0 20px ${ctaColor}66`;
       }
       if (ctaText) ctaBtnText.textContent = ctaText;
-      if (ctaSub) ctaSubtext.textContent = ctaSub;
+      if (ctaSub) {
+        ctaSubtext.textContent = ctaSub;
+        const subWrap = document.getElementById('ctaSubtextContainer');
+        if (subWrap) subWrap.style.display = 'flex';
+      } else {
+        const subWrap = document.getElementById('ctaSubtextContainer');
+        if (subWrap) subWrap.style.display = 'none';
+      }
       if (ctaUrl) ctaBtn.href = ctaUrl;
 
       document.addEventListener('contextmenu', function (e) {
@@ -1144,7 +1152,7 @@
           } catch (e) {}
         }
 
-        if (ctaTime > 0 && cur >= ctaTime) {
+        if (ctaEnabled && ctaTime > 0 && cur >= ctaTime) {
           if (!ctaContainer.classList.contains('visible')) {
             ctaContainer.classList.add('visible');
             emitAnalyticsEvent('pitch_viewed', null, cur);
