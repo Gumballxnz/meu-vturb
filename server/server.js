@@ -325,6 +325,8 @@ try { db.exec("ALTER TABLE videos ADD COLUMN deleted_at DATETIME DEFAULT NULL");
 try { db.exec("ALTER TABLE videos ADD COLUMN hls_ready INTEGER DEFAULT 0"); } catch (e) {}
 try { db.exec("ALTER TABLE videos ADD COLUMN hls_manifest TEXT DEFAULT NULL"); } catch (e) {}
 try { db.exec("ALTER TABLE videos ADD COLUMN smartautoplay_url TEXT DEFAULT NULL"); } catch (e) {}
+try { db.exec("ALTER TABLE videos ADD COLUMN blocked_at DATETIME DEFAULT NULL"); } catch (e) {}
+try { db.exec("ALTER TABLE videos ADD COLUMN blocked_reason TEXT DEFAULT NULL"); } catch (e) {}
 try { db.exec("ALTER TABLE api_keys ADD COLUMN token TEXT"); } catch (e) {}
 try { db.exec("CREATE INDEX IF NOT EXISTS idx_videos_folder ON videos(folder_id)"); } catch (e) {}
 try { db.exec("CREATE INDEX IF NOT EXISTS idx_videos_deleted ON videos(deleted_at)"); } catch (e) {}
@@ -1014,6 +1016,95 @@ async function sendInviteEmail({ to, name, inviterName, inviteLink, role }) {
       Este convite é de uso exclusivo e tem validade de <strong>24 horas</strong>. Se você não esperava este convite, pode ignorar este e-mail com segurança.
     </p>
     <div style="font-size:12px;color:#a1a1aa;border-top:1px solid #f4f4f5;padding-top:16px;">CloudVTurb — Plataforma de Hospedagem VSL de Alta Retenção</div>
+  </div>
+</body>
+</html>`;
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      from: fromEmail,
+      to: [to],
+      subject: subject,
+      html: html
+    })
+  });
+
+  const resJson = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const detail = resJson.message || resJson.error || response.statusText || 'Erro desconhecido';
+    throw new Error(`Falha no envio via Resend: ${detail}`);
+  }
+  return resJson;
+}
+
+async function sendVideoModerationEmail({ to, name, videoTitle, action, reason }) {
+  const apiKey = (process.env.RESEND_API_KEY || '').trim();
+  if (!apiKey) {
+    console.log(`[CloudVTurb Moderation Email] Para: ${to} | Ação: ${action} | Vídeo: ${videoTitle} | Motivo: ${reason}`);
+    if (process.env.NODE_ENV === 'production' && process.env.REQUIRE_RESEND === 'true') {
+      throw new Error('Chave RESEND_API_KEY não configurada no servidor (.env). Configure a chave da Resend para o envio de e-mails.');
+    }
+    return;
+  }
+
+  let fromEmail = (process.env.RESEND_FROM_EMAIL || '').trim();
+  if (!fromEmail || fromEmail.includes('onboarding@resend.dev')) {
+    fromEmail = 'CloudVTurb <nao-responda@roleta-sorte.online>';
+  }
+
+  let subject = '';
+  let actionTitle = '';
+  let badgeColor = '';
+  let badgeBg = '';
+
+  if (action === 'block') {
+    subject = `Aviso Importante: Seu vídeo "${videoTitle}" foi bloqueado`;
+    actionTitle = 'Vídeo Bloqueado pela Administração';
+    badgeColor = '#dc2626';
+    badgeBg = '#fee2e2';
+  } else if (action === 'delete') {
+    subject = `Aviso Importante: Seu vídeo "${videoTitle}" foi excluído do servidor`;
+    actionTitle = 'Vídeo Removido do Servidor';
+    badgeColor = '#b91c1c';
+    badgeBg = '#fee2e2';
+  } else if (action === 'unblock') {
+    subject = `Aviso: Seu vídeo "${videoTitle}" foi reativado`;
+    actionTitle = 'Vídeo Desbloqueado';
+    badgeColor = '#16a34a';
+    badgeBg = '#dcfce7';
+  }
+
+  const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${escapeHtml(actionTitle)}</title>
+</head>
+<body style="margin:0;padding:24px;background-color:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#18181b;">
+  <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:12px;padding:36px;border:1px solid #e4e4e7;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+    <div style="font-size:22px;font-weight:800;color:#2563eb;margin-bottom:24px;letter-spacing:-0.5px;">CloudVTurb</div>
+    <div style="display:inline-block;padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;color:${badgeColor};background:${badgeBg};margin-bottom:16px;">
+      ${escapeHtml(actionTitle)}
+    </div>
+    <h2 style="font-size:19px;font-weight:700;color:#09090b;margin:0 0 14px 0;">Notificação sobre seu vídeo</h2>
+    <p style="font-size:14px;line-height:1.6;color:#52525b;margin:0 0 16px 0;">Olá${name ? ` <strong>${escapeHtml(name)}</strong>` : ''},</p>
+    <p style="font-size:14px;line-height:1.6;color:#52525b;margin:0 0 20px 0;">
+      A administração da plataforma aplicou uma ação sobre o seu vídeo <strong>"${escapeHtml(videoTitle)}"</strong>.
+    </p>
+    <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;margin:20px 0;">
+      <div style="font-size:12px;text-transform:uppercase;letter-spacing:0.5px;color:#64748b;font-weight:600;margin-bottom:6px;">Motivo / Justificativa informada:</div>
+      <div style="font-size:14px;color:#1e293b;line-height:1.6;white-space:pre-wrap;">${escapeHtml(reason || 'Sem justificativa informada.')}</div>
+    </div>
+    <p style="font-size:13px;line-height:1.5;color:#71717a;margin:20px 0 24px 0;">
+      Caso tenha dúvidas sobre esta decisão, entre em contato diretamente com o administrador da sua organização.
+    </p>
+    <div style="font-size:12px;color:#a1a1aa;border-top:1px solid #f4f4f5;padding-top:16px;">CloudVTurb — Plataforma de Hospedagem VSL</div>
   </div>
 </body>
 </html>`;
@@ -2473,6 +2564,7 @@ app.get('/api/storage/details', authMiddleware, (req, res) => {
   if (isOwner) {
     rawVideos = db.prepare(`
       SELECT v.id, v.title, v.duration, v.file_size, v.source_type, v.created_at, v.deleted_at,
+             v.blocked_at, v.blocked_reason,
              v.user_id, u.name as user_name, u.email as user_email, u.role as user_role,
              f.name as folder_name
       FROM videos v
@@ -2484,6 +2576,7 @@ app.get('/api/storage/details', authMiddleware, (req, res) => {
   } else {
     rawVideos = db.prepare(`
       SELECT v.id, v.title, v.duration, v.file_size, v.source_type, v.created_at, v.deleted_at,
+             v.blocked_at, v.blocked_reason,
              v.user_id,
              f.name as folder_name
       FROM videos v
@@ -2506,6 +2599,10 @@ app.get('/api/storage/details', authMiddleware, (req, res) => {
     return {
       id: v.id,
       title: v.title,
+      userId: v.user_id,
+      isBlocked: !!v.blocked_at,
+      blockedAt: v.blocked_at,
+      blockedReason: v.blocked_reason,
       duration: v.duration || '00:00',
       sizeBytes,
       sizeFormatted: v.source_type === 'remote' && sizeBytes === 0 ? 'Remoto (0 MB)' : formatStorage(sizeBytes),
@@ -2532,7 +2629,8 @@ app.get('/api/storage/details', authMiddleware, (req, res) => {
     formattedFree: formatStorage(freeBytes),
     usagePercent: percent < 0.1 && usedBytes > 0 ? '0.1' : percent.toFixed(1),
     videosCount: rawVideos.length,
-    activeVideosCount: rawVideos.filter(v => !v.deleted_at).length,
+    activeVideosCount: rawVideos.filter(v => !v.deleted_at && !v.blocked_at).length,
+    blockedVideosCount: rawVideos.filter(v => !v.deleted_at && !!v.blocked_at).length,
     trashVideosCount: rawVideos.filter(v => !!v.deleted_at).length,
     averageSizeBytes: rawVideos.length > 0 ? Math.round(usedBytes / rawVideos.length) : 0,
     averageSizeFormatted: rawVideos.length > 0 ? formatStorage(Math.round(usedBytes / rawVideos.length)) : '0 MB',
@@ -3112,6 +3210,83 @@ app.delete('/api/videos/:id/permanent', authMiddleware, (req, res) => {
   res.json({ success: true, permanentlyDeleted: true });
 });
 
+app.post('/api/videos/:id/moderate', authMiddleware, async (req, res) => {
+  if (req.user.role !== 'owner') {
+    return res.status(403).json({ error: 'Apenas o proprietário do sistema pode moderar vídeos.' });
+  }
+
+  const vidId = req.params.id;
+  const { action, reason } = req.body || {};
+
+  if (!['block', 'unblock', 'delete'].includes(action)) {
+    return res.status(400).json({ error: 'Ação de moderação inválida.' });
+  }
+
+  const cleanReason = (reason || '').trim();
+  if ((action === 'block' || action === 'delete') && !cleanReason) {
+    return res.status(400).json({ error: 'É obrigatório informar o motivo antes de prosseguir.' });
+  }
+
+  const video = db.prepare(`
+    SELECT v.*, u.name as user_name, u.email as user_email
+    FROM videos v
+    LEFT JOIN users u ON u.id = v.user_id
+    WHERE v.id = ?
+  `).get(vidId);
+
+  if (!video) {
+    return res.status(404).json({ error: 'Vídeo não encontrado.' });
+  }
+
+  const userEmail = video.user_email;
+  const userName = video.user_name || 'Usuário';
+  const videoTitle = video.title || 'Vídeo';
+
+  try {
+    if (action === 'block') {
+      db.prepare('UPDATE videos SET blocked_at = CURRENT_TIMESTAMP, blocked_reason = ? WHERE id = ?').run(cleanReason, vidId);
+    } else if (action === 'unblock') {
+      db.prepare('UPDATE videos SET blocked_at = NULL, blocked_reason = NULL WHERE id = ?').run(vidId);
+    } else if (action === 'delete') {
+      if (video.source_type === 'local' && video.file_path && fs.existsSync(video.file_path)) {
+        try { fs.unlinkSync(video.file_path); } catch (e) {}
+      }
+      const hlsDir = path.join(VIDEOS_DIR, vidId);
+      if (fs.existsSync(hlsDir)) {
+        try { fs.rmSync(hlsDir, { recursive: true, force: true }); } catch (e) {}
+      }
+      db.prepare('UPDATE videos SET deleted_at = CURRENT_TIMESTAMP, file_size = 0, blocked_reason = ? WHERE id = ?').run(cleanReason, vidId);
+    }
+
+    if (userEmail) {
+      try {
+        await sendVideoModerationEmail({
+          to: userEmail,
+          name: userName,
+          videoTitle,
+          action,
+          reason: cleanReason || (action === 'unblock' ? 'Vídeo desbloqueado pela administração.' : '')
+        });
+      } catch (mailErr) {
+        console.error('[CloudVTurb Moderation Mail Error]', mailErr);
+      }
+    }
+
+    res.json({
+      success: true,
+      action,
+      message: action === 'block'
+        ? 'Vídeo bloqueado com sucesso e notificação enviada por e-mail.'
+        : action === 'delete'
+        ? 'Vídeo excluído com sucesso e notificação enviada por e-mail.'
+        : 'Vídeo desbloqueado com sucesso.'
+    });
+  } catch (err) {
+    console.error('[CloudVTurb Moderate Error]', err);
+    res.status(500).json({ error: 'Erro ao processar moderação do vídeo.' });
+  }
+});
+
 app.post('/api/videos/:id/reprocess', authMiddleware, (req, res) => {
   const vidId = req.params.id;
   const existing = db.prepare('SELECT * FROM videos WHERE id = ?').get(vidId);
@@ -3142,8 +3317,11 @@ app.post('/api/videos/:id/play', (req, res) => {
 app.get('/api/videos/:id/public', (req, res) => {
   const vidId = req.params.id;
   try {
-    const v = db.prepare('SELECT id, title, video_url, duration, settings_json, hls_ready, hls_manifest, smartautoplay_url FROM videos WHERE id = ? AND deleted_at IS NULL').get(vidId);
+    const v = db.prepare('SELECT id, title, video_url, duration, settings_json, hls_ready, hls_manifest, smartautoplay_url, blocked_at, blocked_reason FROM videos WHERE id = ? AND deleted_at IS NULL').get(vidId);
     if (!v) return res.status(404).json({ error: 'Vídeo não encontrado ou indisponível.' });
+    if (v.blocked_at) {
+      return res.status(403).json({ error: 'Vídeo bloqueado pela moderação.', blocked: true, reason: v.blocked_reason });
+    }
     let settings = {};
     try { settings = JSON.parse(v.settings_json || '{}'); } catch (e) {}
 

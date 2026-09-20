@@ -4203,6 +4203,7 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
               <select id="storageFilterStatus" class="select-filter" style="font-size: 12.5px; padding: 6px 10px;" onchange="filterStorageVideos()">
                 <option value="all">Todos os status</option>
                 <option value="active">Apenas ativos</option>
+                <option value="blocked">Bloqueados</option>
                 <option value="trash">Na lixeira</option>
               </select>
               <select id="storageFilterUser" class="select-filter" style="font-size: 12.5px; padding: 6px 10px; display: none;" onchange="filterStorageVideos()">
@@ -5525,6 +5526,46 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       </div>
       <div class="modal-footer-clean">
         <button class="btn-clean-secondary" onclick="closeProfileModal()">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="modalVideoModeration">
+    <div class="modal-box" style="max-width: 480px;">
+      <div class="modal-header-clean">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div id="modalModIcon" style="width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; background: rgba(239,68,68,0.12); color: #ef4444;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+          </div>
+          <div class="modal-title-clean" id="modalModTitle">Moderar VSL</div>
+        </div>
+        <button class="btn-icon" onclick="closeModerationModal()">&times;</button>
+      </div>
+      <div class="modal-body-clean" style="padding: 20px 24px;">
+        <div style="background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 18px;">
+          <div style="font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim); margin-bottom: 4px;">Vídeo selecionado</div>
+          <div id="modalModVideoTitle" style="font-size: 14px; font-weight: 700; color: var(--text-main); margin-bottom: 4px; word-break: break-word;">-</div>
+          <div style="font-size: 12px; color: var(--text-muted);">
+            Proprietário: <span id="modalModOwnerName" style="color: var(--text-main); font-weight: 600;">-</span> (<span id="modalModOwnerEmail">-</span>)
+          </div>
+        </div>
+
+        <div class="form-row" style="margin-bottom: 12px;">
+          <label class="form-label" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Motivo / Justificativa <span style="color: #ef4444;">*</span></span>
+            <span style="font-size: 11px; color: var(--text-dim); font-weight: normal;">Obrigatório</span>
+          </label>
+          <textarea id="modalModReason" class="form-input-text" rows="4" placeholder="Explique com clareza o motivo desta ação (ex: conteúdo fora das diretrizes, violação de direitos, excesso de armazenamento, etc.)..." style="width: 100%; resize: vertical; font-size: 13px; line-height: 1.5; padding: 10px;"></textarea>
+        </div>
+
+        <div style="font-size: 12px; color: var(--text-dim); line-height: 1.4; display: flex; align-items: flex-start; gap: 8px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0; margin-top: 2px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          <span>O proprietário do vídeo receberá uma notificação imediata por e-mail com esta justificativa.</span>
+        </div>
+      </div>
+      <div class="modal-footer-clean" style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn-clean-secondary" onclick="closeModerationModal()">Cancelar</button>
+        <button type="button" id="modalModConfirmBtn" class="btn-primary-action" style="background: #ef4444; border-color: #ef4444;" onclick="submitVideoModeration()">Confirmar Bloqueio</button>
       </div>
     </div>
   </div>
@@ -7380,7 +7421,11 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       if (cardCount) cardCount.textContent = data.videosCount || 0;
 
       const cardSub = document.getElementById('storageCardVideosSub');
-      if (cardSub) cardSub.textContent = `${data.activeVideosCount || 0} ativos • ${data.trashVideosCount || 0} na lixeira`;
+      if (cardSub) {
+        const blockedCount = data.blockedVideosCount || 0;
+        const blockedText = blockedCount > 0 ? ` • ${blockedCount} bloqueado${blockedCount > 1 ? 's' : ''}` : '';
+        cardSub.textContent = `${data.activeVideosCount || 0} ativos${blockedText} • ${data.trashVideosCount || 0} na lixeira`;
+      }
 
       const cardAvg = document.getElementById('storageCardAverage');
       if (cardAvg) cardAvg.textContent = data.averageSizeFormatted || '0 MB';
@@ -7437,7 +7482,8 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           const userMatch = (v.userName || '').toLowerCase().includes(searchVal) || (v.userEmail || '').toLowerCase().includes(searchVal);
           if (!titleMatch && !userMatch) return false;
         }
-        if (statusVal === 'active' && v.isTrash) return false;
+        if (statusVal === 'active' && (v.isTrash || v.isBlocked)) return false;
+        if (statusVal === 'blocked' && !v.isBlocked) return false;
         if (statusVal === 'trash' && !v.isTrash) return false;
         if (userVal !== 'all' && v.userEmail !== userVal && v.userName !== userVal) return false;
         return true;
@@ -7464,16 +7510,37 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
 
       const isOwner = data.isOwner;
       tbody.innerHTML = videos.map(v => {
+        const isMine = currentUser && (v.userId === currentUser.id);
         const date = v.createdAt ? formatDate(v.createdAt) : '-';
-        const statusBadge = v.isTrash
-          ? `<span class="badge-status" style="background:rgba(239,68,68,0.12);color:#f87171;border:1px solid rgba(239,68,68,0.25);">Lixeira</span>`
-          : `<span class="badge-status" style="background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.25);">Ativo</span>`;
+        let statusBadge = '';
+        if (v.isTrash) {
+          statusBadge = `<span class="badge-status" style="background:rgba(239,68,68,0.12);color:#f87171;border:1px solid rgba(239,68,68,0.25);">Lixeira</span>`;
+        } else if (v.isBlocked) {
+          statusBadge = `<span class="badge-status" style="background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3);cursor:help;" title="${escapeHtml(v.blockedReason ? 'Motivo: ' + v.blockedReason : 'Bloqueado pela moderação')}">Bloqueado</span>`;
+        } else {
+          statusBadge = `<span class="badge-status" style="background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.25);">Ativo</span>`;
+        }
 
         const ownerCell = isOwner
           ? `<td><div style="font-size:12.5px;font-weight:600;color:var(--text-main);">${escapeHtml(v.userName || '-')}</div><div style="font-size:11px;color:var(--text-dim);">${escapeHtml(v.userEmail || '')}</div></td>`
           : '';
 
         const barWidth = Math.min(100, parseFloat(v.pctOfUsed) || 0);
+
+        let actionsHtml = '';
+        if (isMine) {
+          actionsHtml = `<button class="btn-clean-secondary" style="font-size:12px;padding:5px 10px;" onclick="openEditor('${v.id}')">Editar</button>`;
+        } else if (isOwner) {
+          const safeTitle = (v.title || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+          const safeUserName = (v.userName || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+          const safeUserEmail = (v.userEmail || '').replace(/'/g, "\\'").replace(/"/g, '&quot;');
+
+          const blockBtn = v.isBlocked
+            ? `<button class="btn-clean-secondary" style="font-size:12px;padding:5px 8px;color:#10b981;border-color:rgba(16,185,129,0.3);" title="Desbloquear vídeo" onclick="unblockVideoModeration('${v.id}', '${safeTitle}')">Desbloquear</button>`
+            : `<button class="btn-clean-secondary" style="font-size:12px;padding:5px 8px;color:#f59e0b;border-color:rgba(245,158,11,0.3);" title="Bloquear vídeo" onclick="openModerationModal('${v.id}', '${safeTitle}', 'block', '${safeUserName}', '${safeUserEmail}')">Bloquear</button>`;
+          const deleteBtn = `<button class="btn-clean-secondary" style="font-size:12px;padding:5px 8px;color:#ef4444;border-color:rgba(239,68,68,0.3);" title="Excluir do servidor" onclick="openModerationModal('${v.id}', '${safeTitle}', 'delete', '${safeUserName}', '${safeUserEmail}')">Excluir</button>`;
+          actionsHtml = `<div style="display:flex;gap:6px;justify-content:flex-end;">${blockBtn}${deleteBtn}</div>`;
+        }
 
         return `<tr>
           <td>
@@ -7491,9 +7558,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           </td>
           <td style="font-size:12.5px;color:var(--text-dim);">${v.pctOfTotal}%</td>
           <td style="font-size:12px;color:var(--text-dim);">${date}</td>
-          <td style="text-align:right;">
-            <button class="btn-clean-secondary" style="font-size:12px;padding:5px 10px;" onclick="openEditor('${v.id}')">Editar</button>
-          </td>
+          <td style="text-align:right;">${actionsHtml}</td>
         </tr>`;
       }).join('');
     }
@@ -7512,6 +7577,114 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         sel.value = cur === 'size_desc' ? 'size_asc' : 'size_desc';
       }
       filterStorageVideos();
+    }
+
+    let currentModerationData = null;
+
+    function openModerationModal(videoId, videoTitle, action, ownerName, ownerEmail) {
+      currentModerationData = { videoId, videoTitle, action, ownerName, ownerEmail };
+      const modal = document.getElementById('modalVideoModeration');
+      const titleEl = document.getElementById('modalModTitle');
+      const vTitleEl = document.getElementById('modalModVideoTitle');
+      const oNameEl = document.getElementById('modalModOwnerName');
+      const oEmailEl = document.getElementById('modalModOwnerEmail');
+      const reasonEl = document.getElementById('modalModReason');
+      const confirmBtn = document.getElementById('modalModConfirmBtn');
+      const iconEl = document.getElementById('modalModIcon');
+
+      if (vTitleEl) vTitleEl.textContent = videoTitle || '-';
+      if (oNameEl) oNameEl.textContent = ownerName || 'Membro';
+      if (oEmailEl) oEmailEl.textContent = ownerEmail || '-';
+      if (reasonEl) reasonEl.value = '';
+
+      if (action === 'block') {
+        if (titleEl) titleEl.textContent = 'Bloquear VSL';
+        if (confirmBtn) {
+          confirmBtn.textContent = 'Confirmar Bloqueio';
+          confirmBtn.style.background = '#f59e0b';
+          confirmBtn.style.borderColor = '#f59e0b';
+        }
+        if (iconEl) {
+          iconEl.style.background = 'rgba(245,158,11,0.12)';
+          iconEl.style.color = '#f59e0b';
+          iconEl.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>';
+        }
+      } else if (action === 'delete') {
+        if (titleEl) titleEl.textContent = 'Excluir VSL do Servidor';
+        if (confirmBtn) {
+          confirmBtn.textContent = 'Confirmar Exclusão';
+          confirmBtn.style.background = '#ef4444';
+          confirmBtn.style.borderColor = '#ef4444';
+        }
+        if (iconEl) {
+          iconEl.style.background = 'rgba(239,68,68,0.12)';
+          iconEl.style.color = '#ef4444';
+          iconEl.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6"/></svg>';
+        }
+      }
+
+      if (modal) modal.classList.add('active');
+      if (reasonEl) setTimeout(() => reasonEl.focus(), 100);
+    }
+
+    function closeModerationModal() {
+      const modal = document.getElementById('modalVideoModeration');
+      if (modal) modal.classList.remove('active');
+      currentModerationData = null;
+    }
+
+    async function submitVideoModeration() {
+      if (!currentModerationData) return;
+      const reasonEl = document.getElementById('modalModReason');
+      const reason = (reasonEl?.value || '').trim();
+      if (!reason) {
+        showToast('Por favor, informe o motivo antes de confirmar.', true);
+        if (reasonEl) reasonEl.focus();
+        return;
+      }
+
+      const confirmBtn = document.getElementById('modalModConfirmBtn');
+      if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Processando...';
+      }
+
+      try {
+        const res = await api(`/api/videos/${encodeURIComponent(currentModerationData.videoId)}/moderate`, {
+          method: 'POST',
+          body: {
+            action: currentModerationData.action,
+            reason
+          }
+        });
+
+        showToast(res.message || 'Ação executada com sucesso!', false);
+        closeModerationModal();
+        await loadStorageDetails();
+      } catch (err) {
+        showToast(err.message || 'Erro ao processar moderação.', true);
+      } finally {
+        if (confirmBtn) {
+          confirmBtn.disabled = false;
+          confirmBtn.textContent = currentModerationData?.action === 'delete' ? 'Confirmar Exclusão' : 'Confirmar Bloqueio';
+        }
+      }
+    }
+
+    async function unblockVideoModeration(videoId, videoTitle) {
+      if (!confirm(`Deseja desbloquear o vídeo "${videoTitle}"? Ele voltará a ficar disponível para reprodução.`)) {
+        return;
+      }
+      try {
+        const res = await api(`/api/videos/${encodeURIComponent(videoId)}/moderate`, {
+          method: 'POST',
+          body: { action: 'unblock' }
+        });
+        showToast(res.message || 'Vídeo desbloqueado com sucesso!', false);
+        await loadStorageDetails();
+      } catch (err) {
+        showToast(err.message || 'Erro ao desbloquear vídeo.', true);
+      }
     }
 
     function applyOverviewUI(aData) {
@@ -8598,7 +8771,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       el.innerHTML = `
         <div class="video-thumb-stage">
           <video src="${v.video_url}#t=0.5" preload="metadata" muted playsinline></video>
-          <div class="thumb-badge-source">${isLocal ? 'Hospedado' : 'Cloudflare R2'}</div>
+          ${v.blocked_at ? `<div class="thumb-badge-source" style="background:#ef4444;color:#fff;" title="Bloqueado: ${escapeHtml(v.blocked_reason || '')}">Bloqueado</div>` : `<div class="thumb-badge-source">${isLocal ? 'Hospedado' : 'Cloudflare R2'}</div>`}
           ${v.duration ? `<div class="thumb-badge-duration">${escapeHtml(v.duration)}</div>` : ''}
           <div class="thumb-play-hover" onclick="openEditor('${v.id}')">
             <div class="play-circle-btn">
