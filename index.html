@@ -6594,6 +6594,7 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
         </div>
       </section>
 
+      <section class="tab-view" id="viewPlayerDetails">
         <div class="vturb-editor-layout">
           <div class="vturb-editor-topbar">
             <div class="vturb-editor-title-wrap" style="max-width: 60%;">
@@ -8935,9 +8936,24 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       } else if (p === '/settings/profile' || p === '/settings' || p.startsWith('/settings/') || p === '/configuracoes' || p.startsWith('/configuracoes/')) {
         navigateTo('settings', false);
         switchSettingsTab('account', false);
+      } else if (/^\/players\/([^/]+)\/edit\/(.+)\/?$/.test(p)) {
+        const m = p.match(/^\/players\/([^/]+)\/edit\/(.+)\/?$/);
+        const vidId = m[1];
+        const sectionSlug = m[2];
+        const panelKey = vturbSlugToPanel[sectionSlug] || sectionSlug;
+        if (currentEditingVideoId === vidId && document.body.classList.contains('is-editor-mode')) {
+          openEditorPanel(panelKey, false);
+        } else {
+          openEditor(vidId, false, panelKey);
+        }
       } else if (/^\/players\/([^/]+)\/edit\/?$/.test(p)) {
         const m = p.match(/^\/players\/([^/]+)\/edit\/?$/);
-        openEditor(m[1], false);
+        const vidId = m[1];
+        if (currentEditingVideoId === vidId && document.body.classList.contains('is-editor-mode')) {
+          closeEditorPanel(false);
+        } else {
+          openEditor(vidId, false);
+        }
       } else if (/^\/players\/([^/]+)\/analytics(?:\/([^/]+))?\/?$/.test(p) || /^\/video\/([^/]+)\/analytics(?:\/([^/]+))?\/?$/.test(p)) {
         const m = p.match(/^\/(?:players|video)\/([^/]+)\/analytics(?:\/([^/]+))?\/?$/);
         const vidId = m[1];
@@ -11633,7 +11649,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           <div class="va-retention-toolbar">
             <div class="va-toolbar-group">
               <div class="va-pill-btn" style="cursor:default;">
-                <span style="font-size:14px;">🇲🇿</span>
+                <span style="font-weight:700;font-size:12px;color:var(--text-muted);">MZ</span>
                 <span>MT</span>
               </div>
             </div>
@@ -11742,7 +11758,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         <div class="va-retention-toolbar">
           <div class="va-toolbar-group">
             <div class="va-pill-btn" style="cursor:default;">
-              <span style="font-size:14px;">🇲🇿</span>
+              <span style="font-weight:700;font-size:12px;color:var(--text-muted);">MZ</span>
               <span>MT</span>
             </div>
             ${sub === 'traffic' ? `
@@ -13038,23 +13054,29 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       });
     }
 
-    const vturbDrawerTitles = {
-      estilo: 'Estilo',
-      progresso: 'Progresso Inteligente',
-      autoplay: 'Smart Autoplay™',
-      turbo: 'Turbo',
-      headlines: 'Headlines',
-      filtro: 'Filtro de Tráfego',
-      cta: 'Botões de ação',
-      thumb: 'ThumbSniper™',
-      resume: 'Continuar assistindo',
-      ganchos: 'Mini-Ganchos™',
-      pixels: 'Pixels',
-      legendas: 'Legendas',
-      playback: 'Opções de Reprodução'
+    const vturbPanelSlugs = {
+      estilo: 'styles',
+      progresso: 'smart-progress',
+      autoplay: 'smart-autoplay-v2',
+      turbo: 'turbo-v3',
+      headlines: 'headlines',
+      filtro: 'traffic-filter',
+      cta: 'call-actions',
+      thumb: 'thumb-sniper',
+      resume: 'keep-watching',
+      ganchos: 'mini-hooks',
+      pixels: 'pixels',
+      legendas: 'subtitle',
+      playback: 'playback-options'
     };
 
-    async function openEditor(id, updateUrl = true) {
+    const vturbSlugToPanel = Object.fromEntries(
+      Object.entries(vturbPanelSlugs).map(([k, v]) => [v, k])
+    );
+
+    let currentEditorPanelKey = null;
+
+    async function openEditor(id, updateUrl = true, initialPanel = null) {
       currentEditingVideoId = id;
       let v = videos.find(x => x.id === id);
       if (!v) {
@@ -13161,20 +13183,24 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       generateEmbedSnippets(v);
       syncSidebarBadges(s);
 
-      openEditorDrawer('estilo');
-
-      if (updateUrl && window.location.pathname !== `/players/${id}/edit`) {
-        history.pushState({ tab: 'editor', videoId: id }, '', `/players/${id}/edit`);
+      if (initialPanel) {
+        openEditorPanel(initialPanel, updateUrl);
+      } else {
+        closeEditorPanel(false);
+        if (updateUrl && window.location.pathname !== `/players/${id}/edit`) {
+          history.pushState({ tab: 'editor', videoId: id }, '', `/players/${id}/edit`);
+        }
       }
 
       liveUpdateSettings();
     }
 
     function exitEditor() {
+      currentEditorPanelKey = null;
       document.body.classList.remove('is-editor-mode');
       const vidId = currentEditingVideoId;
       currentEditingVideoId = null;
-      closeEditorDrawer();
+      closeEditorPanel(false);
       if (vidId) {
         openPlayerDetails(vidId, true);
       } else {
@@ -13293,20 +13319,34 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       });
     }
 
-    function openEditorDrawer(panelKey) {
+    function onEditorBackClick() {
+      if (currentEditorPanelKey) {
+        closeEditorPanel();
+      } else {
+        exitEditor();
+      }
+    }
+
+    function openEditorPanel(panelKey, updateUrl = true) {
+      currentEditorPanelKey = panelKey;
+
       document.querySelectorAll('.vturb-editor-item').forEach(el => el.classList.remove('active'));
       const activeItem = document.getElementById(`vturbItem${capitalize(panelKey)}`);
       if (activeItem) activeItem.classList.add('active');
 
-      const drawer = document.getElementById('vturbSettingsDrawer');
-      if (drawer) drawer.classList.add('open');
+      const panels = document.getElementById('vturbEditorPanels');
+      const preview = document.getElementById('vturbPreviewStage');
+      if (panels) panels.style.display = 'flex';
+      if (preview) preview.style.display = 'none';
 
-      const titleEl = document.getElementById('drawerTitle');
-      if (titleEl && vturbDrawerTitles[panelKey]) titleEl.textContent = vturbDrawerTitles[panelKey];
+      document.querySelectorAll('.vturb-editor-panel').forEach(p => p.style.display = 'none');
+      const targetPanel = document.getElementById(`edPanel${capitalize(panelKey)}`);
+      if (targetPanel) targetPanel.style.display = 'flex';
 
-      document.querySelectorAll('.drawer-panel-section').forEach(p => p.style.display = 'none');
-      const targetPanel = document.getElementById(`drawerPanel${capitalize(panelKey)}`);
-      if (targetPanel) targetPanel.style.display = 'block';
+      const backLabel = document.getElementById('btnEditorBackLabel');
+      if (backLabel) backLabel.textContent = 'Voltar a Customização';
+      const actions = document.getElementById('editorSidebarHeaderActions');
+      if (actions) actions.style.display = 'none';
 
       if (panelKey === 'autoplay') {
         const iframe = document.getElementById('editorPreviewFrame');
@@ -13314,12 +13354,46 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           iframe.contentWindow.postMessage({ type: 'SHOW_AUDIO_OVERLAY' }, '*');
         }
       }
+
+      if (updateUrl && currentEditingVideoId) {
+        const slug = vturbPanelSlugs[panelKey] || panelKey;
+        const newPath = `/players/${currentEditingVideoId}/edit/${slug}`;
+        if (window.location.pathname !== newPath) {
+          history.pushState({ tab: 'editor', videoId: currentEditingVideoId, panel: panelKey }, '', newPath);
+        }
+      }
+    }
+
+    function closeEditorPanel(updateUrl = true) {
+      currentEditorPanelKey = null;
+
+      const panels = document.getElementById('vturbEditorPanels');
+      const preview = document.getElementById('vturbPreviewStage');
+      if (panels) panels.style.display = 'none';
+      if (preview) preview.style.display = 'flex';
+
+      document.querySelectorAll('.vturb-editor-panel').forEach(p => p.style.display = 'none');
+      document.querySelectorAll('.vturb-editor-item').forEach(el => el.classList.remove('active'));
+
+      const backLabel = document.getElementById('btnEditorBackLabel');
+      if (backLabel) backLabel.textContent = 'Voltar ao vídeo';
+      const actions = document.getElementById('editorSidebarHeaderActions');
+      if (actions) actions.style.display = 'flex';
+
+      if (updateUrl && currentEditingVideoId) {
+        const newPath = `/players/${currentEditingVideoId}/edit`;
+        if (window.location.pathname !== newPath) {
+          history.pushState({ tab: 'editor', videoId: currentEditingVideoId }, '', newPath);
+        }
+      }
+    }
+
+    function openEditorDrawer(panelKey) {
+      openEditorPanel(panelKey);
     }
 
     function closeEditorDrawer() {
-      const drawer = document.getElementById('vturbSettingsDrawer');
-      if (drawer) drawer.classList.remove('open');
-      document.querySelectorAll('.vturb-editor-item').forEach(el => el.classList.remove('active'));
+      closeEditorPanel();
     }
 
     function promptRenameVideo() {
