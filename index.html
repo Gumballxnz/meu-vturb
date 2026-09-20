@@ -5284,7 +5284,6 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
                     <span id="vaTimeAxisMid2">--:--</span>
                     <span id="vaTimeAxisEnd">--:--</span>
                   </div>
-                  <div id="vaRetentionSubtabBadge" class="va-retention-subtab-badge" style="display: none;"></div>
                 </div>
 
                 <div id="vaRetentionSubContentArea"></div>
@@ -8572,7 +8571,17 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         openEditor(m[1], false);
       } else if (/^\/players\/([^/]+)\/analytics(?:\/([^/]+))?\/?$/.test(p) || /^\/video\/([^/]+)\/analytics(?:\/([^/]+))?\/?$/.test(p)) {
         const m = p.match(/^\/(?:players|video)\/([^/]+)\/analytics(?:\/([^/]+))?\/?$/);
-        openVideoAnalyticsFull(m[1], m[2] || 'retention', false);
+        const vidId = m[1];
+        const sub = (m[2] || '').toLowerCase();
+        const retSubtabs = ['countries', 'devices', 'os', 'browsers', 'traffic'];
+        const mainTabs = ['summary', 'funnel', 'benchmark', 'best-times', 'live'];
+        if (retSubtabs.includes(sub)) {
+          openVideoAnalyticsFull(vidId, 'retention', false, sub);
+        } else if (mainTabs.includes(sub)) {
+          openVideoAnalyticsFull(vidId, sub, false, 'general');
+        } else {
+          openVideoAnalyticsFull(vidId, 'retention', false, 'general');
+        }
       } else if (p === '/folders/top-videos') {
         navigateTo('videos', false);
         switchLibrarySubtab('top', false);
@@ -10520,19 +10529,55 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
     let currentVaTab = 'retention';
     let currentVaRetSubtab = 'general';
     let currentVaData = null;
+    let vaRetentionSelectedCols = ['views', 'unique_views', 'plays', 'unique_plays', 'play_rate', 'engagement', 'pitch_retention', 'pitch_audience', 'cta_clicks', 'conversions', 'conversion_rate', 'revenue'];
+    let vaRetentionSortCol = 'plays';
+    let vaRetentionSortDir = 'desc';
+    let vaCurrentTrafficParam = 'utm_source';
+    let vaTrafficSearchQuery = '';
+    let vaCurrentRetentionFilter = null;
+    let vaSearchTimeout = null;
+
+    const vaRetentionAllCols = [
+      { key: 'views', label: 'Visualizações', align: 'right' },
+      { key: 'unique_views', label: 'Vis. Únicas', align: 'right' },
+      { key: 'plays', label: 'Plays', align: 'right' },
+      { key: 'unique_plays', label: 'Plays Únicos', align: 'right' },
+      { key: 'play_rate', label: 'Play Rate', align: 'right', format: v => `${Number(v || 0).toFixed(2).replace('.', ',')}%` },
+      { key: 'engagement', label: 'Engajamento', align: 'right', format: v => `${Math.round(Number(v || 0))}%` },
+      { key: 'pitch_retention', label: 'Retenção ao Pitch', align: 'right', format: v => `${Number(v || 0).toFixed(2).replace('.', ',')}%` },
+      { key: 'pitch_audience', label: 'Audiência do Pitch', align: 'right' },
+      { key: 'cta_clicks', label: 'Cliques no Botão', align: 'right' },
+      { key: 'conversions', label: 'Conversões', align: 'right' },
+      { key: 'conversion_rate', label: 'Taxa de Conversão', align: 'right', format: v => `${Number(v || 0).toFixed(2).replace('.', ',')}%` },
+      { key: 'revenue', label: 'Receita', align: 'right', format: v => `${Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MT` }
+    ];
 
     async function openVideoAnalytics(id) {
-      openVideoAnalyticsFull(id, 'retention', true);
+      openVideoAnalyticsFull(id, 'retention', true, 'general');
     }
 
-    async function openVideoAnalyticsFull(id, tab = 'retention', updateUrl = true) {
+    async function openVideoAnalyticsFull(id, tab = 'retention', updateUrl = true, subtab = 'general') {
       currentVaVideoId = id;
-      currentVaTab = tab;
+      const retSubtabs = ['countries', 'devices', 'os', 'browsers', 'traffic'];
+      if (retSubtabs.includes(tab)) {
+        currentVaTab = 'retention';
+        currentVaRetSubtab = tab;
+      } else {
+        currentVaTab = tab || 'retention';
+        currentVaRetSubtab = subtab || 'general';
+      }
       navigateTo('videoAnalytics', false);
 
-      const targetUrl = `/players/${encodeURIComponent(id)}/analytics${tab !== 'retention' ? '/' + tab : ''}?returnTo=%2Ffolders`;
       if (updateUrl) {
-        history.pushState({ tab: 'videoAnalytics', videoId: id, subtab: tab }, '', targetUrl);
+        let targetUrl;
+        if (currentVaTab === 'retention') {
+          targetUrl = currentVaRetSubtab === 'general'
+            ? `/players/${encodeURIComponent(id)}/analytics?returnTo=%2Ffolders`
+            : `/players/${encodeURIComponent(id)}/analytics/${currentVaRetSubtab}?returnTo=%2Ffolders`;
+        } else {
+          targetUrl = `/players/${encodeURIComponent(id)}/analytics/${currentVaTab}?returnTo=%2Ffolders`;
+        }
+        history.pushState({ tab: 'videoAnalytics', videoId: id, vaTab: currentVaTab, subtab: currentVaRetSubtab }, '', targetUrl);
       }
 
       const v = (videos || []).find(x => x.id === id) || (topVideos || []).find(x => x.id === id);
@@ -10541,7 +10586,10 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         titleEl.textContent = v ? v.title : id;
       }
 
-      switchVaTab(tab, false);
+      switchVaTab(currentVaTab, false);
+      if (currentVaTab === 'retention') {
+        switchVaRetentionSubtab(currentVaRetSubtab, false);
+      }
     }
 
     function vaGoBack() {
@@ -10565,8 +10613,15 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       });
 
       if (updateUrl && currentVaVideoId) {
-        const subPath = tab === 'retention' ? '' : '/' + tab;
-        history.pushState({ tab: 'videoAnalytics', videoId: currentVaVideoId, subtab: tab }, '', `/players/${encodeURIComponent(currentVaVideoId)}/analytics${subPath}?returnTo=%2Ffolders`);
+        let targetUrl;
+        if (tab === 'retention') {
+          targetUrl = currentVaRetSubtab === 'general'
+            ? `/players/${encodeURIComponent(currentVaVideoId)}/analytics?returnTo=%2Ffolders`
+            : `/players/${encodeURIComponent(currentVaVideoId)}/analytics/${currentVaRetSubtab}?returnTo=%2Ffolders`;
+        } else {
+          targetUrl = `/players/${encodeURIComponent(currentVaVideoId)}/analytics/${tab}?returnTo=%2Ffolders`;
+        }
+        history.pushState({ tab: 'videoAnalytics', videoId: currentVaVideoId, vaTab: tab, subtab: currentVaRetSubtab }, '', targetUrl);
       }
 
       vaLoadCurrentTab();
@@ -10606,15 +10661,22 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
     }
 
     async function loadVaRetention() {
-      const chartBox = document.getElementById('vaRetentionChartContainer');
       const subArea = document.getElementById('vaRetentionSubContentArea');
       if (!subArea) return;
-      subArea.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:20px;">Carregando métricas...</div>';
+      subArea.innerHTML = '<div style="color:var(--text-dim);font-size:13px;padding:36px;text-align:center;">Carregando métricas...</div>';
 
       try {
         const qs = getVaQueryStr();
+        let extraQs = `&trafficParam=${encodeURIComponent(vaCurrentTrafficParam || 'utm_source')}`;
+        if (vaCurrentRetentionFilter && vaCurrentRetentionFilter.value) {
+          extraQs += `&filterType=${encodeURIComponent(vaCurrentRetentionFilter.type)}&filterValue=${encodeURIComponent(vaCurrentRetentionFilter.value)}`;
+        }
+        if (vaTrafficSearchQuery) {
+          extraQs += `&search=${encodeURIComponent(vaTrafficSearchQuery)}`;
+        }
+
         const res = await api(`/api/analytics/video/${currentVaVideoId}?${qs}`);
-        const retRes = await api(`/api/analytics/video/${currentVaVideoId}/retention?${qs}`);
+        const retRes = await api(`/api/analytics/video/${currentVaVideoId}/retention?${qs}${extraQs}`);
         currentVaData = { ...res, ...retRes };
 
         const vidObj = (videos || []).find(x => x.id === currentVaVideoId) || (topVideos || []).find(x => x.id === currentVaVideoId);
@@ -10626,7 +10688,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
           }
         }
 
-        renderVaRetentionOverlaySvg(res.retentionCurve || []);
+        renderVaRetentionOverlaySvg(retRes.retentionCurve || res.retentionCurve || []);
 
         const durSec = vidObj && vidObj.duration ? parseDurationToSeconds(vidObj.duration) : 60;
         formatVaTimeAxis(durSec);
@@ -10708,7 +10770,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       svg.innerHTML = svgInner;
     }
 
-    function switchVaRetentionSubtab(sub) {
+    function switchVaRetentionSubtab(sub, updateUrl = true) {
       currentVaRetSubtab = sub;
       const subs = ['general', 'countries', 'devices', 'os', 'browsers', 'traffic'];
       const btns = document.querySelectorAll('#vaPane-retention .va-subtab-btn');
@@ -10716,18 +10778,140 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         if (btns[idx]) btns[idx].classList.toggle('active', s === sub);
       });
 
-      const badge = document.getElementById('vaRetentionSubtabBadge');
-      if (badge) {
-        if (sub === 'general') {
-          badge.style.display = 'none';
-        } else {
-          const names = { countries: 'Países', devices: 'Dispositivos', os: 'Sistema Operacional', browsers: 'Navegadores', traffic: 'Origem do Tráfego' };
-          badge.textContent = names[sub] || sub;
-          badge.style.display = 'block';
-        }
+      if (updateUrl && currentVaVideoId) {
+        const targetUrl = sub === 'general'
+          ? `/players/${encodeURIComponent(currentVaVideoId)}/analytics?returnTo=%2Ffolders`
+          : `/players/${encodeURIComponent(currentVaVideoId)}/analytics/${sub}?returnTo=%2Ffolders`;
+        history.pushState({ tab: 'videoAnalytics', videoId: currentVaVideoId, vaTab: 'retention', subtab: sub }, '', targetUrl);
       }
 
       renderVaCurrentSubtabView();
+    }
+
+    function toggleVaColsDropdown(event) {
+      if (event) event.stopPropagation();
+      const menu = document.getElementById('vaColsDropdownMenu');
+      if (menu) menu.classList.toggle('active');
+    }
+
+    document.addEventListener('click', e => {
+      const menu = document.getElementById('vaColsDropdownMenu');
+      const btn = document.getElementById('vaColsDropdownToggleBtn');
+      if (menu && menu.classList.contains('active')) {
+        if (!menu.contains(e.target) && (!btn || !btn.contains(e.target))) {
+          menu.classList.remove('active');
+        }
+      }
+    });
+
+    function toggleVaRetentionColumn(colKey) {
+      const idx = vaRetentionSelectedCols.indexOf(colKey);
+      if (idx >= 0) {
+        if (vaRetentionSelectedCols.length <= 1) {
+          showToast('Pelo menos uma coluna deve permanecer visível.', true);
+          return;
+        }
+        vaRetentionSelectedCols.splice(idx, 1);
+      } else {
+        vaRetentionSelectedCols.push(colKey);
+      }
+      renderVaCurrentSubtabView();
+    }
+
+    function sortVaRetentionTable(colKey) {
+      if (vaRetentionSortCol === colKey) {
+        vaRetentionSortDir = vaRetentionSortDir === 'desc' ? 'asc' : 'desc';
+      } else {
+        vaRetentionSortCol = colKey;
+        vaRetentionSortDir = 'desc';
+      }
+      renderVaCurrentSubtabView();
+    }
+
+    function onVaTrafficParamChange(param) {
+      vaCurrentTrafficParam = param;
+      loadVaRetention();
+    }
+
+    function onVaTrafficSearch(val) {
+      vaTrafficSearchQuery = val;
+      clearTimeout(vaSearchTimeout);
+      vaSearchTimeout = setTimeout(() => {
+        loadVaRetention();
+      }, 300);
+    }
+
+    function toggleVaRetentionSegmentFilter(sub, val) {
+      if (vaCurrentRetentionFilter && vaCurrentRetentionFilter.type === sub && vaCurrentRetentionFilter.value === val) {
+        vaCurrentRetentionFilter = null;
+      } else {
+        vaCurrentRetentionFilter = { type: sub, value: val };
+      }
+      loadVaRetention();
+    }
+
+    function vaShareRetentionLink() {
+      try {
+        navigator.clipboard.writeText(window.location.href);
+        showToast('Link do analytics copiado para a área de transferência!');
+      } catch (e) {
+        showToast('Link: ' + window.location.href);
+      }
+    }
+
+    function vaDownloadMetricsCsv() {
+      if (!currentVaData) return;
+      const sub = currentVaRetSubtab;
+      let csv = '';
+
+      if (sub === 'general') {
+        const m = currentVaData.metrics || {};
+        csv = 'Métrica,Valor\n';
+        csv += `Visualizações,${m.views || 0}\n`;
+        csv += `Visualizações Únicas,${m.uniqueVisitors || 0}\n`;
+        csv += `Plays,${m.plays || 0}\n`;
+        csv += `Plays Únicos,${m.uniqueVisitors || 0}\n`;
+        csv += `Play Rate,${m.playRate || 0}%\n`;
+        csv += `Retenção ao Pitch,${m.pitchRate || 0}%\n`;
+        csv += `Audiência do Pitch,${m.pitchViews || 0}\n`;
+        csv += `Cliques no Botão,${m.ctaClicks || 0}\n`;
+        csv += `Conversões,${m.conversions || 0}\n`;
+        csv += `Taxa de Conversão,${m.conversionRate || 0}%\n`;
+        csv += `Receita (MT),${m.revenue || 0}\n`;
+      } else {
+        const mapping = {
+          countries: { list: currentVaData.countries || [], title: 'País' },
+          devices: { list: currentVaData.devices || [], title: 'Dispositivo' },
+          os: { list: currentVaData.os || [], title: 'Sistema Operacional' },
+          browsers: { list: currentVaData.browsers || [], title: 'Navegador' },
+          traffic: { list: currentVaData.traffic || [], title: 'Origem' }
+        };
+        const item = mapping[sub] || { list: [], title: sub };
+        const activeDefs = vaRetentionAllCols.filter(c => vaRetentionSelectedCols.includes(c.key));
+        const headers = [item.title, ...activeDefs.map(c => c.label)];
+        csv = headers.join(',') + '\n';
+        (item.list || []).forEach(row => {
+          const values = [
+            `"${String(row.name || '').replace(/"/g, '""')}"`,
+            ...activeDefs.map(c => {
+              const val = row[c.key] !== undefined ? row[c.key] : 0;
+              return typeof val === 'number' ? val : `"${String(val).replace(/"/g, '""')}"`;
+            })
+          ];
+          csv += values.join(',') + '\n';
+        });
+      }
+
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `metricas_${sub}_${currentVaVideoId || 'video'}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Arquivo CSV baixado com sucesso!');
     }
 
     function renderVaCurrentSubtabView() {
@@ -10738,43 +10922,101 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
       const m = currentVaData.metrics || {};
 
       if (sub === 'general') {
+        const pitchSecFmt = currentVaData.pitchSec ? (() => {
+          const s = currentVaData.pitchSec;
+          const min = Math.floor(s / 60).toString().padStart(2, '0');
+          const sec = (s % 60).toString().padStart(2, '0');
+          return `${min}:${sec}`;
+        })() : '00:30';
+
         subArea.innerHTML = `
           <div style="font-size:16px;font-weight:700;color:var(--text-main);margin-bottom:14px;">Métricas</div>
+
+          <div class="va-pitch-banner" id="vaPitchBanner">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+              <span>IA detectou o pitch em <strong>${pitchSecFmt}</strong></span>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <button class="btn-primary-action" style="padding:5px 14px;font-size:12px;" onclick="document.getElementById('vaPitchBanner').style.display='none'">Use este tempo</button>
+              <button style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:16px;" onclick="document.getElementById('vaPitchBanner').style.display='none'">&times;</button>
+            </div>
+          </div>
+
+          <div class="va-retention-toolbar">
+            <div class="va-toolbar-group">
+              <div class="va-pill-btn" style="cursor:default;">
+                <span style="font-size:14px;">🇲🇿</span>
+                <span>MT</span>
+              </div>
+            </div>
+            <div class="va-toolbar-group">
+              <button class="va-pill-btn" onclick="vaDownloadMetricsCsv()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>Baixar Métricas</span>
+              </button>
+              <button class="va-pill-btn" onclick="vaShareRetentionLink()">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                <span>Compartilhar</span>
+              </button>
+            </div>
+          </div>
+
           <div class="metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-bottom: 24px;">
             <div class="metric-card">
               <div class="metric-title">Visualizações</div>
-              <div class="metric-value">${(m.views || 0).toLocaleString()}</div>
+              <div class="metric-value">${(m.views || 0).toLocaleString('pt-BR')}</div>
               <div class="metric-sub"><span class="metric-diff-badge ${m.viewsDiff?.positive ? 'positive' : 'neutral'}">${m.viewsDiff?.text || '0%'}</span> vs anterior</div>
             </div>
             <div class="metric-card">
               <div class="metric-title">Visualizações Únicas</div>
-              <div class="metric-value">${(m.uniqueVisitors || 0).toLocaleString()}</div>
+              <div class="metric-value">${(m.uniqueVisitors || 0).toLocaleString('pt-BR')}</div>
               <div class="metric-sub"><span class="metric-diff-badge ${m.uniqueVisitorsDiff?.positive ? 'positive' : 'neutral'}">${m.uniqueVisitorsDiff?.text || '0%'}</span> vs anterior</div>
             </div>
             <div class="metric-card">
               <div class="metric-title">Plays</div>
-              <div class="metric-value">${(m.plays || 0).toLocaleString()}</div>
+              <div class="metric-value">${(m.plays || 0).toLocaleString('pt-BR')}</div>
               <div class="metric-sub"><span class="metric-diff-badge ${m.playRateDiff?.positive ? 'positive' : 'neutral'}">${m.playRateDiff?.text || '0%'}</span> vs anterior</div>
             </div>
             <div class="metric-card">
               <div class="metric-title">Plays Únicos</div>
-              <div class="metric-value">${(m.uniqueVisitors || 0).toLocaleString()}</div>
+              <div class="metric-value">${(m.uniqueVisitors || 0).toLocaleString('pt-BR')}</div>
               <div class="metric-sub">${m.playRate || '0.0'}% Play Rate</div>
             </div>
             <div class="metric-card">
-              <div class="metric-title">Taxa de Play</div>
+              <div class="metric-title">Play Rate</div>
               <div class="metric-value">${m.playRate || '0.0'}%</div>
               <div class="metric-sub"><span class="metric-diff-badge ${m.playRateDiff?.positive ? 'positive' : 'neutral'}">${m.playRateDiff?.text || '0%'}</span> vs anterior</div>
             </div>
             <div class="metric-card">
+              <div class="metric-title">Retenção ao Pitch</div>
+              <div class="metric-value">${m.pitchRate || '0.0'}%</div>
+              <div class="metric-sub"><a href="#" onclick="openEditor('${currentVaVideoId}'); return false;" style="color:var(--primary);text-decoration:none;">Definir Tempo do Pitch</a></div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-title">Audiência do Pitch</div>
+              <div class="metric-value">${(m.pitchViews || 0).toLocaleString('pt-BR')}</div>
+              <div class="metric-sub"><a href="#" onclick="openEditor('${currentVaVideoId}'); return false;" style="color:var(--primary);text-decoration:none;">Definir Tempo do Pitch</a></div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-title">Engajamento</div>
+              <div class="metric-value">${m.engagement !== undefined ? m.engagement : '0'}%</div>
+              <div class="metric-sub">milestones assistidos</div>
+            </div>
+            <div class="metric-card">
               <div class="metric-title">Cliques no Botão</div>
-              <div class="metric-value">${(m.ctaClicks || 0).toLocaleString()}</div>
+              <div class="metric-value">${(m.ctaClicks || 0).toLocaleString('pt-BR')}</div>
               <div class="metric-sub positive">${m.ctaClickRate || '0.0'}% CTR</div>
             </div>
             <div class="metric-card">
               <div class="metric-title">Conversões</div>
-              <div class="metric-value">${(m.conversions || 0).toLocaleString()}</div>
+              <div class="metric-value">${(m.conversions || 0).toLocaleString('pt-BR')}</div>
               <div class="metric-sub">${m.conversionRate || '0.00'}% conv.</div>
+            </div>
+            <div class="metric-card">
+              <div class="metric-title">Taxa de Conversão</div>
+              <div class="metric-value">${m.conversionRate || '0.00'}%</div>
+              <div class="metric-sub"><span class="metric-diff-badge ${m.conversionsDiff?.positive ? 'positive' : 'neutral'}">${m.conversionsDiff?.text || '0%'}</span> vs anterior</div>
             </div>
             <div class="metric-card">
               <div class="metric-title">Receita</div>
@@ -10791,47 +11033,125 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         devices: { list: currentVaData.devices || [], title: 'Dispositivo' },
         os: { list: currentVaData.os || [], title: 'Sistema Operacional' },
         browsers: { list: currentVaData.browsers || [], title: 'Navegador' },
-        traffic: { list: currentVaData.traffic || [], title: 'Origem do Tráfego' }
+        traffic: { list: currentVaData.traffic || [], title: 'Origem' }
       };
 
       const itemData = mapping[sub] || { list: [], title: sub };
-      const list = itemData.list;
-      const totalPlays = currentVaData.totalPlays || (m.plays || 1);
+      let list = [...itemData.list];
 
-      if (!list || !list.length) {
+      list.sort((a, b) => {
+        let va = a[vaRetentionSortCol];
+        let vb = b[vaRetentionSortCol];
+        if (typeof va === 'string') va = va.toLowerCase();
+        if (typeof vb === 'string') vb = vb.toLowerCase();
+        if (va < vb) return vaRetentionSortDir === 'asc' ? -1 : 1;
+        if (va > vb) return vaRetentionSortDir === 'asc' ? 1 : -1;
+        return 0;
+      });
+
+      const activeCols = vaRetentionAllCols.filter(c => vaRetentionSelectedCols.includes(c.key));
+
+      let toolbarHtml = `
+        <div class="va-retention-toolbar">
+          <div class="va-toolbar-group">
+            <div class="va-pill-btn" style="cursor:default;">
+              <span style="font-size:14px;">🇲🇿</span>
+              <span>MT</span>
+            </div>
+            ${sub === 'traffic' ? `
+              <select class="va-param-select" onchange="onVaTrafficParamChange(this.value)">
+                <option value="utm_source" ${vaCurrentTrafficParam === 'utm_source' ? 'selected' : ''}>utm_source</option>
+                <option value="utm_medium" ${vaCurrentTrafficParam === 'utm_medium' ? 'selected' : ''}>utm_medium</option>
+                <option value="utm_campaign" ${vaCurrentTrafficParam === 'utm_campaign' ? 'selected' : ''}>utm_campaign</option>
+                <option value="utm_term" ${vaCurrentTrafficParam === 'utm_term' ? 'selected' : ''}>utm_term</option>
+                <option value="utm_content" ${vaCurrentTrafficParam === 'utm_content' ? 'selected' : ''}>utm_content</option>
+                <option value="src" ${vaCurrentTrafficParam === 'src' ? 'selected' : ''}>src</option>
+                <option value="domain" ${vaCurrentTrafficParam === 'domain' ? 'selected' : ''}>domain</option>
+              </select>
+              <div style="position:relative;display:inline-flex;align-items:center;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute;left:10px;color:var(--text-dim);pointer-events:none;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" class="va-search-input" placeholder="Buscar origens" value="${escapeHtml(vaTrafficSearchQuery)}" oninput="onVaTrafficSearch(this.value)">
+              </div>
+            ` : ''}
+          </div>
+          <div class="va-toolbar-group">
+            <div style="position:relative;display:inline-block;">
+              <button class="va-pill-btn" id="vaColsDropdownToggleBtn" onclick="toggleVaColsDropdown(event)">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                <span>Visualização de Colunas</span>
+              </button>
+              <div class="va-cols-dropdown" id="vaColsDropdownMenu">
+                <div style="padding:6px 14px 8px;font-size:11px;font-weight:700;color:var(--text-dim);border-bottom:1px solid var(--border-subtle);text-transform:uppercase;">Coluna</div>
+                ${vaRetentionAllCols.map(c => `
+                  <div class="va-col-item" onclick="toggleVaRetentionColumn('${c.key}')">
+                    <span>${escapeHtml(c.label)}</span>
+                    <input type="checkbox" ${vaRetentionSelectedCols.includes(c.key) ? 'checked' : ''} onclick="event.stopPropagation(); toggleVaRetentionColumn('${c.key}')">
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+            <button class="va-pill-btn" onclick="vaDownloadMetricsCsv()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              <span>Baixar Métricas</span>
+            </button>
+          </div>
+        </div>
+      `;
+
+      if (!list || list.length === 0) {
         subArea.innerHTML = `
-          <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;padding:36px;text-align:center;">
-            <p style="font-size:13px;color:var(--text-dim);margin:0;">Nenhum dado disponível neste período para ${itemData.title}.</p>
+          ${toolbarHtml}
+          <div class="va-table-scroll-wrap">
+            <table class="va-data-table">
+              <thead>
+                <tr>
+                  <th style="width:36px;"><input type="checkbox" disabled></th>
+                  <th>${escapeHtml(itemData.title)}</th>
+                  ${activeCols.map(c => `<th style="text-align:${c.align};">${escapeHtml(c.label)}</th>`).join('')}
+                </tr>
+              </thead>
+            </table>
+            <div class="va-empty-state-box">
+              <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--text-dim);margin-bottom:12px;opacity:0.75;">
+                <path d="M22 12h-6l-2 3h-4l-2-3H2v7a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-7z"/>
+                <path d="M5.45 5.11L2 12v0h20v0l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>
+              </svg>
+              <div style="font-size:14px;font-weight:600;color:var(--text-muted);">Não há dados</div>
+            </div>
           </div>
         `;
         return;
       }
 
       subArea.innerHTML = `
-        <div style="background:var(--bg-card);border:1px solid var(--border-subtle);border-radius:12px;overflow:hidden;">
+        ${toolbarHtml}
+        <div class="va-table-scroll-wrap">
           <table class="va-data-table">
             <thead>
               <tr>
-                <th>${escapeHtml(itemData.title)}</th>
-                <th style="text-align:right;">Plays</th>
-                <th style="text-align:right;">% dos Plays</th>
-                <th style="width:200px;">Distribuição</th>
+                <th style="width:36px;"><input type="checkbox"></th>
+                <th class="sortable" onclick="sortVaRetentionTable('name')">
+                  ${escapeHtml(itemData.title)} ${vaRetentionSortCol === 'name' ? (vaRetentionSortDir === 'desc' ? '▼' : '▲') : '↕'}
+                </th>
+                ${activeCols.map(c => `
+                  <th class="sortable" style="text-align:${c.align};" onclick="sortVaRetentionTable('${c.key}')">
+                    ${escapeHtml(c.label)} ${vaRetentionSortCol === c.key ? (vaRetentionSortDir === 'desc' ? '▼' : '▲') : '↕'}
+                  </th>
+                `).join('')}
               </tr>
             </thead>
             <tbody>
-              ${list.map(it => {
-                const count = it.count || 0;
-                const pct = totalPlays > 0 ? ((count / totalPlays) * 100).toFixed(1) : '0.0';
+              ${list.map(row => {
+                const isFiltered = vaCurrentRetentionFilter && vaCurrentRetentionFilter.type === sub && vaCurrentRetentionFilter.value === row.name;
                 return `
-                  <tr>
-                    <td style="font-weight:600;">${escapeHtml(it.name)}</td>
-                    <td style="text-align:right;font-weight:700;">${count.toLocaleString()}</td>
-                    <td style="text-align:right;color:var(--text-dim);">${pct}%</td>
-                    <td>
-                      <div style="height:6px;background:var(--border-subtle);border-radius:3px;overflow:hidden;">
-                        <div style="width:${Math.min(100, Math.max(3, parseFloat(pct)))}%;height:100%;background:var(--primary);border-radius:3px;"></div>
-                      </div>
-                    </td>
+                  <tr class="clickable ${isFiltered ? 'selected' : ''}" onclick="toggleVaRetentionSegmentFilter('${sub}', '${escapeHtml(row.name)}')">
+                    <td onclick="event.stopPropagation()"><input type="checkbox" ${isFiltered ? 'checked' : ''} onchange="toggleVaRetentionSegmentFilter('${sub}', '${escapeHtml(row.name)}')"></td>
+                    <td style="font-weight:600;">${escapeHtml(row.name)}</td>
+                    ${activeCols.map(c => {
+                      const rawVal = row[c.key];
+                      const formatted = c.format ? c.format(rawVal) : (typeof rawVal === 'number' ? rawVal.toLocaleString('pt-BR') : rawVal);
+                      return `<td style="text-align:${c.align};">${formatted}</td>`;
+                    }).join('')}
                   </tr>
                 `;
               }).join('')}
