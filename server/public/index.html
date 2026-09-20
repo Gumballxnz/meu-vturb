@@ -4672,13 +4672,17 @@
       overflow: hidden;
       background: #000;
       display: flex;
-      align-items: center;
-      justify-content: center;
+      align-items: stretch;
+      justify-content: stretch;
+      min-height: 0;
     }
     .phone-screen-container iframe {
+      flex: 1;
       width: 100%;
       height: 100%;
       border: none;
+      display: block;
+      min-height: 0;
     }
 
     .vturb-embed-tabs {
@@ -6393,7 +6397,7 @@ if (window.__initialRoute && document.getElementById('pageTitleLabel')) document
                       <div class="toggle-info-desc">Surge no segundo programado da oferta</div>
                     </div>
                     <label class="switch-clean">
-                      <input type="checkbox" id="edCtaEnabled" checked onchange="liveUpdateSettings()">
+                      <input type="checkbox" id="edCtaEnabled" onchange="liveUpdateSettings()">
                       <span class="slider-clean"></span>
                     </label>
                   </div>
@@ -10743,14 +10747,14 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
                 autoplayText: 'Seu vídeo ja iniciou\\nClique para escutar',
                 fakeProgress: true,
                 blockSeek: true,
-                ctaEnabled: true,
+                ctaEnabled: false,
                 ctaTime: 8,
                 ctaText: 'QUERO GARANTIR MINHA VAGA AGORA',
                 ctaUrl: 'https://seusite.com/checkout',
                 ctaColor: '#10b981',
                 ctaSubtext: 'Compra 100% Segura • Acesso Imediato',
                 resume: true,
-                pixels: true
+                pixels: false
               }
             })
           });
@@ -13541,7 +13545,7 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
         audioNoticeGlow: getVal('edAudioNoticeGlow', 'subtle'),
         fakeProgress: getChecked('edFakeProgress', true),
         blockSeek: getChecked('edBlockSeek', true),
-        ctaEnabled: getChecked('edCtaEnabled', true),
+        ctaEnabled: getChecked('edCtaEnabled', false),
         ctaTime: parseInt(getVal('edCtaTime', '10'), 10) || 0,
         ctaText: getVal('edCtaText', 'QUERO GARANTIR MINHA VAGA'),
         ctaUrl: getVal('edCtaUrl', 'https://seusite.com/checkout'),
@@ -14250,14 +14254,14 @@ webhook-signature: whsec_exemplo_assinatura_secreta_aqui</pre>
               autoplayText: 'Seu vídeo ja iniciou\\nClique para escutar',
               fakeProgress: true,
               blockSeek: true,
-              ctaEnabled: true,
+              ctaEnabled: false,
               ctaTime: 8,
               ctaText: 'QUERO GARANTIR MINHA VAGA AGORA',
               ctaUrl: 'https://seusite.com/checkout',
               ctaColor: '#16A34A',
               ctaSubtext: 'Compra 100% Segura • Acesso Imediato',
               resume: true,
-              pixels: true
+              pixels: false
             }
           })
         });
