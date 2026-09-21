@@ -112,10 +112,84 @@ npm start
 | `PLAYER_DOMAIN` | Dominio exclusivo do player de video (opcional) | *Vazio* |
 | `RESEND_API_KEY` | Chave de API do Resend para envio de e-mails | *Opcional* |
 | `RESEND_FROM_EMAIL` | Remetente autenticado do Resend | `CloudVTurb <onboarding@resend.dev>` |
+| `GOOGLE_CLIENT_ID` | Client ID OAuth 2.0 do Google Cloud | *Opcional (para importacao do Drive)* |
+| `GOOGLE_API_KEY` | Chave de API do Google Cloud para o Google Picker | *Opcional (para importacao do Drive)* |
 | `DATA_DIR` | Diretorio do banco de dados SQLite e avatares | `/app/data` ou `./server/data` |
 | `VIDEOS_DIR` | Diretorio de armazenamento de videos | `/app/videos` ou `./server/videos` |
 
 ---
+
+## Como Configurar a Importacao Direta do Google Drive
+
+A plataforma possui integracao nativa com o **Google Picker API**. Com ela, o usuario clica em **Google Drive**, a janela oficial do Google abre direto no navegador, ele seleciona qualquer video de sua conta (ou de Drives Compartilhados) e o servidor baixa o arquivo via streaming de alta velocidade, processa os metadados com FFmpeg FastStart e disponibiliza o player imediatamente.
+
+### Passo a Passo no Google Cloud Console:
+
+1. Acesse o [Google Cloud Console](https://console.cloud.google.com/) e crie um novo projeto (ex: `CloudVTurb`).
+2. **Ativar as APIs necessarias**:
+   - No menu lateral, va em **APIs e Servicos** ➡️ **Biblioteca**.
+   - Pesquise por **Google Drive API** e clique em **Ativar**.
+   - Pesquise por **Google Picker API** e clique em **Ativar**.
+3. **Configurar a Tela de Consentimento OAuth**:
+   - Va em **APIs e Servicos** ➡️ **Tela de consentimento OAuth**.
+   - Escolha **Externo** e clique em **Criar**.
+   - Preencha o nome do app (`CloudVTurb`) e seu e-mail de suporte.
+   - Em **Escopos**, adicione o escopo `https://www.googleapis.com/auth/drive.file` (permite ler apenas os arquivos que o usuario explicitamente escolher no seletor).
+   - Em **Usuarios de teste**, adicione o e-mail do Google que voce usara para testar (se o app estiver em modo de teste).
+4. **Criar o ID do Cliente OAuth 2.0**:
+   - Va em **APIs e Servicos** ➡️ **Credenciais** ➡️ **Criar Credenciais** ➡️ **ID do cliente OAuth**.
+   - **Tipo de aplicativo**: `Aplicativo da Web`.
+   - **Nome**: `CloudVTurb Web Client`.
+   - **Origens JavaScript autorizadas**:
+     - Para desenvolvimento local: `http://localhost:3000` e `http://localhost:4000`
+     - Para producao: `https://dash.meudominio.com` e `https://meudominio.com` (sem barra no final)
+   - Clique em **Criar** e copie o **ID do Cliente** (ex: `123456789-xxxx.apps.googleusercontent.com`).
+5. **Criar a Chave de API (API Key)**:
+   - Na mesma pagina de **Credenciais**, clique em **Criar Credenciais** ➡️ **Chave de API**.
+   - Copie a chave gerada (ex: `AIzaSyD...`).
+   - *(Opcional recomendado)*: Clique em **Restringir chave** e selecione apenas a **Google Picker API**.
+6. **Inserir no `.env` do Servidor**:
+   ```env
+   GOOGLE_CLIENT_ID=123456789-xxxx.apps.googleusercontent.com
+   GOOGLE_API_KEY=AIzaSyD...
+   ```
+7. Reinicie o servidor (`docker compose restart` ou `npm start`). O botao do Google Drive no modal de novo video estara 100% operacional.
+
+---
+
+## Como Configurar o Envio de E-mails via Resend
+
+O **Resend** e utilizado para o envio transacional de e-mails:
+- Codigo de 8 digitos para confirmacao de cadastro.
+- Recuperacao de senha esquecida.
+- Convite de novos membros de equipe pelo Administrador.
+- Alertas automaticos de moderacao e seguranca.
+
+### Comportamento em Desenvolvimento vs Producao:
+- **Sem chave configurada (`RESEND_API_KEY` vazia)**: O sistema nao quebra nem trava! O codigo de 8 digitos de verificacao e exibido diretamente nos logs do console do servidor (`docker compose logs -f` ou terminal do Node.js). Isso permite testar e desenvolver localmente sem custo ou configuracao previa.
+- **Com chave configurada**: Os e-mails sao disparados instantaneamente para a caixa de entrada do usuario.
+
+### Passo a Passo de Configuracao:
+
+1. Acesse [Resend.com](https://resend.com/) e crie uma conta gratuita.
+2. No painel, acesse **API Keys** e clique em **Create API Key**.
+3. De um nome (ex: `CloudVTurb Production`) e copie a chave que comeca com `re_`.
+4. **Para testes rapidos (sem dominio proprio)**:
+   - Voce pode usar o remetente padrao de testes da Resend:
+     ```env
+     RESEND_API_KEY=re_sua_chave_aqui
+     RESEND_FROM_EMAIL=CloudVTurb <onboarding@resend.dev>
+     ```
+     *(Nota: o remetente `onboarding@resend.dev` permite enviar e-mails apenas para o mesmo e-mail titular da sua conta no Resend).*
+5. **Para producao (com seu proprio dominio)**:
+   - No menu **Domains** do Resend, clique em **Add Domain** (ex: `meudominio.com`).
+   - Adicione os registros DNS gerados (DKIM e SPF) na Cloudflare ou no seu provedor de DNS.
+   - Assim que o status mudar para **Verified**, configure no `.env`:
+     ```env
+     RESEND_API_KEY=re_sua_chave_aqui
+     RESEND_FROM_EMAIL=CloudVTurb <nao-responda@meudominio.com>
+     ```
+6. Reinicie o servidor. Todos os fluxos de autenticacao e convites passarao a disparar e-mails autenticados com entregabilidade maxima.
 
 ## Otimizacao para Alta Escala e Maxima Performance (Custo R$ 0,00)
 
