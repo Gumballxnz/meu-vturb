@@ -4555,9 +4555,10 @@ app.get('/api/analytics/video/:id/live', authMiddleware, (req, res) => {
   if (req.user.role !== 'owner' && video.user_id !== req.user.id) return res.status(403).json({ error: 'Permissão negada.' });
 
   const activeRows = db.prepare(`
-    SELECT COUNT(DISTINCT session_id) as c
+    SELECT COUNT(DISTINCT visitor_id) as c
     FROM analytics_events
-    WHERE video_id = ? AND created_at >= datetime('now', '-5 minutes')
+    WHERE video_id = ? AND created_at >= datetime('now', '-3 minutes')
+      AND visitor_id NOT LIKE 'test_vis%'
   `).get(vidId);
 
   const countryLocations = {
@@ -4576,9 +4577,10 @@ app.get('/api/analytics/video/:id/live', authMiddleware, (req, res) => {
   };
 
   const activeViewers = db.prepare(`
-    SELECT country, city, timezone, COUNT(DISTINCT session_id) as viewers
+    SELECT country, city, timezone, COUNT(DISTINCT visitor_id) as viewers
     FROM analytics_events
-    WHERE video_id = ? AND created_at >= datetime('now', '-5 minutes')
+    WHERE video_id = ? AND created_at >= datetime('now', '-3 minutes')
+      AND visitor_id NOT LIKE 'test_vis%'
     GROUP BY country, city, timezone
   `).all(vidId).map(v => {
     let cName = v.country || 'Moçambique';
@@ -4610,7 +4612,8 @@ app.get('/api/analytics/video/:id/live', authMiddleware, (req, res) => {
            MAX(created_at) as last_seen, event_type
     FROM analytics_events
     WHERE video_id = ? AND created_at >= datetime('now', '-2 hours')
-    GROUP BY session_id
+      AND visitor_id NOT LIKE 'test_vis%'
+    GROUP BY visitor_id
     ORDER BY last_seen DESC
     LIMIT 50
   `).all(vidId);
