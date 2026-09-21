@@ -432,6 +432,10 @@ try {
   }
 } catch (e) {}
 
+try {
+  db.exec("DELETE FROM analytics_events WHERE visitor_id LIKE 'test_vis%' OR session_id LIKE 'test_sess%'");
+} catch (e) {}
+
 const getSetting = (key, defaultVal) => {
   const row = db.prepare('SELECT value FROM system_settings WHERE key = ?').get(key);
   return row ? row.value : defaultVal;

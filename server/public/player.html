@@ -166,7 +166,7 @@
       gap: 12px;
       border-radius: 9px;
       border: 2.25px solid rgb(255, 255, 255);
-      background: rgba(255, 0, 0, 0.85);
+      background: var(--an-bg, #2563EB);
       box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
     }
     .pulse-badge-wrapper.style-square .pulse-text-top {
@@ -876,7 +876,7 @@
         position: params.get('an_pos') || dbSettings.audioNoticePosition || 'center',
         animation: params.get('an_anim') || dbSettings.audioNoticeAnimation || 'none',
         icon: params.get('an_icon') || dbSettings.audioNoticeIcon || 'volume-muted',
-        bgColor: params.get('an_bg') || dbSettings.audioNoticeBgColor || 'rgba(255, 0, 0, 0.85)',
+        bgColor: params.get('an_bg') || dbSettings.audioNoticeBgColor || '#2563EB',
         textColor: params.get('an_text_color') || dbSettings.audioNoticeTextColor || '#FFFFFF',
         iconBgColor: params.get('an_icon_bg') || dbSettings.audioNoticeIconBgColor || 'transparent',
         iconColor: params.get('an_icon_color') || dbSettings.audioNoticeIconColor || '#FFFFFF',
@@ -944,6 +944,7 @@
 
         const bg = cfg.bgColor || '#2563EB';
         pulseBadge.style.backgroundColor = bg;
+        pulseBadge.style.setProperty('--an-bg', bg);
 
         const textColor = cfg.textColor || '#FFFFFF';
         if (overlayTextTop) overlayTextTop.style.color = textColor;
